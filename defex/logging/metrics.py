@@ -46,6 +46,7 @@ class TrialResult:
     disturbance: dict[str, float] = field(default_factory=dict)
     events: list[tuple[float, str, str]] = field(default_factory=list)
     peak_contact_force_10ms_n: float = 0.0  # ground truth, 10 ms moving average (sustained load)
+    peak_measured_torque_nm: float = 0.0  # filtered F/T torque magnitude (the stop's second criterion)
     sim_time_s: float = 0.0
     wall_time_s: float = 0.0
 
@@ -63,9 +64,9 @@ def wilson_interval(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
         return (float("nan"), float("nan"))
     p = k / n
     denom = 1.0 + z * z / n
-    centre = (p + z * z / (2 * n)) / denom
+    center = (p + z * z / (2 * n)) / denom
     half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom
-    return (max(0.0, centre - half), min(1.0, centre + half))
+    return (max(0.0, center - half), min(1.0, center + half))
 
 
 def _stats(values: list[float]) -> dict[str, float]:
@@ -113,6 +114,7 @@ def summarize(results: Iterable[TrialResult]) -> list[dict[str, Any]]:
                 "peak_contact_force_n": _stats([r.peak_contact_force_n for r in rs]),
                 "peak_contact_force_10ms_n": _stats([r.peak_contact_force_10ms_n for r in rs]),
                 "peak_measured_force_n": _stats([r.peak_measured_force_n for r in rs]),
+                "peak_measured_torque_nm": _stats([r.peak_measured_torque_nm for r in rs]),
                 "retries_mean": float(np.mean([r.retries for r in rs])),
                 "retries_max": int(max(r.retries for r in rs)),
                 "trials_with_recovery": len(with_recovery),
@@ -210,6 +212,7 @@ def read_trials_csv(path: Path) -> list[TrialResult]:
                     disturbance=dist,
                     sim_time_s=float(row.get("sim_time_s", 0.0) or 0.0),
                     peak_contact_force_10ms_n=float(row.get("peak_contact_force_10ms_n", 0.0) or 0.0),
+                    peak_measured_torque_nm=float(row.get("peak_measured_torque_nm", 0.0) or 0.0),
                     wall_time_s=float(row.get("wall_time_s", 0.0) or 0.0),
                 )
             )

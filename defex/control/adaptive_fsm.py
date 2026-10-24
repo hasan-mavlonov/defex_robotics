@@ -14,7 +14,7 @@
   limits.
 * DETECT: hold and diagnose the contact state. A plug stopped on the top face is
   first allowed to *conform* (zero-spring tilt admittance) so that the measured
-  centre of pressure reflects the support geometry rather than the residual tilt
+  center of pressure reflects the support geometry rather than the residual tilt
   error; a flat conform also measures that tilt error, which is folded into the
   reference.
 * RECOVER: retract along the axis, update the contact-based hole localizer (or
@@ -23,7 +23,7 @@
 * VERIFY: bottoming signature, seat conform (tilt aligned to the floor), guarded
   lateral probes along the socket's short axis (both opposing walls must push back
   within the clearance budget, which proves the plug is captured by the cavity;
-  their positions also centre it) and, when the vision yaw is uncertain, yaw
+  their positions also center it) and, when the vision yaw is uncertain, yaw
   centering between the rotational limits.
 
 Depth estimates are only as good as the vision height estimate until the top
@@ -323,7 +323,7 @@ class AdaptiveInsertionController(InsertionController):
             possibly_surface = not self._engaged(depth) and depth < self._seat_threshold()
             if possibly_surface and obs.t - self.phase_t >= 0.04:
                 # Possibly stopped on the top face: let the plug face conform first so the
-                # centre of pressure reflects the support geometry, not the tilt error.
+                # center of pressure reflects the support geometry, not the tilt error.
                 self.adm_conf.reset()
                 self._conf_hist.clear()
                 self._conf_saturated = False
@@ -546,7 +546,7 @@ class AdaptiveInsertionController(InsertionController):
                 self._verify_base = self.adm_lat.x.copy()
                 # Probe along the socket's short axis (y): it carries the lighter gantry
                 # axis (smaller wall-impact transients) and two opposing walls are enough
-                # to prove the plug is captured by the cavity and to centre it.
+                # to prove the plug is captured by the cavity and to center it.
                 self._verify_dirs = [np.array(d, dtype=float) for d in ((0, 1), (0, -1))]
                 self._verify_results = []
                 self.phase, self.phase_t = "probe_out", obs.t
@@ -630,7 +630,7 @@ class AdaptiveInsertionController(InsertionController):
             )
             self._enter(obs.t, RECOVER, "retract", "verify_failed")
             return self._recover_step(obs)
-        # Centre the plug between the two walls that were just located.
+        # Center the plug between the two walls that were just located.
         cy = 0.5 * (travels[0] - travels[1])
         self.adm_lat.x = self._verify_base + np.array([0.0, cy])
         self.phase, self.phase_t = "center", obs.t
@@ -649,10 +649,11 @@ class AdaptiveInsertionController(InsertionController):
         return self._cmd(10.0)
 
     def _failure_step(self, obs: Observation) -> Command:
+        # Back out along the current compliant pose, exactly as RECOVER's retract does.
+        # The admittance offsets stay frozen: zeroing them while the plug is still in
+        # the cavity commands a sudden re-orientation against the walls, and a wedged
+        # plug then loads the wrist past the cell's torque stop.
         self.z = self._retract_height()
-        self.adm_lat.reset()
-        self.adm_rot.reset()
-        self.adm_conf.reset()
         if not self.done and self._reached(obs, tol=5e-6, rot_tol=2e-3):
             self.finish(obs.t, False, getattr(self, "_fail_reason", "unknown"))
         return self._cmd(self.cfg.retract_speed_mm_s)

@@ -21,9 +21,9 @@ profile (verified in ``tests/test_scene_geometry.py``).
 Frames
 ------
 * World: z up, table top at z = 0.
-* Socket frame (mocap body ``socket``): origin at the centre of the cavity mouth,
+* Socket frame (mocap body ``socket``): origin at the center of the cavity mouth,
   +z pointing out of the socket. A seated plug tip sits at z = -depth.
-* Connector frame (body ``connector``): origin at the plug tip centre (TCP), +z
+* Connector frame (body ``connector``): origin at the plug tip center (TCP), +z
   along the plug towards the gripper.
 * Fixture TCP: the six fixture joints are arranged so that joint zero places the
   TCP at ``home``; the three wrist hinges intersect at the TCP.

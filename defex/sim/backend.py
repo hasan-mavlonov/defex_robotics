@@ -37,7 +37,7 @@ class PayloadModel:
     """Mass properties below the F/T sensor, as identified after grasping."""
 
     mass_kg: float
-    com_in_sensor: np.ndarray  # (3,) centre of mass in the sensor frame (m)
+    com_in_sensor: np.ndarray  # (3,) center of mass in the sensor frame (m)
     sensor_in_tcp: Pose  # F/T sensor frame relative to the fixture TCP frame
 
 

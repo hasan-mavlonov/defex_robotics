@@ -25,8 +25,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib.patches import FancyBboxPatch, Rectangle  # noqa: E402
 
-from defex.config import SafetyConfig  # noqa: E402
+from defex.config import ConnectorSpec, SafetyConfig  # noqa: E402
 from defex.logging.metrics import TrialResult, read_trials_csv, summarize, wilson_interval  # noqa: E402
+from defex.tasks.conditions import MODERATE  # noqa: E402
 
 CONTROLLER_ORDER = ["fixed", "correction", "adaptive"]
 LABELS = {"fixed": "A: Fixed trajectory", "correction": "B: Vision correction", "adaptive": "C: Defex adaptive"}
@@ -174,7 +175,9 @@ def plot_success(summary: list[dict], results: list[TrialResult], path: Path, th
             continue
         if xlabel is not None:
             conds = sorted(conds, key=_level)
-            xs = np.array([_level(c) for c in conds])
+            if group in ("lateral", "angular_yaw", "angular_tilt") and conds_by_group.get("nominal"):
+                conds = ["nominal", *conds]  # the aligned socket is the zero-error point
+            xs = np.array([0.0 if c == "nominal" else _level(c) for c in conds])
             span = (xs.max() - xs.min()) or 1.0
             for k, ctrl in enumerate(ctrls):
                 dx = (k - (len(ctrls) - 1) / 2) * 0.018 * span
@@ -201,6 +204,9 @@ def plot_success(summary: list[dict], results: list[TrialResult], path: Path, th
                     x = j + (k - (len(ctrls) - 1) / 2) * (width + 0.04)
                     bars.vbar(ax, x, cell["success_rate"] * 100, width, th["series"][ctrl])
                     ax.plot([x, x], [cell["success_ci_low"] * 100, cell["success_ci_high"] * 100], color=th["ink2"], lw=0.8)
+                    if cell["success_rate"] == 0:
+                        # A zero-height bar is invisible: say so, or the controller looks absent.
+                        ax.text(x, 6, "0%", color=th["ink2"], fontsize=7.5, ha="center", va="bottom")
             ax.set_xticks(range(len(conds)))
             ax.set_xticklabels([c.replace("generalization_", "") for c in conds])
             ax.set_xlim(-0.6, len(conds) - 0.4)
@@ -237,7 +243,7 @@ def plot_cycle_and_force(results: list[TrialResult], path: Path, th: dict) -> No
     _strip_box(ax2, data, ctrls, th)
     for val, label in (
         (safety.protective_stop_force_n, "protective stop (measured F/T)"),
-        (safety.damage_contact_force_n, "damage threshold"),
+        (safety.damage_contact_force_n, "damage threshold (judged on the 10 ms average; dots are single-sample peaks)"),
     ):
         ax2.axhline(val, color=th["critical"], lw=0.9)
         ax2.text(len(ctrls) - 0.45, val + 0.6, label, color=th["ink2"], fontsize=7.5, ha="right", va="bottom")
@@ -392,21 +398,44 @@ def plot_dashboard(summary: list[dict], results: list[TrialResult], path: Path, 
         ax.text(0.045, 0.12, f"success, all conditions (95% CI {lo * 100:.1f}-{hi * 100:.1f}%)  ·  "
                 f"{stops} safety stops", color=th["muted"], fontsize=7.3)
     # Charts row: success curves + gentleness
-    for j, (group, title, xlabel) in enumerate([GROUPS[0], GROUPS[3]]):
-        ax = fig.add_axes((0.055 + j * 0.315, 0.10, 0.255, 0.45))
+    def panel_title(ax, title: str, note: str) -> None:
+        ax.set_title(title, color=th["ink"], fontsize=10, loc="left", pad=19)
+        ax.text(0.0, 1.02, note, transform=ax.transAxes, color=th["muted"], fontsize=7.3, va="bottom")
+
+    spec = ConnectorSpec.load("rect_12x8")
+    capture_mm = spec.socket.clearance_mm + spec.socket.chamfer_mm
+    notes = {
+        "lateral": ("Success vs socket offset", "exact offset, random direction; nominal vision", "socket offset (mm)"),
+        "pose_uncertainty": (
+            "Success vs vision error",
+            f"socket also randomly off by up to {MODERATE.lateral_mm:g} mm, {MODERATE.yaw_deg:g} deg yaw, "
+            f"{MODERATE.tilt_deg:g} deg tilt",
+            "vision sigma (mm)",
+        ),
+    }
+    for j, (group, _, _) in enumerate([GROUPS[0], GROUPS[3]]):
+        ax = fig.add_axes((0.055 + j * 0.315, 0.10, 0.255, 0.43))
         style_axes(ax, th)
         conds = sorted({s["condition"] for s in summary if s["group"] == group}, key=_level)
         if not conds:
             ax.set_visible(False)
             continue
-        xs = np.array([_level(c) for c in conds])
+        if group == "lateral" and any(s["condition"] == "nominal" for s in summary):
+            conds = ["nominal", *conds]  # the aligned socket is the 0 mm point
+        xs = np.array([0.0 if c == "nominal" else _level(c) for c in conds])
         span = (xs.max() - xs.min()) or 1.0
+        if group == "lateral":
+            # The fixed program only works inside the chamfer's capture range: mark the cliff.
+            ax.axvline(capture_mm, color=th["muted"], lw=0.9, ls=(0, (3, 3)), zorder=1)
+            ax.text(capture_mm - 0.12, 50, f"lead-in capture\nlimit {capture_mm:g} mm", color=th["ink2"],
+                    fontsize=7.3, va="center", ha="right")
         for k, c in enumerate(ctrls):
             dx = (k - (len(ctrls) - 1) / 2) * 0.012 * span
             ys = [(_cell(summary, cond, c) or {"success_rate": np.nan})["success_rate"] * 100 for cond in conds]
-            ax.plot(xs + dx, ys, color=th["series"][c], lw=1.4, solid_capstyle="round")
+            ax.plot(xs + dx, ys, color=th["series"][c], lw=1.4, solid_capstyle="round", zorder=3)
             ax.plot(xs + dx, ys, "o", color=th["series"][c], markersize=5.5, markeredgecolor=th["surface"],
-                    markeredgewidth=1.0)
+                    markeredgewidth=1.0, zorder=4)
+        title, note, xlabel = notes[group]
         ax.set_xticks(xs)
         ax.set_xticklabels([f"{x:g}" for x in xs])
         ax.set_xlabel(xlabel)
@@ -414,22 +443,25 @@ def plot_dashboard(summary: list[dict], results: list[TrialResult], path: Path, 
         ax.set_ylim(0, 104)
         ax.set_yticks([0, 50, 100])
         ax.set_yticklabels(["0", "50", "100%"])
-        ax.set_title(f"Success vs {title.lower()}", color=th["ink"], fontsize=10, loc="left", pad=8)
-    ax = fig.add_axes((0.70, 0.10, 0.265, 0.45))
+        panel_title(ax, title, note)
+    ax = fig.add_axes((0.70, 0.10, 0.265, 0.43))
     style_axes(ax, th, ygrid=False, xgrid=True)
     rows = []
     for c in ctrls:
         rs = [r for r in results if r.controller == c]
         rows.append((c, float(np.percentile([r.peak_contact_force_n for r in rs], 95))))
+    stop_n = SafetyConfig().protective_stop_force_n
+    ax.axvline(stop_n, color=th["critical"], lw=0.9, ls=(0, (3, 3)), zorder=1)
+    ax.text(stop_n - 0.6, -0.5, f"safety stop {stop_n:g} N", color=th["critical"], fontsize=7.3, ha="right", va="center")
     for k, (c, v) in enumerate(rows):
         bars.hbar(ax, k, v, 0.46, th["series"][c])
         ax.text(v + 0.6, k, f"{v:.1f} N", color=th["ink"], fontsize=9, va="center")
     ax.set_yticks(range(len(rows)))
     ax.set_yticklabels([SHORT[c] for c, _ in rows], fontsize=9)
-    ax.set_ylim(len(rows) - 0.4, -0.6)
-    ax.set_xlim(0, max(v for _, v in rows) * 1.32 + 1)
-    ax.set_xlabel("95th percentile peak contact force (N)")
-    ax.set_title("Worst-case contact force (lower is gentler)", color=th["ink"], fontsize=10, loc="left", pad=8)
+    ax.set_ylim(len(rows) - 0.4, -0.75)
+    ax.set_xlim(0, max(max(v for _, v in rows), stop_n) * 1.32 + 1)
+    ax.set_xlabel("contact force (N)")
+    panel_title(ax, "Peak contact force (lower is gentler)", "95th percentile of each trial's peak, all conditions")
     bars.draw(fig)
     fig.savefig(path, facecolor=th["page"])
     plt.close(fig)
@@ -468,6 +500,7 @@ def write_report(summary: list[dict], results: list[TrialResult], path: Path) ->
         "median peak contact force (N)": lambda rs: f"{np.median([r.peak_contact_force_n for r in rs]):.1f}",
         "95th pct peak contact force (N)": lambda rs: f"{np.percentile([r.peak_contact_force_n for r in rs], 95):.1f}",
         "protective stops": lambda rs: f"{sum(r.protective_stop for r in rs)}",
+        "max measured wrist torque (N m; stop at 0.6)": lambda rs: f"{max(r.peak_measured_torque_nm for r in rs):.3f}",
         "mean retries": lambda rs: f"{np.mean([r.retries for r in rs]):.2f}",
         "max penetration (mm)": lambda rs: f"{max(r.max_penetration_mm for r in rs):.4f}",
         "false accepts (declared success, not seated)": lambda rs: (

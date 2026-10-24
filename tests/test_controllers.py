@@ -68,3 +68,14 @@ def test_verify_probes_reach_the_walls_at_high_friction(task):
     detail = next(d for _, k, d in r.events if k == "verify")
     travels = [float(x) for x in re.search(r"at travel \[([^\]]*)\] mm", detail).group(1).split(",")]
     assert sum(travels) > 1.0, detail
+
+
+def test_abort_retracts_without_tripping_the_cell_stop(task):
+    # Regression from benchmark seed 20261025, noise_2mm trial 89: C ran out of time
+    # in VERIFY with the plug wedged 14 mm deep. The abort used to zero the compliance
+    # offsets before retracting, which re-oriented the plug against the walls and
+    # tripped the 0.6 N m protective stop. A controlled abort must stay an abort.
+    sc = sample_scenario(conditions_by_name()["noise_2mm"], 89, 20261025, task.backend.nominal_socket_pose)
+    r = task.run(make_controller("adaptive"), sc)
+    assert not r.protective_stop, r.failure_reason
+    assert r.failure_reason.startswith("aborted") or r.success, r.failure_reason

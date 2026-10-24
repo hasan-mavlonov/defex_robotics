@@ -76,7 +76,7 @@ class ContactDiagnosis:
     axial_force: float  # N
     lateral_force: np.ndarray  # (2,) N
     torque: np.ndarray  # (3,) N m about the tip, socket frame
-    cop: np.ndarray | None  # (2,) m, centre of pressure relative to the tip (socket frame)
+    cop: np.ndarray | None  # (2,) m, center of pressure relative to the tip (socket frame)
     probe_xy: np.ndarray  # (2,) m, tip lateral position in the estimated socket frame
     trigger: str = ""
 

@@ -190,6 +190,7 @@ class InsertionTask:
         peak_sustained = 0.0
         window: deque[float] = deque(maxlen=max(1, int(round(0.010 / dt))))
         peak_measured = 0.0
+        peak_torque = 0.0
         max_pen = 0.0
         joint_limit = False
         protective_stop = False
@@ -218,9 +219,10 @@ class InsertionTask:
             obs = estimator.update(sensors.measure(be.read_sensors()), motion.pose)
             f_meas = obs.force_norm
             peak_measured = max(peak_measured, f_meas)
+            peak_torque = max(peak_torque, obs.torque_norm)
             if f_meas > self.safety.protective_stop_force_n or obs.torque_norm > self.safety.protective_stop_torque_nm:
                 protective_stop = True
-                controller.log(obs.t, "protective_stop", f"|F|={f_meas:.1f} N")
+                controller.log(obs.t, "protective_stop", f"|F|={f_meas:.1f} N |T|={obs.torque_norm:.2f} N m")
                 break
             cmd: Command = controller.step(obs)
             sp = motion.update(cmd)
@@ -307,6 +309,7 @@ class InsertionTask:
             peak_contact_force_n=float(peak_contact),
             peak_contact_force_10ms_n=float(peak_sustained),
             peak_measured_force_n=float(peak_measured),
+            peak_measured_torque_nm=float(peak_torque),
             retries=int(controller.retries),
             recovered=bool(success and controller.retries > 0),
             final_depth_mm=float(final["depth_mm"]),

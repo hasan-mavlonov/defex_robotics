@@ -71,7 +71,7 @@ def test_ft_sensor_convention_and_compensation(backend):
     np.testing.assert_allclose(obs.force_world, backend.ground_truth().contact_force, atol=0.05)
 
 
-def test_measured_centre_of_pressure_matches_forward_model(backend, spec):
+def test_measured_center_of_pressure_matches_forward_model(backend, spec):
     S = backend.nominal_socket_pose
     noise = SensorNoiseConfig()
     for k, (ox, oy) in enumerate([(2.0, 0.0), (4.0, 0.0), (0.0, 3.0), (2.5, 2.5), (-2.5, 1.0)]):

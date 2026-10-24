@@ -105,6 +105,18 @@ def dashboard_frames(path: Path, sink: VideoSink, seconds: float = 10.0) -> np.n
     return last
 
 
+def save_strip(path: Path, stills_a: dict[str, np.ndarray], stills_c: dict[str, np.ndarray]) -> Path:
+    """Three-panel still for the README: A's failure, C's recovery, C's verified result."""
+    picks = [stills_a.get("final"), stills_c.get("RECOVER", stills_c.get("DETECT")), stills_c.get("final")]
+    picks = [p for p in picks if p is not None]
+    w, h = W // 2, H // 2
+    strip = Image.new("RGB", (w * len(picks) + 8 * (len(picks) - 1), h), BG)
+    for k, frame in enumerate(picks):
+        strip.paste(Image.fromarray(frame).resize((w, h), Image.LANCZOS), (k * (w + 8), 0))
+    strip.save(path, optimize=True)
+    return path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--results", type=Path, default=DEFAULT_RESULTS, help="benchmark run folder (for showcase + dashboard)")
@@ -131,6 +143,8 @@ def main() -> None:
     o = orbit(task, scenario, sink, 4.0)
     fade(sink, o, o, 0.1)
 
+    stills_a: dict[str, np.ndarray] = {}
+    stills_c: dict[str, np.ndarray] = {}
     s1 = card(
         "Scene 1: fixed-trajectory automation",
         [
@@ -142,7 +156,7 @@ def main() -> None:
     fade(sink, o, s1, 0.5)
     sink.hold(s1, 3.0)
     ra = record_run(task, "fixed", scenario, sink, speed=0.5, title=LABELS["fixed"],
-                    subtitle="Taught program, no sensing  ·  socket misaligned", hold_s=3.0)
+                    subtitle="Taught program, no sensing  ·  socket misaligned", hold_s=3.0, stills=stills_a)
 
     s2 = card(
         "Scene 2: Defex adaptive insertion",
@@ -154,8 +168,8 @@ def main() -> None:
         kicker="Defex Adaptive Insertion Engine",
     )
     sink.hold(s2, 3.5)
-    rc = record_run(task, "adaptive", scenario, sink, speed=0.8, title=LABELS["adaptive"],
-                    subtitle="Vision + force feedback  ·  same socket as Scene 1", hold_s=3.5)
+    rc = record_run(task, "adaptive", scenario, sink, speed=0.6, title=LABELS["adaptive"],
+                    subtitle="Vision + force feedback  ·  same socket as Scene 1", hold_s=3.5, stills=stills_c)
 
     dash = args.results / "plots" / "dashboard_dark.png"
     if dash.exists():
@@ -163,15 +177,17 @@ def main() -> None:
                   ["Paired disturbances, identical for every controller.", "Ground-truth scoring in simulation."],
                   kicker="Benchmark")
         sink.hold(s3, 2.5)
-        last = dashboard_frames(dash, sink, 10.0)
-        end = card("defexrobotics.com", ["Adaptive assembly for real-world variation."], kicker="Defex Robotics")
+        last = dashboard_frames(dash, sink, 12.0)
+        end = card("Defex Robotics", ["Adaptive assembly for real-world variation."], kicker="Defex Adaptive Insertion Engine V0.1")
         fade(sink, last, end, 0.6)
         sink.hold(end, 3.0)
     sink.close()
+    seconds = sink.frames / sink.fps
+    strip = save_strip(args.out.with_name(args.out.stem + "_strip.png"), stills_a, stills_c)
     print(f"Scene 1 (A): success={ra.success} reason={ra.failure_reason} peak={ra.peak_contact_force_n:.1f} N")
     print(f"Scene 2 (C): success={rc.success} retries={rc.retries} cycle={rc.cycle_time_s:.1f} s "
           f"peak={rc.peak_contact_force_n:.1f} N")
-    print(f"wrote {args.out}")
+    print(f"wrote {args.out} ({seconds:.1f} s) and {strip}")
 
 
 if __name__ == "__main__":

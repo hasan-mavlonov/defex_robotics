@@ -2,7 +2,7 @@
 
 When an insertion attempt is blocked on the receptacle's top face, the wrist F/T
 sensor measures where the contact force acts. With the force reference point at
-the plug tip, the centre of pressure (CoP) on the plug face is
+the plug tip, the center of pressure (CoP) on the plug face is
 
     cop_x = -tau_y / F_z,   cop_y = tau_x / F_z      (socket frame)
 
@@ -16,7 +16,7 @@ the true mouth position relative to the vision estimate:
   ``o = p - h``. The supported part of the plug face is (plug ∩ housing top)
   minus the lead-in opening. Because the wrist is rotationally compliant relative
   to the very stiff contact, the plug pivots on its supports and the CoP is the
-  projection of the plug centre onto the convex hull of that region (validated
+  projection of the plug center onto the convex hull of that region (validated
   against the physics in ``tests/test_search_policy.py``). The model is
   precomputed once per connector geometry as a lookup table over ``o``.
 * Likelihood: Gaussian on the CoP residual for blocked hypotheses, a small
@@ -46,7 +46,7 @@ class _ContactTable:
     step: float  # m, offset grid spacing
     half_n: int  # offsets span [-half_n, half_n] * step on each axis
     blocked: np.ndarray  # (N, N) bool
-    cop: np.ndarray  # (N, N, 2) m, CoP relative to the plug centre (NaN when not blocked)
+    cop: np.ndarray  # (N, N, 2) m, CoP relative to the plug center (NaN when not blocked)
     capture_half: tuple[float, float]  # m, lead-in capture half-widths (o_x, o_y)
     missed: np.ndarray  # (N, N) bool, plug footprint clear of the housing
     strict_half: tuple[float, float]  # m, offsets inside which the plug clears the cavity walls
@@ -100,14 +100,14 @@ def _support_cop(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Analytic contact model for a flat plug face pressed on the receptacle top.
 
-    ``o`` (N, 2): plug centre minus mouth centre. Works in plug-centred coordinates.
+    ``o`` (N, 2): plug center minus mouth center. Works in plug-centered coordinates.
     Returns ``blocked`` (N,), ``missed`` (N,) (plug clear of the housing) and the
     predicted CoP (N, 2).
 
     The supporting region is (plug ∩ housing) minus the lead-in opening, a union of
     at most four rectangles. Because the wrist's rotational stiffness is tiny
     relative to the contact stiffness, the plug pivots until the net contact force
-    passes as close as possible to the wrist load point (the plug centre): the CoP
+    passes as close as possible to the wrist load point (the plug center): the CoP
     is the projection of the origin onto the convex hull of the support region.
     """
     px, py = plug_half

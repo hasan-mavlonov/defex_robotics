@@ -63,7 +63,7 @@ def friendly(kind: str, detail: str) -> str | None:
     if kind == "verify":
         return "Verified: socket walls felt on both sides" if "PASS" in detail else "Verification failed: retrying"
     if kind == "yaw_centering":
-        return "Yaw centred between the socket walls"
+        return "Yaw centered between the socket walls"
     if kind == "protective_stop":
         return "SAFETY STOP: contact force limit exceeded"
     if kind == "abort":

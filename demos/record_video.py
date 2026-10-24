@@ -33,6 +33,7 @@ class VideoSink:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._writer = None
         self._gif_frames: list = []
+        self.frames = 0  # frames written so far (duration = frames / fps)
         if self.path.suffix.lower() == ".mp4":
             import imageio.v2 as imageio
 
@@ -41,6 +42,7 @@ class VideoSink:
             )
 
     def add(self, frame: np.ndarray) -> None:
+        self.frames += 1
         if self._writer is not None:
             self._writer.append_data(frame)
         else:
@@ -77,8 +79,13 @@ def record_run(
     width: int = 1280,
     height: int = 720,
     pip: bool = True,
+    stills: dict[str, np.ndarray] | None = None,
 ):
-    """Run one trial and append its frames (plus an outcome hold) to ``sink``."""
+    """Run one trial and append its frames (plus an outcome hold) to ``sink``.
+
+    If ``stills`` is given, it receives the first rendered frame of every FSM state
+    the controller enters (keyed by state name) and the final frame (``"final"``).
+    """
     be = task.backend
     be.load(SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset))
     renderer = FrameRenderer(
@@ -101,13 +108,18 @@ def record_run(
         if next_t[0] is None:
             next_t[0] = info.t
         if info.t + 1e-9 >= next_t[0]:
-            sink.add(renderer.frame(be.data, info, tel, markers, state, controller_name))
+            frame = renderer.frame(be.data, info, tel, markers, state, controller_name)
+            sink.add(frame)
+            if stills is not None and info.controller.state not in stills:
+                stills[info.controller.state] = frame.copy()
             next_t[0] += dt_frame
 
     result = task.run(make_controller(controller_name), scenario, on_step=on_step)
     state.outcome, state.outcome_text, state.extra_lines = outcome_text(result)
     final = renderer.frame(be.data, last[0], tel, markers, state, controller_name)
     sink.hold(final, hold_s)
+    if stills is not None:
+        stills["final"] = final.copy()
     renderer.close()
     return result
 

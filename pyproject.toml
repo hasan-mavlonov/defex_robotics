@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "defex-robotics"
+version = "0.1.0"
+description = "Defex Adaptive Insertion Engine (DAIE) V0.1: force-adaptive connector insertion in MuJoCo"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Defex Robotics" }]
+dependencies = [
+    "mujoco>=3.16,<4",
+    "numpy>=2.0",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+video = ["imageio>=2.34", "imageio-ffmpeg>=0.5"]
+
+[tool.setuptools.packages.find]
+include = ["defex*", "experiments*", "demos*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "slow: longer closed-loop simulation tests",
+]
+
+[tool.ruff]
+line-length = 120

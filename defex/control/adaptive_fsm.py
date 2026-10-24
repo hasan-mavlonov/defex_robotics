@@ -20,9 +20,11 @@
 * RECOVER: retract along the axis, update the contact-based hole localizer (or
   re-aim using the orientation learned through compliance after a jam), choose a
   bounded correction, and retry.
-* VERIFY: bottoming signature, lateral constraint probes (the walls must be felt
-  in +/-x and +/-y; their positions also locate the cavity centre) and, when the
-  vision yaw is uncertain, yaw centering between the rotational limits.
+* VERIFY: bottoming signature, seat conform (tilt aligned to the floor), guarded
+  lateral probes along the socket's short axis (both opposing walls must push back
+  within the clearance budget, which proves the plug is captured by the cavity;
+  their positions also centre it) and, when the vision yaw is uncertain, yaw
+  centering between the rotational limits.
 
 Depth estimates are only as good as the vision height estimate until the top
 face has been touched, so every depth-based decision uses an explicit depth
@@ -119,6 +121,7 @@ class AdaptiveInsertionController(InsertionController):
         self._conf_depth0 = 0.0
         self._verify_dirs: list[np.ndarray] = []
         self._verify_base = np.zeros(2)
+        self._preload_unsettled_t = 0.0
         self._verify_results: list[tuple[float, float]] = []
         self._yaw_results: list[float] = []
         self._yaw_base = 0.0
@@ -527,12 +530,19 @@ class AdaptiveInsertionController(InsertionController):
                 conf = self.adm_conf.x
                 self.log(obs.t, "seat_conform", f"tilt aligned to floor by ({conf[0] / DEG:+.2f},{conf[1] / DEG:+.2f}) deg")
                 self.phase, self.phase_t = "preload", obs.t
+                self._preload_unsettled_t = obs.t
             return self._cmd(30.0)
         if self.phase == "preload":
-            v = self.force_axis.velocity(c.verify_preload_n, float(F[2]))
-            self.z -= v * dt
+            self._hold_preload(F, dt)
             self.adm_lat.update(F[:2], dt)
-            if obs.t - self.phase_t > 0.1:
+            # The wall probes only mean something while floor friction (mu x axial
+            # force) stays below the wall-reaction threshold, so wait until the axial
+            # force has really come down from the seating force to the light preload
+            # (the force loop's time constant is about 0.1 s).
+            if abs(float(F[2]) - c.verify_preload_n) > 0.2:
+                self._preload_unsettled_t = obs.t
+            elapsed = obs.t - self.phase_t
+            if (elapsed > 0.1 and obs.t - self._preload_unsettled_t >= 0.05) or elapsed > 0.8:
                 self._verify_base = self.adm_lat.x.copy()
                 # Probe along the socket's short axis (y): it carries the lighter gantry
                 # axis (smaller wall-impact transients) and two opposing walls are enough
@@ -541,6 +551,8 @@ class AdaptiveInsertionController(InsertionController):
                 self._verify_results = []
                 self.phase, self.phase_t = "probe_out", obs.t
             return self._cmd(30.0)
+        if self.phase in ("probe_out", "probe_back", "center", "yaw_out", "yaw_back"):
+            self._hold_preload(F, dt)
         if self.phase == "probe_out":
             # Guarded lateral probe: advance until the wall pushes back, or give up
             # once the travel exceeds the full clearance budget.
@@ -596,6 +608,10 @@ class AdaptiveInsertionController(InsertionController):
                     self.phase, self.phase_t = "yaw_out", obs.t
             return self._cmd(10.0)
         return self._cmd(30.0)
+
+    def _hold_preload(self, F: np.ndarray, dt: float) -> None:
+        """Regulate the light axial preload used during verification probes."""
+        self.z -= self.force_axis.velocity(self.cfg.verify_preload_n, float(F[2])) * dt
 
     def _lateral_verdict(self, obs: Observation) -> Command:
         c = self.cfg

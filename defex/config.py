@@ -333,7 +333,9 @@ class AdaptiveConfig:
     # Verification (lateral constraint probe)
     verify_probe_mm: float = 1.2  # max guarded travel per direction (>= 2 x clearance + margin)
     verify_force_n: float = 2.0  # wall reaction required in every direction
-    verify_preload_n: float = 1.0  # light axial preload during probing (keeps floor friction low)
+    # Light axial preload held during probing. Floor friction (mu x preload) must stay
+    # below verify_force_n, or the floor rather than a wall could stop a probe.
+    verify_preload_n: float = 1.0
     verify_probe_speed_mm_s: float = 2.5
     # Yaw centering inside the cavity (runs when the vision yaw sigma exceeds the gate)
     yaw_center_gate_deg: float = 1.0

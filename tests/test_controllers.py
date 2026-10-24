@@ -53,3 +53,18 @@ def test_trials_are_deterministic(task):
     assert a.success == b.success and a.retries == b.retries
     assert a.cycle_time_s == b.cycle_time_s
     assert a.peak_contact_force_n == b.peak_contact_force_n
+
+
+def test_verify_probes_reach_the_walls_at_high_friction(task):
+    # Regression: the probes once started before the axial force had come down from
+    # the seating force to the light preload. At mu = 1 floor friction then exceeded
+    # the 2 N wall threshold, so the probe "found a wall" without moving (travel equal
+    # to the servo deflection, about 0.2 mm per side). Reaching both walls needs the
+    # full 2 x 0.5 mm of free play plus that deflection.
+    import re
+
+    r = _run(task, "adaptive", "friction_1")
+    assert r.success, r.failure_reason
+    detail = next(d for _, k, d in r.events if k == "verify")
+    travels = [float(x) for x in re.search(r"at travel \[([^\]]*)\] mm", detail).group(1).split(",")]
+    assert sum(travels) > 1.0, detail

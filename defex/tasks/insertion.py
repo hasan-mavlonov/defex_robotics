@@ -27,7 +27,7 @@ from defex.control.motion import CartesianMotionGenerator
 from defex.logging.metrics import TrialResult
 from defex.perception.sensors import SensorSuite
 from defex.perception.state_estimator import Observation, StateEstimator
-from defex.sim.backend import GroundTruth, SceneParams
+from defex.sim.backend import GroundTruth, SceneParams, SimBackend
 from defex.sim.mujoco_backend import MuJoCoBackend
 from defex.tasks.scenarios import Scenario
 from defex.utils.transforms import Pose, axis_angle_between, twist_about_axis
@@ -44,7 +44,7 @@ class StepInfo:
     gt: GroundTruth
     controller: InsertionController
     setpoint: Pose
-    backend: MuJoCoBackend
+    backend: SimBackend
     scenario: Scenario
     protective_stop: bool = False
 
@@ -132,7 +132,7 @@ class InsertionTask:
         fixture: FixtureConfig | None = None,
         safety: SafetyConfig | None = None,
         success: SuccessCriteria | None = None,
-        backend: MuJoCoBackend | None = None,
+        backend: SimBackend | None = None,
     ) -> None:
         self.sim = sim or SimConfig()
         self.fixture = fixture or FixtureConfig()

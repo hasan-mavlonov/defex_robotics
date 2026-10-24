@@ -101,13 +101,16 @@ class Telemetry:
     def lines(info: StepInfo) -> list[tuple[str, str]]:
         c = info.controller
         obs = info.obs
+        rel = info.gt.socket_pose.inv() @ info.gt.connector_pose
+        depth = -rel.p[2] / MM
+        # Above the mouth, show the clearance height instead of a negative depth.
+        depth_text = f"{depth:5.2f} mm" if depth >= -0.05 else f"{-depth:4.1f} mm above"
         out = [
             ("time", f"{info.t:5.2f} s"),
             ("state", f"{c.state}"),
-            ("depth (est)", f"{obs.depth / MM:+6.2f} mm"),
-            ("contact force", f"{obs.force_norm:5.1f} N"),
-            ("axial / lateral", f"{obs.axial_force:+5.1f} / {np.hypot(*obs.lateral_force):4.1f} N"),
-            ("retries", f"{c.retries}"),
+            ("insertion depth*", depth_text),
+            ("measured force", f"{obs.force_norm:5.1f} N"),
+            ("recoveries", f"{c.retries}"),
         ]
         if info.protective_stop:
             out.append(("SAFETY", "protective stop"))

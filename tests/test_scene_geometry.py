@@ -120,7 +120,7 @@ def test_radial_clearance(backend, spec, axis):
 
 
 def test_yaw_capacity_matches_geometry(backend, spec):
-    # A 12 x 8 plug in a 13 x 9 cavity fits up to about 4.6 deg of yaw.
+    # A 12 x 8 plug in a 13 x 9 cavity fits up to asin(4.5 / hypot(6, 4)) - atan2(4, 6) = 4.92 deg of yaw.
     assert _place(backend, 0.0, 0.0, spec.depth - 1 * MM, yaw=np.deg2rad(4.3)) == 0
     assert _place(backend, 0.0, 0.0, spec.depth - 1 * MM, yaw=np.deg2rad(5.2)) > 0
 

@@ -395,8 +395,8 @@ def plot_dashboard(summary: list[dict], results: list[TrialResult], path: Path, 
         ax.add_patch(Rectangle((0.045, 0.71), 0.018, 0.15, color=th["series"][c], lw=0))
         ax.text(0.085, 0.785, LABELS[c], color=th["ink2"], fontsize=10, va="center")
         ax.text(0.045, 0.40, f"{rate * 100:.1f}%", color=th["ink"], fontsize=30, va="center", fontweight="bold")
-        ax.text(0.045, 0.12, f"success, all conditions (95% CI {lo * 100:.1f}-{hi * 100:.1f}%)  ·  "
-                f"{stops} safety stops", color=th["muted"], fontsize=7.3)
+        ax.text(0.045, 0.12, f"{k_s:,} of {len(rs):,} trials  ·  95% CI {lo * 100:.1f}-{hi * 100:.1f}%  ·  "
+                f"{stops:,} safety stop{'' if stops == 1 else 's'}", color=th["muted"], fontsize=7.3)
     # Charts row: success curves + gentleness
     def panel_title(ax, title: str, note: str) -> None:
         ax.set_title(title, color=th["ink"], fontsize=10, loc="left", pad=19)

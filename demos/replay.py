@@ -135,30 +135,34 @@ def main() -> None:
         print(f"wrote {args.render}")
         return
 
-    from mujoco import viewer as mj_viewer  # local alias: a bare `import mujoco.viewer` would shadow `mujoco`
+    from demos.common import PassiveViewer
 
-    h = mj_viewer.launch_passive(be.model, be.data, show_left_ui=False, show_right_ui=False)
+    viewer = PassiveViewer(be.model, be.data, show_left_ui=False, show_right_ui=False)
+    h = viewer.handle
     h.cam.lookat[:] = be.nominal_socket_pose.p + np.array([0.0, 0.0, 0.006])
     h.cam.distance, h.cam.azimuth, h.cam.elevation = 0.11, 128.0, -17.0
     wall0 = time.perf_counter()
     last_text = -1.0
-    for k in range(len(t)):
-        if not h.is_running():
-            return
-        with h.lock():
-            show(k)
-        # set_texts blocks on the render thread: refresh the label at ~10 Hz only.
-        now = time.perf_counter()
-        if now - last_text > 0.1 or k == len(t) - 1:
-            sub = f"{states[k]}  t={t[k]:.2f}s" + (f"  {outcome}" if k == len(t) - 1 else "")
-            h.set_texts((mujoco.mjtFontScale.mjFONTSCALE_150, mujoco.mjtGridPos.mjGRID_TOPLEFT, head, sub))
-            last_text = now
-        h.sync()
-        target = wall0 + (t[k] - t[0]) / args.speed
-        time.sleep(max(0.0, target - time.perf_counter()))
-    while h.is_running():
-        h.sync()
-        time.sleep(0.05)
+    try:
+        for k in range(len(t)):
+            if not h.is_running():
+                return
+            with h.lock():
+                show(k)
+            # set_texts blocks on the render thread: refresh the label at ~10 Hz only.
+            now = time.perf_counter()
+            if now - last_text > 0.1 or k == len(t) - 1:
+                sub = f"{states[k]}  t={t[k]:.2f}s" + (f"  {outcome}" if k == len(t) - 1 else "")
+                h.set_texts((mujoco.mjtFontScale.mjFONTSCALE_150, mujoco.mjtGridPos.mjGRID_TOPLEFT, head, sub))
+                last_text = now
+            h.sync()
+            target = wall0 + (t[k] - t[0]) / args.speed
+            time.sleep(max(0.0, target - time.perf_counter()))
+        while h.is_running():
+            h.sync()
+            time.sleep(0.05)
+    finally:
+        viewer.close()  # waits for the render thread before interpreter teardown
 
 
 if __name__ == "__main__":

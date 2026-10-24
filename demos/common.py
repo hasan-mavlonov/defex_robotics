@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import threading
 from collections import deque
 from dataclasses import replace
 from pathlib import Path
@@ -164,3 +165,31 @@ def font_bold(size: int):
 
     path = font_manager.findfont(font_manager.FontProperties(family="DejaVu Sans", weight="bold"))
     return ImageFont.truetype(path, size)
+
+
+class PassiveViewer:
+    """``mujoco.viewer.launch_passive`` with a shutdown that waits for the viewer.
+
+    On Linux the passive viewer renders from its own daemon thread, and MuJoCo
+    registers ``glfw.terminate`` to run at interpreter exit. ``Handle.close()`` only
+    requests an exit, so a script that ends right after it can tear GLFW down under
+    a live render loop (a segfault or an X11 hang). ``close()`` here also joins the
+    viewer's threads. On macOS (``mjpython``) the viewer lives on the main thread,
+    no extra threads exist, and this reduces to ``Handle.close()``.
+    """
+
+    def __init__(self, model: mujoco.MjModel, data: mujoco.MjData, **kwargs) -> None:
+        from mujoco import viewer as mj_viewer  # lazy: headless renderers never need GLFW
+
+        before = set(threading.enumerate())
+        self.handle = mj_viewer.launch_passive(model, data, **kwargs)
+        self._threads = [t for t in threading.enumerate() if t not in before]
+
+    def close(self, timeout_s: float = 10.0) -> None:
+        if self.handle is None:
+            return
+        self.handle.close()
+        for t in self._threads:
+            t.join(timeout_s)
+        self.handle = None
+

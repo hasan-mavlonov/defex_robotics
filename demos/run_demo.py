@@ -23,14 +23,13 @@ import sys
 import time
 
 import mujoco
-import mujoco.viewer
 import numpy as np
 
 from defex.control.registry import LABELS, make_controller
 from defex.sim.backend import SceneParams
 from defex.tasks.insertion import InsertionTask, StepInfo
 from defex.tasks.scenarios import Scenario
-from demos.common import SceneMarkers, Telemetry, add_scenario_args, describe_scenario, scenario_from_args
+from demos.common import PassiveViewer, SceneMarkers, Telemetry, add_scenario_args, describe_scenario, scenario_from_args
 from demos.render import friendly, outcome_text
 
 
@@ -44,6 +43,7 @@ class LiveViewer:
         self.speed = speed
         self.fps = fps
         self.handle = None
+        self._viewer: PassiveViewer | None = None
         self._texts: list = []
         self._last_text = 0.0
 
@@ -52,10 +52,10 @@ class LiveViewer:
         be.load(SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset))
         if self.handle is not None and self.handle.m is be.model:
             return
-        if self.handle is not None:
-            self.handle.close()
+        self.close()
         try:
-            self.handle = mujoco.viewer.launch_passive(be.model, be.data, show_left_ui=False, show_right_ui=False)
+            self._viewer = PassiveViewer(be.model, be.data, show_left_ui=False, show_right_ui=False)
+            self.handle = self._viewer.handle
         except RuntimeError as exc:
             if sys.platform == "darwin":
                 raise SystemExit(
@@ -136,6 +136,13 @@ class LiveViewer:
             self._last_text = now
         h.sync()
 
+    def close(self) -> None:
+        """Close the window before the interpreter exits (an open render thread can crash teardown)."""
+        if self._viewer is not None:
+            self._viewer.close()
+        self._viewer = None
+        self.handle = None
+
     def wait_close(self, seconds: float | None = None) -> None:
         """Keep the window alive (and its render loop fed) until closed or timed out."""
         t0 = time.time()
@@ -202,14 +209,17 @@ def main() -> None:
         run_headless(task, names, scenario)
         return
     viewer = LiveViewer(task, speed=args.speed)
-    for k, name in enumerate(names):
-        r = viewer.run(name, scenario)
-        print_result(name, r)
-        if r is None:
-            return
-        if k < len(names) - 1:
-            viewer.wait_close(2.5)
-    viewer.wait_close(args.hold)
+    try:
+        for k, name in enumerate(names):
+            r = viewer.run(name, scenario)
+            print_result(name, r)
+            if r is None:
+                return
+            if k < len(names) - 1:
+                viewer.wait_close(2.5)
+        viewer.wait_close(args.hold)
+    finally:
+        viewer.close()
 
 
 if __name__ == "__main__":

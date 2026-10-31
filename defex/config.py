@@ -515,6 +515,22 @@ class AdaptiveConfig:
     localizer_exclude_fraction: float = 0.75  # of the strict clearance, around blocked probes
     localizer_exclude_min_cells: float = 0.6
     localizer_min_support_mm: float = 0.02  # support strips narrower than this do not carry load
+    # W4: joint (x, y, yaw) localizer. "xy" is V0.1's 2D filter plus the fixed yaw sequence.
+    localizer_mode: str = "xy"  # "xyyaw" available; no measured gain in development (W4 report)
+    yaw_localizer_extent_deg: float = 12.0  # hypotheses of true yaw relative to the vision estimate
+    yaw_localizer_resolution_deg: float = 1.5
+    yaw_prior_scale: float = 1.3  # widen the characterized yaw sigma, as prior_sigma_scale does for x/y
+    min_yaw_prior_sigma_deg: float = 0.5
+    probe_xy_step_mm: float = 0.5  # coarse probe search grid, refined to half the step
+    probe_yaw_step_deg: float = 1.5
+    exclude_yaw_deg: float = 1.0  # a blocked pose excludes probes within this yaw (and the x/y radius)
+    # Re-centre yaw in VERIFY whenever the controller itself changed the yaw by more than this
+    # (the replication-seed escape: a yaw search left the plug 3.4 deg off and centring was skipped).
+    yaw_center_if_corrected_deg: float = 0.5
+    # When VERIFY re-centres yaw between the rotational limits:
+    # "sigma_gate" (V0.1): only if the characterized vision yaw sigma exceeds yaw_center_gate_deg;
+    # "gate_or_corrected": also if C changed the yaw itself; "always": every cycle.
+    yaw_center_policy: str = "always"  # W4 default; V0.1 used "sigma_gate" (see results/w4_development)
     # VERIFY
     verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance
     seat_conform_min_s: float = 0.08

@@ -101,3 +101,53 @@ def test_measured_center_of_pressure_matches_forward_model(backend, spec):
         pred = predicted_cop(spec, lat)
         assert pred is not None
         assert np.linalg.norm(cop - pred) < 0.3 * MM, (ox, oy, cop / MM, pred / MM)
+
+
+def test_yaw_contact_model_matches_mujoco_at_nonzero_yaw(backend, spec):
+    """W4: the (x, y, yaw) localizer's CoP model agrees with MuJoCo within 0.3 mm (worst 0.10 mm in development)."""
+    from defex.config import DEG
+    from defex.recovery.search_policy import _support_cop
+    from defex.recovery.yaw_localizer import support_cop_yaw
+    from defex.utils.transforms import rot_z
+
+    ph = spec.plug_half[:2]
+    op = (spec.cavity_half[0] + spec.chamfer, spec.cavity_half[1] + spec.chamfer)
+    S = backend.nominal_socket_pose
+    noise = SensorNoiseConfig()
+    for k, (ox, oy, yaw) in enumerate([(2.0, 0.0, 4.0), (0.0, 3.0, 8.0), (1.0, -2.5, 12.0), (4.0, 0.0, -6.0)]):
+        backend.reset()
+        sensors = SensorSuite(noise, 200 + k)
+        est = StateEstimator(backend.true_payload, 0.002, noise.ft_filter_cutoff_hz)
+        est.reset(S, Pose.identity())
+        R = rot_z(yaw * DEG)
+        home = Pose(backend.home_tcp_pose.p, R)
+        backend.set_joint_positions_kinematic(backend.inverse_kinematics(home))
+        backend.set_tcp_setpoint(home)
+        for i in range(100):
+            if i == 50:
+                est.begin_tare()
+            backend.step(0.002)
+            est.update(sensors.measure(backend.read_sensors()), home)
+        est.end_tare()
+        above = Pose(S.p + np.array([ox, oy, 1.0]) * MM, R)
+        backend.set_joint_positions_kinematic(backend.inverse_kinematics(above))
+        for i in range(400):
+            backend.set_tcp_setpoint(Pose(S.p + np.array([ox, oy, 1.0 - min(i / 200, 1.0) * 1.6]) * MM, R))
+            backend.step(0.002)
+        obs = [est.update(sensors.measure(backend.read_sensors()), above) for _ in range(60)
+               if backend.step(0.002) is None]
+        F = np.mean([o.force for o in obs], axis=0)
+        T = np.mean([o.torque for o in obs], axis=0)
+        cop = np.array([-T[1] / F[2], T[0] / F[2]])
+        lat = np.mean([o.lateral for o in obs], axis=0)
+        blocked, _, pred = support_cop_yaw(lat[None], np.array([yaw * DEG]), ph, op, spec.outer_half, 0.02 * MM)
+        assert blocked[0]
+        assert np.linalg.norm(cop - pred[0]) < 0.3 * MM, (ox, oy, yaw, cop / MM, pred[0] / MM)
+    # At zero yaw the yaw model is the 2D model exactly.
+    g = np.arange(-14, 14.01, 0.5) * MM
+    X, Y = np.meshgrid(g, g, indexing="ij")
+    o = np.stack([X.ravel(), Y.ravel()], axis=1)
+    b1, m1, c1 = _support_cop(o, ph, op, spec.outer_half, 0.02 * MM)
+    b2, m2, c2 = support_cop_yaw(o, np.zeros(len(o)), ph, op, spec.outer_half, 0.02 * MM)
+    assert (b1 == b2).all() and (m1 == m2).all()
+    assert np.allclose(c1[b1], c2[b1], atol=1e-9)

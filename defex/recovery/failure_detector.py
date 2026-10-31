@@ -81,6 +81,7 @@ class ContactDiagnosis:
     cop: np.ndarray | None  # (2,) m, center of pressure relative to the tip (socket frame)
     probe_xy: np.ndarray  # (2,) m, tip lateral position in the estimated socket frame
     trigger: str = ""
+    probe_yaw: float = 0.0  # rad, plug yaw relative to the estimated socket (encoders + grasp estimate)
 
     def describe(self) -> str:
         cop = "n/a" if self.cop is None else f"({self.cop[0] / MM:+.2f},{self.cop[1] / MM:+.2f}) mm"

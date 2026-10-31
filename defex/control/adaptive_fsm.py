@@ -47,7 +47,8 @@ from defex.control.compliance import Admittance, ForceGuidedAxis
 from defex.perception.state_estimator import Observation
 from defex.recovery.failure_detector import ContactDiagnoser, ContactDiagnosis, InsertionMonitor
 from defex.recovery.search_policy import HoleLocalizer, yaw_search_sequence_deg
-from defex.utils.transforms import Pose, matrix_to_rotvec, norm3, rot_z, rotvec_to_matrix
+from defex.recovery.yaw_localizer import YawHoleLocalizer
+from defex.utils.transforms import Pose, matrix_to_rotvec, norm3, rot_z, rotvec_to_matrix, twist_about_axis
 
 APPROACH, ALIGN, INSERT, DETECT, RECOVER, VERIFY, SUCCESS, FAILURE = (
     "APPROACH",
@@ -146,6 +147,24 @@ class AdaptiveInsertionController(InsertionController):
             exclude_min_cells=c.localizer_exclude_min_cells,
             min_support=c.localizer_min_support_mm * MM,
         )
+        self.ylocalizer = None
+        if c.localizer_mode == "xyyaw":
+            self.ylocalizer = YawHoleLocalizer(
+                spec,
+                prior_sigma=float(np.hypot(c.prior_sigma_scale * sigma_xy, bias)),
+                yaw_prior_sigma=max(c.yaw_prior_scale * self.yaw_sigma, c.min_yaw_prior_sigma_deg * DEG),
+                extent=c.search_extent_mm * MM,
+                resolution=c.search_resolution_mm * MM,
+                yaw_extent=c.yaw_localizer_extent_deg * DEG,
+                yaw_resolution=c.yaw_localizer_resolution_deg * DEG,
+                cop_sigma=c.cop_sigma_mm * MM,
+                outlier_weight=c.localizer_outlier_weight,
+                entry_likelihood=c.localizer_entry_likelihood,
+                band_stick_probability=c.localizer_band_stick_probability,
+                prior_uniform_weight=c.localizer_prior_uniform_weight,
+                min_support=c.localizer_min_support_mm * MM,
+            )
+        self._blocked_poses: list[tuple[np.ndarray, float]] = []
         # Both walls: the plug crosses the clearance twice.
         self.verify_probe = max(c.verify_probe_mm, 2 * spec.socket.clearance_mm + c.verify_probe_margin_mm) * MM
 
@@ -318,11 +337,12 @@ class AdaptiveInsertionController(InsertionController):
 
     def _diagnose(self, window: list[Observation], trigger: str) -> ContactDiagnosis:
         forces, torques = [], []
+        yaw = float(np.mean([twist_about_axis(o.rel_pose.R) for o in window])) if window else 0.0
         for o in window:
             F, T = self._wrench(o)
             forces.append(F)
             torques.append(T)
-        return self.diagnoser.diagnose_values(
+        diag = self.diagnoser.diagnose_values(
             [o.t for o in window],
             [o.depth for o in window],
             [o.lateral for o in window],
@@ -333,6 +353,8 @@ class AdaptiveInsertionController(InsertionController):
             trigger,
             engage_threshold=self._engage_threshold(),
         )
+        diag.probe_yaw = yaw
+        return diag
 
     def _detect_step(self, obs: Observation) -> Command:
         c = self.cfg
@@ -493,9 +515,10 @@ class AdaptiveInsertionController(InsertionController):
                 diag.cop is not None and norm3(np.append(diag.cop, 0.0)) < c.clean_cop_mm * MM
             )
             sigma = c.cop_sigma_mm * MM if clean else c.unclean_cop_sigma_mm * MM
-            self.localizer.update_blocked(
-                diag.probe_xy, diag.cop if diag.kind == "surface_block" else None, cop_sigma=sigma
-            )
+            cop = diag.cop if diag.kind == "surface_block" else None
+            if self.ylocalizer is not None:
+                return self._plan_xyyaw(obs, diag, cop, sigma, lim_xy)
+            self.localizer.update_blocked(diag.probe_xy, cop, cop_sigma=sigma)
             self._blocked_probes.append(diag.probe_xy.copy())
             new_xy, p_cap = self.localizer.best_probe(lim_xy, exclude=self._blocked_probes)
             if self.blocks_at_best >= 2 and self.yaw_search_idx < len(self.yaw_sequence):
@@ -510,6 +533,8 @@ class AdaptiveInsertionController(InsertionController):
             detail += f"localizer -> probe ({new_xy[0] / MM:+.2f},{new_xy[1] / MM:+.2f}) mm, P(entry)={p_cap:.2f}"
         elif diag.kind == "partial_jam":
             self.localizer.update_entered(diag.probe_xy)
+            if self.ylocalizer is not None:
+                self.ylocalizer.update_entered(diag.probe_xy, diag.probe_yaw)
             self.xy = np.clip(self.xy + learned_lat, -lim_xy, lim_xy)
             # Re-aim with the orientation found through compliance during the attempt.
             rv = matrix_to_rotvec(self.R_corr) + learned_rot
@@ -521,6 +546,36 @@ class AdaptiveInsertionController(InsertionController):
             detail = f"jam: re-aim tilt=({rv[0] / DEG:+.1f},{rv[1] / DEG:+.1f}) yaw={rv[2] / DEG:+.1f} deg"
         else:  # verification failed or ambiguous
             detail = "retry at same probe"
+        return self._retry(obs, detail)
+
+    def _plan_xyyaw(self, obs: Observation, diag: ContactDiagnosis, cop, sigma: float, lim_xy: float) -> Command:
+        """W4: update the joint (x, y, yaw) posterior and pick the next probe pose."""
+        c = self.cfg
+        self.ylocalizer.update_blocked(diag.probe_xy, diag.probe_yaw, cop, cop_sigma=sigma)
+        self._blocked_poses.append((diag.probe_xy.copy(), diag.probe_yaw))
+        max_yaw = c.max_yaw_correction_deg * DEG
+        xy, yaw, p = self.ylocalizer.best_probe(
+            lim_xy,
+            max_yaw,
+            self._blocked_poses,
+            exclude_radius=max(
+                min(self.localizer.table.strict_half) * c.localizer_exclude_fraction,
+                c.localizer_exclude_min_cells * c.search_resolution_mm * MM,
+            ),
+            exclude_yaw=c.exclude_yaw_deg * DEG,
+            xy_step=c.probe_xy_step_mm * MM,
+            yaw_step=c.probe_yaw_step_deg * DEG,
+        )
+        self.xy = xy
+        rv = matrix_to_rotvec(self.R_corr)
+        rv[2] = float(np.clip(yaw, -max_yaw, max_yaw))
+        self.R_corr = rotvec_to_matrix(rv)
+        detail = (f"xy-yaw localizer -> probe ({xy[0] / MM:+.2f},{xy[1] / MM:+.2f}) mm, yaw {yaw / DEG:+.1f} deg, "
+                  f"P(entry)={p:.2f}")
+        return self._retry(obs, detail)
+
+    def _retry(self, obs: Observation, detail: str) -> Command:
+        c = self.cfg
         self.retries += 1
         self.log(obs.t, "recover", detail)
         self.adm_lat.reset()
@@ -603,7 +658,7 @@ class AdaptiveInsertionController(InsertionController):
             return self._cmd(c.verify_probe_speed_mm_s * c.verify_return_speed_factor)
         if self.phase == "center":
             if self._reached(obs, tol=c.probe_reach_tol_mm * MM):
-                if self.yaw_sigma > c.yaw_center_gate_deg * DEG:
+                if self._yaw_centering_needed():
                     self._yaw_base = self.yaw_adj
                     self._yaw_results = []
                     self.phase, self.phase_t = "yaw_out", obs.t
@@ -637,6 +692,15 @@ class AdaptiveInsertionController(InsertionController):
                     self.phase, self.phase_t = "yaw_out", obs.t
             return self._cmd(c.slow_phase_speed_cap_mm_s)
         return self._cmd(c.force_phase_speed_cap_mm_s)
+
+    def _yaw_centering_needed(self) -> bool:
+        c = self.cfg
+        gate = self.yaw_sigma > c.yaw_center_gate_deg * DEG
+        if c.yaw_center_policy == "always":
+            return True
+        if c.yaw_center_policy == "gate_or_corrected":
+            return gate or abs(matrix_to_rotvec(self.R_corr)[2]) > c.yaw_center_if_corrected_deg * DEG
+        return gate
 
     def _hold_preload(self, F: np.ndarray, dt: float) -> None:
         """Regulate the light axial preload used during verification probes."""

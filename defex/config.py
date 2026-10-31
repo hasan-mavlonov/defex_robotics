@@ -176,6 +176,11 @@ class SensorNoiseConfig:
     vision_yaw_sigma_deg: float = 0.5
     vision_tilt_sigma_deg: float = 0.3
     vision_bias_mm: float = 0.0  # systematic hand-eye calibration error (random direction)
+    # Gross vision errors (W2 held-out families): with this probability a shot is off by a
+    # uniform 3-6 mm in a random horizontal direction (wrong feature, glare, occlusion).
+    vision_outlier_probability: float = 0.0
+    vision_outlier_min_mm: float = 3.0
+    vision_outlier_max_mm: float = 6.0
     # In-hand estimate of the connector pose relative to the gripper.
     grasp_xy_sigma_mm: float = 0.1
     grasp_rot_sigma_deg: float = 0.3
@@ -286,6 +291,9 @@ class Condition:
     clearance_mm: float | None = None
     chamfer_mm: float | None = None
     description: str = ""
+    # What the cell integrator believes the vision accuracy is (handed to controllers).
+    # None: the true noise above (correctly characterized, as in V0.1).
+    characterized_noise: SensorNoiseConfig | None = None
 
 
 # --------------------------------------------------------------------------------------

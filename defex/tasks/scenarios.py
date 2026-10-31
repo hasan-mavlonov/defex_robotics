@@ -29,6 +29,7 @@ class Scenario:
     socket_pose: Pose  # true socket mouth pose (world)
     grasp_offset: Pose  # true connector tip pose relative to the fixture TCP
     noise: SensorNoiseConfig
+    characterized_noise: SensorNoiseConfig | None = None  # what controllers are told; None = noise
     disturbance: dict[str, float] = field(default_factory=dict)
 
 
@@ -91,6 +92,7 @@ def sample_scenario(condition: Condition, trial_index: int, base_seed: int, nomi
         socket_pose=socket_pose,
         grasp_offset=grasp,
         noise=condition.noise,
+        characterized_noise=condition.characterized_noise,
         disturbance={
             "dx_mm": float(dx),
             "dy_mm": float(dy),

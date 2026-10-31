@@ -20,7 +20,7 @@ from pathlib import Path
 
 from defex.config import REPO_ROOT
 from defex.control.registry import CONTROLLERS
-from defex.tasks.conditions import standard_conditions
+from defex.tasks.conditions import heldout_conditions, standard_conditions
 from experiments.runner import default_workers, run_suite
 
 
@@ -35,9 +35,11 @@ def main() -> None:
     ap.add_argument("--record", type=int, default=0, help="save trajectories for the first N trials of each cell")
     ap.add_argument("--list", action="store_true", help="list the available conditions and exit")
     ap.add_argument("--no-plots", action="store_true")
+    ap.add_argument("--suite", choices=["standard", "heldout"], default="standard",
+                    help="heldout: the W2 held-out families (pre-registered runs only)")
     args = ap.parse_args()
 
-    conds = standard_conditions()
+    conds = standard_conditions() if args.suite == "standard" else heldout_conditions()
     if args.list:
         for c in conds:
             print(f"{c.name:26s} [{c.group}] {c.description}")

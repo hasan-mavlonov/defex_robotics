@@ -114,3 +114,63 @@ def standard_conditions() -> list[Condition]:
 
 def conditions_by_name() -> dict[str, Condition]:
     return {c.name: c for c in standard_conditions()}
+
+
+# --------------------------------------------------------------------------------------
+# W2 held-out families. Defined and pre-registered before any run; never used for
+# development or tuning. Not part of standard_conditions(), so no tuning script can
+# reach them by accident.
+# --------------------------------------------------------------------------------------
+
+TOLD_HALF_MM = NOMINAL_NOISE.scaled_vision(0.5)  # what the integrator believes: 0.5 mm class camera
+
+
+def heldout_conditions() -> list[Condition]:
+    return [
+        Condition(
+            "heldout_mischar_1mm",
+            "heldout_vision",
+            MODERATE,
+            NOMINAL_NOISE.scaled_vision(1.0),
+            characterized_noise=TOLD_HALF_MM,
+            description="Controllers told vision sigma 0.5 mm; true sigma 1.0 mm (z, yaw, tilt scaled alike)",
+        ),
+        Condition(
+            "heldout_mischar_2mm",
+            "heldout_vision",
+            MODERATE,
+            NOMINAL_NOISE.scaled_vision(2.0),
+            characterized_noise=TOLD_HALF_MM,
+            description="Controllers told vision sigma 0.5 mm; true sigma 2.0 mm",
+        ),
+        Condition(
+            "heldout_handeye_bias_1.5mm",
+            "heldout_vision",
+            MODERATE,
+            replace(NOMINAL_NOISE, vision_bias_mm=1.5),
+            characterized_noise=NOMINAL_NOISE,
+            description="Unknown 1.5 mm hand-eye calibration bias (random direction); controllers told no bias",
+        ),
+        Condition(
+            "heldout_vision_outliers",
+            "heldout_vision",
+            MODERATE,
+            replace(NOMINAL_NOISE, vision_outlier_probability=0.05),
+            characterized_noise=NOMINAL_NOISE,
+            description="5% of vision shots off by 3-6 mm; controllers told the nominal accuracy",
+        ),
+        Condition(
+            "heldout_worst_case",
+            "heldout_combined",
+            MODERATE,
+            NOMINAL_NOISE.scaled_vision(1.0),
+            friction=0.8,
+            clearance_mm=0.2,
+            characterized_noise=TOLD_HALF_MM,
+            description="Friction 0.8, 0.2 mm clearance, told 0.5 mm vision sigma but true 1.0 mm",
+        ),
+    ]
+
+
+def heldout_conditions_by_name() -> dict[str, Condition]:
+    return {c.name: c for c in heldout_conditions()}

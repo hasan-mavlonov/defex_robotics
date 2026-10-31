@@ -201,7 +201,7 @@ class InsertionTask:
             home_pose=home,
             control_period_s=dt,
             fixture=self.fixture,
-            vision_accuracy=scenario.noise,
+            vision_accuracy=scenario.characterized_noise or scenario.noise,
         )
         controller.reset(ctx)
 

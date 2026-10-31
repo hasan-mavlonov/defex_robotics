@@ -61,6 +61,12 @@ class SensorSuite:
         yaw = r.normal(0.0, n.vision_yaw_sigma_deg) * DEG
         # Orientation error expressed in the socket frame: yaw about the socket axis, tilt about its x/y.
         R_err = rotvec_to_matrix(tilt) @ rotvec_to_matrix(np.array([0.0, 0.0, yaw]))
+        if n.vision_outlier_probability > 0.0:
+            # Extra draws only when outliers are enabled, so every V0.1 condition keeps its streams.
+            if r.uniform() < n.vision_outlier_probability:
+                mag = r.uniform(n.vision_outlier_min_mm, n.vision_outlier_max_mm) * MM
+                ang = r.uniform(0.0, 2.0 * np.pi)
+                dp = dp + mag * np.array([np.cos(ang), np.sin(ang), 0.0])
         return Pose(true_socket_pose.p + dp + self.vision_bias, true_socket_pose.R @ R_err)
 
     def grasp_measurement(self, true_grasp: Pose) -> Pose:

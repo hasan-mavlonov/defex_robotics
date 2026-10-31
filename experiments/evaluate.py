@@ -555,7 +555,7 @@ def evaluate(run_dir: Path, theme: str = "light") -> None:
     plot_cycle_and_force(results, plots / "cycle_time_and_force.png", th)
     plot_recovery(results, plots / "recovery.png", th)
     plot_failures(results, plots / "failure_reasons.png", th)
-    title = f"{run_dir.name.replace('_', ' ')} simulation benchmark"
+    title = f"{run_dir.name.replace('_', ' ')} (simulation)"
     plot_dashboard(summary, results, plots / "dashboard_dark.png", THEMES["dark"], title)
     plot_dashboard(summary, results, plots / "dashboard_light.png", THEMES["light"], title)
     write_report(summary, results, run_dir / "report.md")

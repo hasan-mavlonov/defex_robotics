@@ -1,4 +1,4 @@
-# Defex Adaptive Insertion Engine (DAIE) V0.1
+# Defex Adaptive Insertion Engine (DAIE), V0.2 in progress
 
 DAIE is a simulation prototype of autonomous connector insertion. A 6-DOF fixture
 holds a 12 x 8 mm rectangular connector and has to seat it 15 mm deep in a
@@ -9,122 +9,110 @@ attempts the insertion, detects excessive force or insufficient progress from th
 wrist force/torque sensor, retracts and corrects, retries within hard limits, and
 verifies the result before it declares success.
 
-Everything here runs in MuJoCo 3.16 with a real socket cavity, bounded actuators
-and noisy sensors. Every benchmark number in this README comes from the files in
-[`results/benchmark_v0.1`](results/benchmark_v0.1); the physics behavior is pinned
-by the test suite (see [Validation](#validation)), and the few numbers that come
-from development measurements instead are labeled as such. V0.1 is a research
-prototype: it has not been validated on hardware (see
-[Limitations](#assumptions-and-limitations)).
+Everything here runs in MuJoCo with a real socket cavity, bounded actuators and
+noisy sensors. Every benchmark number in this README comes from the files in
+[`results/benchmark_v0.2a`](results/benchmark_v0.2a) unless it is marked as V0.1
+([`results/benchmark_v0.1`](results/benchmark_v0.1)) or as a development
+measurement. The physics behavior is pinned by the test suite (see
+[Validation](#validation)). This is a research prototype: it has not been
+validated on hardware (see [Limitations](#assumptions-and-limitations)).
+
+## Results: benchmark_v0.2a, against fair baselines
+
+V0.1 compared C with a fixed program (A) and vision correction (B). Neither uses
+force feedback or compliance, and real connector cells use both. V0.2a adds the
+conventional tools those cells use, each tuned on the development seed with more
+effort than C got ([tuning log](results/benchmark_v0.2a/BASELINE_TUNING.md)):
+**D**, force-controlled spiral search as cobot vendors ship it; **E**, B's program
+on a passive remote centre compliance (RCC) device; **F**, spiral search on the
+RCC device. The run was pre-registered
+([`PREREGISTRATION.md`](results/benchmark_v0.2a/PREREGISTRATION.md)): 12,000
+paired trials on a fresh seed, 20261031.
+
+**What holds.**
+
+* **Success.** C seated the connector in 1,995 of 2,000 trials (99.75%, 95% CI
+  99.4 to 99.9%). The strongest conventional cell, F, seated 1,923 (96.15%, 95.2
+  to 96.9%). Trial by trial, C succeeded where F failed 73 times and F succeeded
+  where C failed once (exact McNemar p < 1e-6). The gap is 3.6 points, not the 76
+  points V0.1 showed against A.
+* **The gap is all poor vision.** On 16 of the 20 conditions F is within one
+  trial of C. The gap comes from `noise_1mm` (F 93, C 100), `noise_2mm` (43
+  against 95) and the two held-out generalization conditions (95 and 93 against
+  100 and 100). There the orientation error, not only the position error, is
+  beyond what the lead-in absorbs: a spiral corrects position, C also searches
+  yaw and lets the plug's tilt conform.
+* **Bad units passed.** F declared success on 57 plugs that were not seated
+  within tolerance: 31 seated more than 3 degrees off in yaw, 23 off in tilt, 3
+  short of full depth. Its depth check cannot see orientation. D passed 47, B 33,
+  E 21, A 226. C passed none; its 5 failures were all clean aborts. Per 2,000
+  parts, that is 57 bad connectors leaving F's cell and none leaving C's.
+
+**What got worse or does not hold.**
+
+* **Speed and throughput.** F's median successful cycle is 3.54 s against C's
+  5.42 s, and its 95th percentile 5.12 s against 10.01 s. F makes 848 good units
+  per hour of cell time, C 585, which is 31% fewer. C spends the time on wall
+  probes to verify and on recoveries. Whether C's cell is better therefore depends
+  on what a bad connector that leaves the cell costs; this benchmark does not
+  price that.
+* **Contact force.** V0.1 called C gentle. Against F it is not: F's 95th
+  percentile peak contact force is 6.2 N, C's 8.1 N. Only A, B and E reach the
+  30 N protective stop.
+* **Verification is unproven.** C's wall-probe VERIFY ran 1,995 times and passed
+  every time; it has never rejected anything in either benchmark. C's zero false
+  accepts come from the checks before VERIFY, and no trial yet shows that the
+  probes would catch a bad insertion. Deliberately bad parts (half-latched,
+  broken latch, stubbed terminal) are W3 of the V0.2 plan.
+
+A, B and C agree with V0.1 within their intervals (V0.1: 23.5%, 85.9%, 99.25%).
+These are simulation results with assumed physical parameters.
 
 <!-- RESULTS:START -->
-![The fixed program trips the safety stop; on the same socket, Defex C is blocked on the face, recovers, and seats and verifies](demos/media/defex_daie_v01_investor_demo_strip.png)
+Source: [`results/benchmark_v0.2a`](results/benchmark_v0.2a) (seed 20261031, commit `082f95e`, 20 conditions x 100 paired trials per controller; pre-registration in [`PREREGISTRATION.md`](results/benchmark_v0.2a/PREREGISTRATION.md)). Generated by `python -m experiments.readme_results results/benchmark_v0.2a`.
 
-*Stills from the [investor video](demos/media/defex_daie_v01_investor_demo.mp4), a real
-benchmark trial: the fixed program (left) trips the safety stop; on the identical
-socket, Defex C is blocked on the face, retracts and corrects (middle), then seats
-and verifies (right).*
+![Benchmark dashboard](results/benchmark_v0.2a/plots/dashboard_light.png)
 
-## Results
+| Controller | Success (95% CI) | Bad units passed | Detected failures | Protective stops | False accepts | Cycle p50 / p95 / p99, successes (s) | Good units per hour, no reset / 60 s per stop | p95 peak contact force (N) | Paired vs C: C-only / other-only (McNemar p) |
+|---|---|---|---|---|---|---|---|---|---|
+| A: Fixed trajectory | 24.1% (22.3%-26.1%) | 226 | 1291 | 1291 | n/a (no self-check) | 4.32 / 4.32 / 4.32 | 275 / 21 | 30.5 | 1512 / 0 (<1e-6) |
+| B: Vision correction | 86.7% (85.1%-88.1%) | 33 | 234 | 234 | n/a (no self-check) | 4.31 / 4.33 / 4.34 | 760 / 280 | 30.4 | 262 / 0 (<1e-6) |
+| E: Vision + RCC | 88.8% (87.4%-90.2%) | 21 | 202 | 202 | n/a (no self-check) | 6.32 / 6.34 / 6.35 | 535 / 266 | 30.2 | 218 / 0 (<1e-6) |
+| D: Spiral search | 93.7% (92.5%-94.7%) | 47 | 79 | 0 | 47 | 3.54 / 4.98 / 7.49 | 777 / 777 | 12.1 | 122 / 1 (<1e-6) |
+| F: Spiral + RCC | 96.2% (95.2%-96.9%) | 57 | 20 | 0 | 57 | 3.54 / 5.12 / 8.34 | 848 / 848 | 6.2 | 73 / 1 (<1e-6) |
+| C: Defex adaptive | 99.8% (99.4%-99.9%) | 0 | 5 | 0 | 0 | 5.42 / 10.01 / 14.30 | 585 / 585 | 8.1 | reference |
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="results/benchmark_v0.1/plots/dashboard_dark.png">
-  <img alt="Benchmark dashboard: overall success per controller, success versus socket offset and versus vision error, and 95th-percentile peak contact force" src="results/benchmark_v0.1/plots/dashboard_light.png">
-</picture>
+*Bad units passed*: the trial failed, the cell did not stop and the controller did not declare failure, so the part leaves the cell as if it were good. *Good units per hour*: successes per hour of simulated cell time, counting failed cycles; the second figure adds an assumed 60 s of operator time per protective stop.
 
-Across 6,000 paired trials (20 conditions, 100 trials per condition and
-controller), **the adaptive engine C seated and verified the connector in 1,985 of
-2,000 trials (99.25%, 95% CI 98.8 to 99.5%)**. Vision correction alone (B)
-succeeded in 1,718 (85.9%) and the fixed program (A) in 470 (23.5%). C never
-tripped the cell's protective stop and never declared success on a connector that
-was not seated; A and B tripped the stop 1,302 and 234 times.
+Success per condition (95% Wilson interval in brackets):
 
-**Large but well-measured errors are a vision problem, and B already solves them.**
-On every lateral, yaw and tilt condition, up to 5 mm and 10 degrees, the camera
-estimate is good (0.3 mm), and B and C both succeed in all 100 trials. A works only
-while the error stays inside what the lead-in absorbs: at 1 mm and 2 degrees it
-succeeds every time, at 3 mm and 5 degrees never. Laterally, the plug lands on the
-socket face and the stiff program pushes until the protective stop trips. At
-5 degrees of yaw it forces the plug to full depth at exactly 4.92 degrees, the
-cavity's geometric limit, wedged at the corners and out of tolerance; at 5 degrees
-of tilt it wedges about 14.4 mm deep.
-
-**When the measurement itself is wrong, force feedback is what separates C from B.**
-With the socket randomly off by up to 3 mm, 5 degrees of yaw and 3 degrees of tilt,
-B's success falls from 100% with perfect vision to 90%, 36% and 5% as the vision
-noise grows to 0.5, 1 and 2 mm. At 2 mm it does worse than A (16%): acting on a bad
-estimate is worse than ignoring it. C holds 100%, 100%, 100% and 85%. On the two
-generalization conditions, which no controller saw during development, B reaches
-40% and 59% and C 100% in both. In these conditions C often needs at least one
-recovery (43 and 77 of 100 trials at 1 and 2 mm of vision noise, 49 and 32 in the
-generalization conditions): typically the plug lands on the socket face, C reads
-where the face supports it, retracts and moves toward the hole. Over the whole
-benchmark 212 of C's 2,000 trials needed at least one recovery, and 197 of those
-(93%) still succeeded.
-
-**The cost is cycle time.** C's median successful insertion takes 5.4 s against
-4.3 s for A and B, because it inserts under force control at up to 6 mm/s, settles a
-light preload and probes both walls before declaring success. Each recovery adds
-roughly 3 to 4 s: the median is 9.5 s with one recovery and 12.3 s with two.
-
-**Contact stays gentle.** Half of C's trials peak below 5.8 N of contact force and
-95% below 8.1 N; the 95th percentiles of A and B sit at the 30 N stop. The highest
-wrist torque C measured in any trial was 0.20 N m, against the 0.6 N m stop.
-
-**Where C still fails.** All 15 failures are in `noise_2mm`, where the camera's
-lateral error has a 2 mm standard deviation and its yaw error 3.3 degrees. Every one
-ended as a clean abort at the retry or time limit, never as a false success.
-Failures concentrate where the vision yaw error exceeds 4 degrees (10 of those 33
-trials failed, against 5 of the other 67): the hole localizer reasons in x and y and
-handles yaw with a bounded search sequence, which is the first item on the
-[roadmap](#roadmap-v02).
-
-These are simulation results with assumed physical parameters; read them with the
-[limitations](#assumptions-and-limitations) in mind.
-
-| Overall | A: Fixed trajectory | B: Vision correction | C: Defex adaptive |
-|---|---|---|---|
-| success rate | 23.5% | 85.9% | 99.2% |
-| median cycle time, successes (s) | 4.32 | 4.31 | 5.41 |
-| median peak contact force (N) | 30.3 | 7.5 | 5.8 |
-| 95th pct peak contact force (N) | 30.5 | 30.4 | 8.1 |
-| protective stops | 1302 | 234 | 0 |
-| max measured wrist torque (N m; stop at 0.6) | 0.538 | 0.457 | 0.202 |
-| mean retries | 0.00 | 0.00 | 0.22 |
-| max penetration (mm) | 0.0897 | 0.1480 | 0.0612 |
-| false accepts (declared success, not seated) | n/a (no self-verification) | n/a (no self-verification) | 0 |
-
-Per condition (success rate with 95% Wilson interval; C's median cycle time, median
-peak contact force, and the share of its trials that needed recovery and still
-succeeded):
-
-| Condition | A: Fixed trajectory success | B: Vision correction success | C: Defex adaptive success | C median cycle (s) | C median peak force (N) | C recovery success |
+| Condition | A: Fixed trajectory | B: Vision correction | E: Vision + RCC | D: Spiral search | F: Spiral + RCC | C: Defex adaptive |
 |---|---|---|---|---|---|---|
-| nominal | 100% (96-100) | 100% (96-100) | 100% (96-100) | 5.37 | 5.8 | n/a |
-| lateral_1mm | 100% (96-100) | 100% (96-100) | 100% (96-100) | 5.40 | 5.8 | n/a |
-| lateral_3mm | 0% (0-4) | 100% (96-100) | 100% (96-100) | 5.37 | 5.8 | n/a |
-| lateral_5mm | 0% (0-4) | 100% (96-100) | 100% (96-100) | 5.39 | 5.8 | n/a |
-| yaw_2deg | 100% (96-100) | 100% (96-100) | 100% (96-100) | 5.38 | 5.8 | n/a |
-| yaw_5deg | 0% (0-4) | 100% (96-100) | 100% (96-100) | 5.41 | 5.8 | n/a |
-| yaw_10deg | 0% (0-4) | 100% (96-100) | 100% (96-100) | 5.37 | 5.8 | n/a |
-| tilt_2deg | 100% (96-100) | 100% (96-100) | 100% (96-100) | 5.39 | 5.8 | n/a |
-| tilt_5deg | 0% (0-4) | 100% (96-100) | 100% (96-100) | 5.39 | 5.8 | n/a |
-| tilt_10deg | 0% (0-4) | 100% (96-100) | 100% (96-100) | 5.37 | 5.8 | n/a |
-| noise_0mm | 13% (8-21) | 100% (96-100) | 100% (96-100) | 5.01 | 5.8 | n/a |
-| noise_0.5mm | 8% (4-15) | 90% (83-94) | 100% (96-100) | 5.71 | 5.8 | 100% of 3 |
-| noise_1mm | 11% (6-19) | 36% (27-46) | 100% (96-100) | 8.33 | 7.8 | 100% of 43 |
-| noise_2mm | 16% (10-24) | 5% (2-11) | 85% (77-91) | 11.05 | 8.0 | 81% of 77 |
-| friction_0.1 | 8% (4-15) | 100% (96-100) | 100% (96-100) | 5.38 | 5.8 | n/a |
-| friction_0.3 | 8% (4-15) | 100% (96-100) | 100% (96-100) | 5.39 | 5.8 | n/a |
-| friction_0.6 | 3% (1-8) | 99% (95-100) | 100% (96-100) | 5.38 | 5.9 | n/a |
-| friction_1 | 2% (1-7) | 89% (81-94) | 100% (96-100) | 5.37 | 5.8 | 100% of 8 |
-| generalization_combined | 0% (0-4) | 40% (31-50) | 100% (96-100) | 8.42 | 7.9 | 100% of 49 |
-| generalization_tight | 1% (0-5) | 59% (49-68) | 100% (96-100) | 5.48 | 6.3 | 100% of 32 |
-
-More plots in [`results/benchmark_v0.1/plots`](results/benchmark_v0.1/plots):
-success by condition, cycle-time and force distributions, recovery statistics and
-failure reasons.
+| nominal | 100% (96-100) | 100% (96-100) | 100% (96-100) | 99% (95-100) | 100% (96-100) | 100% (96-100) |
+| lateral_1mm | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| lateral_3mm | 0% (0-4) | 100% (96-100) | 100% (96-100) | 98% (93-99) | 100% (96-100) | 100% (96-100) |
+| lateral_5mm | 0% (0-4) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| yaw_2deg | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| yaw_5deg | 0% (0-4) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| yaw_10deg | 0% (0-4) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| tilt_2deg | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| tilt_5deg | 0% (0-4) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| tilt_10deg | 0% (0-4) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| noise_0mm | 5% (2-11) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| noise_0.5mm | 19% (13-28) | 93% (86-97) | 96% (90-98) | 99% (95-100) | 99% (95-100) | 100% (96-100) |
+| noise_1mm | 12% (7-20) | 40% (31-50) | 52% (42-62) | 92% (85-96) | 93% (86-97) | 100% (96-100) |
+| noise_2mm | 9% (5-16) | 4% (2-10) | 4% (2-10) | 39% (30-49) | 43% (34-53) | 95% (89-98) |
+| friction_0.1 | 11% (6-19) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| friction_0.3 | 13% (8-21) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) | 100% (96-100) |
+| friction_0.6 | 11% (6-19) | 100% (96-100) | 100% (96-100) | 97% (92-99) | 100% (96-100) | 100% (96-100) |
+| friction_1 | 2% (1-7) | 91% (84-95) | 100% (96-100) | 99% (95-100) | 100% (96-100) | 100% (96-100) |
+| generalization_combined | 1% (0-5) | 43% (34-53) | 60% (50-69) | 84% (76-90) | 95% (89-98) | 100% (96-100) |
+| generalization_tight | 0% (0-4) | 62% (52-71) | 65% (55-74) | 67% (57-75) | 93% (86-97) | 100% (96-100) |
 <!-- RESULTS:END -->
+
+V0.1's report, plots and investor video (A, B and C only, seed 20261025) stay
+unchanged in [`results/benchmark_v0.1`](results/benchmark_v0.1/report.md) and
+[`demos/media`](demos/media) as the historical record.
 
 ## How the simulation works
 
@@ -245,10 +233,11 @@ trial is scored on ground truth. A trial succeeds only if all of these hold:
   workspace limit, and completion within 30 s;
 * the controller did not declare failure.
 
-Only controller C declares success or failure, so only C can produce a false
-accept (declares success, not seated) or a false reject (declares failure while
-seated); both are counted. A and B never declare and are scored on ground truth
-alone, which is generous to them.
+C, D and F declare success or failure, so they can produce a false accept
+(declares success, not seated) or a false reject (declares failure while seated);
+both are counted. A, B and E never declare and are scored on ground truth alone.
+Their failures that do not trip the protective stop leave the cell unnoticed and
+count as bad units passed, as do false accepts.
 
 ### Physical assumptions
 
@@ -275,7 +264,7 @@ value that has not been measured on real parts.
 | Damage | 45 N contact force sustained over 10 ms | assumed conservative limit for a small plastic housing on a PCB |
 | Success tolerances | depth within 0.5 mm, lateral within clearance + 0.15 mm, tilt and yaw within 3 deg | assumed seating specification |
 
-## The three controllers
+## The six controllers
 
 **A: fixed trajectory** ([`defex/control/baselines.py`](defex/control/baselines.py)).
 The taught program: transit to 5 mm above the nominal socket at 40 mm/s, descend at
@@ -360,6 +349,28 @@ also locate the cavity center, and C centers the plug between them. When the
 vision yaw is uncertain (sigma above 1 degree) it also finds both rotational
 limits and centers the yaw between them.
 
+**D: spiral search** ([`defex/control/spiral_search.py`](defex/control/spiral_search.py)).
+The conventional force-controlled routine cobot vendors ship (Flexiv Adaptive
+Assembly SearchHole and InsertComp, Robotiq's Insertion node). It approaches the
+vision estimate, tares the wrist sensor, descends under force control until the
+axial force settles, then runs an Archimedean spiral in the socket plane at
+constant axial force. The hole is found when the plug pushes 0.5 mm below the
+face height; it then inserts under force control with compliant x/y. It declares
+success when the plug is a socket depth below the face (or, if it went straight
+in, inside the vision depth window), and retries once after a jam. It has no yaw
+or tilt search and no verification beyond depth.
+
+**E: vision correction + RCC** ([`defex/control/baselines.py`](defex/control/baselines.py)).
+B's program on a passive remote centre compliance stage between the sensor and
+the gripper (`CompliantStageConfig`): 5.78 N/mm lateral (ATI 9115-001-A), 4.5 N m/rad
+in torsion (PFA AST-75), travel limits from the ATI datasheet, cocking treated as
+rigid (181 N m/rad). No force feedback.
+
+**F: spiral search + RCC.** D's routine on E's compliance stage, tuned separately.
+
+D, E and F were tuned on development seed 2026 with about 68,000 trials
+([`BASELINE_TUNING.md`](results/benchmark_v0.2a/BASELINE_TUNING.md)).
+
 ## Experiment protocol
 
 [`defex/tasks/conditions.py`](defex/tasks/conditions.py) defines 20 conditions:
@@ -381,8 +392,8 @@ connector's drawing dimensions (including the tighter socket) as they would be i
 production.
 
 Trials are paired. Trial *i* of a condition derives its disturbance and every
-sensor noise stream from `SeedSequence(base_seed, crc32(condition), i)`, so A, B and
-C face the identical socket, grasp and sensor noise in that trial, and differences
+sensor noise stream from `SeedSequence(base_seed, crc32(condition), i)`, so every
+controller faces the identical socket, grasp and sensor noise in that trial, and differences
 between controllers are paired comparisons. Success rates carry Wilson 95%
 confidence intervals.
 
@@ -470,7 +481,9 @@ prototype model.
 ### Benchmark, plots and replay
 
 ```bash
-python -m experiments.robustness --trials 100 --seed 20261025 --name benchmark_v0.1 --record 1
+python -m experiments.robustness --trials 100 --seed 20261031 --name benchmark_v0.2a --record 1
+python -m experiments.readme_results results/benchmark_v0.2a   # regenerate the README results block
+python -m experiments.tune_baselines --controller spiral --stage coarse   # baseline tuning, dev seed only
 python -m experiments.evaluate results/benchmark_v0.1        # re-plot without re-running
 python -m experiments.robustness --list                      # condition names
 python -m experiments.robustness --conditions lateral_3mm,noise_2mm --trials 20 --name dev_quick
@@ -603,17 +616,22 @@ order they matter for transfer to hardware.
 
 ## Roadmap (V0.2)
 
-1. Localize the hole in (x, y, yaw) jointly instead of (x, y) plus a yaw sequence;
-   this targets the `noise_2mm` tail directly.
-2. Terminal and latch force model, and seat verification from the latch signature.
-3. Grasp compliance and in-hand slip.
-4. A serial arm (UR5e class) through the same backend interface, then an Isaac Sim
-   backend.
-5. A connector library (board-to-board, USB-C, RJ45) generated from asset files.
-6. Hardware in the loop with a real wrist F/T sensor, and calibration of the
-   contact parameters against measured insertions.
-7. Only then learning: residual policies or learned search priors, compared with C
-   on the same paired benchmark.
+The V0.2 plan (brief of 2026-10-26) runs in workstreams, one PR each:
+
+1. W0, done: CI, payload identification from F/T readings, Apple Silicon reproduction.
+2. W1, done: fair baselines D, E, F and benchmark_v0.2a (this README's results).
+3. W2: move tuned constants into configuration, sensitivity sweep, new held-out
+   families (mis-characterized vision, vision outliers, combined worst case),
+   MuJoCo parameter randomization.
+4. W4: joint (x, y, yaw) hole localizer, aimed at the `noise_2mm` tail.
+5. W3: terminal and latch physics from a real connector datasheet, push-click-pull
+   verification, deliberately bad parts to measure false accepts.
+6. W5 and W6: serial-arm backend; cycle-time tail and throughput.
+7. W7: hardware-in-the-loop backend, rig options, test protocol, calibration.
+8. W8: evidence pack.
+
+Learning (residual policies, learned search priors) comes only after real
+force traces exist.
 
 ## Porting to another simulator
 

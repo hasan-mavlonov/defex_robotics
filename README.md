@@ -60,7 +60,12 @@ paired trials on a fresh seed, 20261031.
   percentile peak contact force is 6.2 N, C's 8.1 N. Only A, B and E reach the
   30 N protective stop.
 * **Verification is unproven.** C's wall-probe VERIFY ran 1,995 times and passed
-  every time; it has never rejected anything in either benchmark. C's zero false
+  every time; it has never rejected anything in either benchmark. In a
+  replication on a second seed (a development check, not pre-registered:
+  [`replication_v0.2a_seed20261107`](results/replication_v0.2a_seed20261107/README.md))
+  C passed one bad unit, a plug seated 3.36 degrees off in yaw after its own yaw
+  search, which the wall probes cannot see. Zero bad units is a result of this
+  seed, not a guarantee. C's zero false
   accepts come from the checks before VERIFY, and no trial yet shows that the
   probes would catch a bad insertion. Deliberately bad parts (half-latched,
   broken latch, stubbed terminal) are W3 of the V0.2 plan.

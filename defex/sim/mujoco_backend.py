@@ -97,10 +97,10 @@ class MuJoCoBackend:
         self._socket_mask = np.zeros(m.ngeom, dtype=bool)
         self._socket_mask[list(socket)] = True
         self._elliptic = m.opt.cone == mujoco.mjtCone.mjCONE_ELLIPTIC
-        self._payload = self._identify_payload()
+        self._payload = self._true_payload()
 
-    def _identify_payload(self) -> PayloadModel:
-        """Mass properties below the F/T sensor with a nominal grasp (identified once)."""
+    def _true_payload(self) -> PayloadModel:
+        """Exact mass properties below the F/T sensor with a nominal grasp (reporting only)."""
         m = self.model
         d = mujoco.MjData(m)
         saved_pos = m.body_pos[self._connector_body].copy()
@@ -146,7 +146,11 @@ class MuJoCoBackend:
         return Pose(self._layout.socket_mouth.copy(), np.eye(3))
 
     @property
-    def payload(self) -> PayloadModel:
+    def ft_sensor_in_tcp(self) -> Pose:
+        return Pose(np.array([0.0, 0.0, FT_SITE_Z]), np.eye(3))
+
+    @property
+    def true_payload(self) -> PayloadModel:
         return self._payload
 
     @property

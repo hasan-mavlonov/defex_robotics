@@ -34,7 +34,7 @@ class SceneParams:
 
 @dataclass(frozen=True)
 class PayloadModel:
-    """Mass properties below the F/T sensor, as identified after grasping."""
+    """Mass properties below the F/T sensor (identified, or the simulator's truth)."""
 
     mass_kg: float
     com_in_sensor: np.ndarray  # (3,) center of mass in the sensor frame (m)
@@ -81,7 +81,15 @@ class SimBackend(Protocol):
     def nominal_socket_pose(self) -> Pose: ...
 
     @property
-    def payload(self) -> PayloadModel: ...
+    def ft_sensor_in_tcp(self) -> Pose:
+        """F/T sensor frame relative to the fixture TCP (a drawing dimension)."""
+        ...
+
+    @property
+    def true_payload(self) -> PayloadModel:
+        """Simulator mass properties below the F/T sensor. For tests and reports only:
+        the harness identifies the payload from F/T readings (defex.tasks.calibration)."""
+        ...
 
     def load(self, params: SceneParams) -> None: ...
 

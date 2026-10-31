@@ -203,7 +203,15 @@ From these the state estimator derives the connector pose (encoders composed wit
 the grasp estimate), the connector pose relative to the estimated socket, the
 insertion depth estimate, and the contact wrench at the connector tip expressed
 in the socket frame (gravity-compensated with the identified payload, tared,
-filtered). The controller's own FSM state is logged with every tick.
+filtered). The payload (mass and centre of mass below the sensor) is identified
+once per connector the way a real cell does it: the tool is held at nine wrist
+orientations in free space (up to 20 degrees of tilt), the noisy F/T readings are
+averaged for 0.5 s at each, and mass, centre of mass and sensor bias are fitted by
+least squares ([`defex/perception/payload_id.py`](defex/perception/payload_id.py),
+[`defex/tasks/calibration.py`](defex/tasks/calibration.py)). With the nominal
+sensor noise the identification error is 0.15 g RMS in mass (of 34 g) and a median
+0.17 mm in centre of mass over 20 seeds (development measurement; a test keeps it
+below 0.5 g and 0.6 mm). V0.1 read the exact mass from the simulator instead. The controller's own FSM state is logged with every tick.
 
 At reset a controller also receives static configuration, the things a cell
 integrator would know in advance: the connector's drawing dimensions, the
@@ -418,7 +426,9 @@ and the failure reason of every failed trial.
 
 ## Quick start
 
-Tested on Linux with Python 3.12.3, MuJoCo 3.16.0, NumPy 2.5.4 and Matplotlib 3.11.2.
+Tested on Linux with Python 3.12.3, MuJoCo 3.16.0, NumPy 2.5.4 and Matplotlib 3.11.2,
+and on an Apple M5 (macOS, Python 3.12.11, MuJoCo 3.17.0), where the full benchmark
+takes about 4 minutes on 9 workers.
 The project targets the existing `.venv` on the Mac mini (Python 3.12, MuJoCo
 3.16.0); nothing here needs a different interpreter.
 
@@ -426,7 +436,7 @@ The project targets the existing `.venv` on the Mac mini (Python 3.12, MuJoCo
 source .venv/bin/activate
 pip install -e ".[dev,video]"     # mujoco, numpy, matplotlib; pytest; imageio + ffmpeg for MP4
 
-pytest -q                         # 36 tests (physics, geometry, sensing, controllers)
+pytest -q                         # 40 tests (physics, geometry, sensing, controllers)
 pytest -q -m "not slow"           # skip the closed-loop controller tests
 python -m experiments.baseline    # one-minute check: all controllers at 100% on easy conditions
 ```
@@ -515,7 +525,7 @@ experiments/              baseline check, robustness benchmark, evaluation + plo
 demos/                    live viewer, video recorder, replay, investor video
   media/                  rendered investor video and its README still
 simulations/              generated workcell MJCF, original prototype, viewer script
-tests/                    36 tests: geometry, physics, sensing, controllers, metrics
+tests/                    40 tests: geometry, physics, sensing, controllers, metrics
 results/benchmark_v0.1/   the reported benchmark: trials.csv, summary.json/.csv, report.md,
                           plots/, events.json.gz, trajectories/ (replayable),
                           earlier_runs/ (superseded reports)
@@ -585,8 +595,11 @@ order they matter for transfer to hardware.
 9. **Determinism is per platform.** Trials are bit-for-bit reproducible on a given
    machine and build. Floating-point differences between CPU architectures (for
    example x86-64 versus Apple Silicon) can change individual trial outcomes, so a
-   re-run on the Mac mini should reproduce the rates within their confidence
-   intervals, not trial by trial. This has not yet been checked on Apple Silicon.
+   re-run on Apple Silicon was expected to reproduce the rates within their
+   confidence intervals, not trial by trial. Checked on 2026-10-31 on an Apple M5
+   (MuJoCo 3.17.0): all 6,000 trials had the same success outcome as the reported
+   Linux run, with small floating-point differences in the continuous metrics
+   ([`results/repro_v0.1_apple_m5`](results/repro_v0.1_apple_m5/REPORT.md)).
 
 ## Roadmap (V0.2)
 
@@ -609,7 +622,8 @@ The task harness talks to physics only through the `SimBackend` protocol in
 `set_tcp_setpoint(pose)`, `step(duration)`, `read_sensors()` (noise-free hardware
 signals), `ground_truth()` (scoring only), `joint_positions()` and
 `set_marker_pose()` (logging and visuals), plus the `home_tcp_pose`,
-`nominal_socket_pose` and `payload` properties. An Isaac Sim backend would build the
+`nominal_socket_pose` and `ft_sensor_in_tcp` properties (plus `true_payload`, for tests and
+reports only). An Isaac Sim backend would build the
 same workcell as USD, map `set_tcp_setpoint` onto its articulation controller,
 read its wrist joint force sensor for `read_sensors`, and use its contact report
 for `ground_truth`. Controllers, perception, recovery, scoring and the experiment

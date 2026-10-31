@@ -11,6 +11,8 @@ from defex.perception.state_estimator import Observation, StateEstimator
 from defex.utils.transforms import Pose, matrix_to_rotvec, rotvec_to_matrix
 
 ROOT = Path(__file__).resolve().parents[1]
+CONTROLLER_SIDE = ("control", "recovery", "perception")
+SIM_TRUTH_ATTRS = {"ground_truth", "true_payload", "joint_positions", "contact_wrench"}
 
 
 def test_motion_generator_respects_limits(rng):
@@ -42,7 +44,7 @@ def test_motion_generator_respects_limits(rng):
 def test_gravity_compensation_and_tare_in_free_space(backend):
     noise = SensorNoiseConfig()
     sensors = SensorSuite(noise, 7)
-    est = StateEstimator(backend.payload, 0.002, noise.ft_filter_cutoff_hz)
+    est = StateEstimator(backend.true_payload, 0.002, noise.ft_filter_cutoff_hz)
     est.reset(backend.nominal_socket_pose, Pose.identity())
     home = backend.home_tcp_pose
     backend.set_tcp_setpoint(home)
@@ -70,17 +72,26 @@ def test_observation_has_no_ground_truth_fields():
 
 def test_controller_code_cannot_reach_the_simulator():
     """Controllers, recovery and estimation must not import MuJoCo or ground truth."""
-    for sub in ("control", "recovery", "perception"):
-        for path in (ROOT / "defex" / sub).glob("*.py"):
-            tree = ast.parse(path.read_text())
-            for node in ast.walk(tree):
-                mods = []
-                if isinstance(node, ast.Import):
-                    mods = [a.name for a in node.names]
-                elif isinstance(node, ast.ImportFrom):
-                    mods = [node.module or ""]
-                    names = [a.name for a in node.names]
-                    assert "GroundTruth" not in names, path
-                for mod in mods:
-                    assert not mod.startswith("mujoco"), path
-                    assert "mujoco_backend" not in mod, path
+    paths = [p for sub in CONTROLLER_SIDE for p in (ROOT / "defex" / sub).rglob("*.py")]
+    assert len(paths) >= 10
+    for path in paths:
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute):
+                assert node.attr not in SIM_TRUTH_ATTRS, (path, node.attr)
+            mods = []
+            if isinstance(node, ast.Import):
+                mods = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                mods = [node.module or ""]
+                names = [a.name for a in node.names]
+                assert "GroundTruth" not in names, path
+            for mod in mods:
+                assert not mod.startswith("mujoco"), path
+                assert "mujoco_backend" not in mod, path
+
+
+def test_harness_identifies_the_payload_instead_of_reading_the_simulator():
+    src = (ROOT / "defex" / "tasks" / "insertion.py").read_text()
+    assert "true_payload" not in src
+    assert "StateEstimator(payload" in src

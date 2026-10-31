@@ -21,14 +21,16 @@ from typing import Callable
 
 import numpy as np
 
-from defex.config import DEG, MM, FixtureConfig, SafetyConfig, SimConfig, SuccessCriteria
+from defex.config import DEG, MM, FixtureConfig, SafetyConfig, SensorNoiseConfig, SimConfig, SuccessCriteria
 from defex.control.base import Command, ControllerContext, InsertionController
 from defex.control.motion import CartesianMotionGenerator
 from defex.logging.metrics import TrialResult
+from defex.perception.payload_id import PayloadFit
 from defex.perception.sensors import SensorSuite
 from defex.perception.state_estimator import Observation, StateEstimator
 from defex.sim.backend import GroundTruth, SceneParams, SimBackend
 from defex.sim.mujoco_backend import MuJoCoBackend
+from defex.tasks.calibration import calibration_seed, identify_payload
 from defex.tasks.scenarios import Scenario
 from defex.utils.transforms import Pose, axis_angle_between, twist_about_axis
 
@@ -139,6 +141,20 @@ class InsertionTask:
         self.safety = safety or SafetyConfig()
         self.criteria = success or SuccessCriteria()
         self.backend = backend or MuJoCoBackend(self.sim, self.fixture)
+        self._payload_fits: dict[str, PayloadFit] = {}
+
+    def payload_fit(self, scenario: Scenario) -> PayloadFit:
+        """Identified payload for this connector (once per connector, nominal grasp)."""
+        spec = scenario.connector
+        key = repr((spec.name, spec.plug, spec.socket))
+        if key not in self._payload_fits:
+            be = self.backend
+            # Free-space motion 60 mm above the socket: the socket pose plays no role.
+            be.load(SceneParams(spec, scenario.friction, scenario.socket_pose))
+            self._payload_fits[key] = identify_payload(
+                be, self.fixture, SensorNoiseConfig(), self.sim.control_period_s, calibration_seed(spec.name)
+            )
+        return self._payload_fits[key]
 
     def run(
         self,
@@ -151,12 +167,13 @@ class InsertionTask:
         wall0 = time.perf_counter()
         dt = self.sim.control_period_s
         be = self.backend
+        payload = self.payload_fit(scenario).payload
         be.load(SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset))
 
         sensors = SensorSuite(scenario.noise, scenario.seed)
         vision = sensors.vision_measurement(scenario.socket_pose)
         grasp_est = sensors.grasp_measurement(scenario.grasp_offset)
-        estimator = StateEstimator(be.payload, dt, scenario.noise.ft_filter_cutoff_hz)
+        estimator = StateEstimator(payload, dt, scenario.noise.ft_filter_cutoff_hz)
         estimator.reset(vision, grasp_est)
         motion = CartesianMotionGenerator(self.fixture, dt)
         home = be.home_tcp_pose

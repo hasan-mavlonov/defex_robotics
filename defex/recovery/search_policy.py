@@ -17,7 +17,7 @@ the true mouth position relative to the vision estimate:
   minus the lead-in opening. Because the wrist is rotationally compliant relative
   to the very stiff contact, the plug pivots on its supports and the CoP is the
   projection of the plug center onto the convex hull of that region (validated
-  against the physics in ``tests/test_search_policy.py``). The model is
+  against the physics in ``tests/test_physics.py``). The model is
   precomputed once per connector geometry as a lookup table over ``o``.
 * Likelihood: Gaussian on the CoP residual for blocked hypotheses, a small
   probability for hypotheses that predicted entry, plus an outlier floor.

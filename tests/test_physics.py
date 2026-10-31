@@ -36,7 +36,7 @@ def test_nominal_insertion_is_seated_without_interpenetration(backend):
     assert abs(depth - 15 * MM) < 0.02 * MM
     # 0.5 mm programmed overtravel on a 10 N/mm servo -> 5 N preload, plus the weight of
     # the tool and connector (fixture links are gravity-compensated, the payload is not).
-    expected = 5.0 + backend.payload.mass_kg * 9.81
+    expected = 5.0 + backend.true_payload.mass_kg * 9.81
     assert abs(gt.contact_force_norm - expected) < 0.05
     assert pen < 0.01 * MM
 
@@ -57,12 +57,12 @@ def test_ft_sensor_convention_and_compensation(backend):
     backend.step(0.3)
     raw = backend.read_sensors()
     # The force sensor reports the wrist's force on the tool: +m g in free space.
-    np.testing.assert_allclose(raw.ft_force, [0, 0, backend.payload.mass_kg * 9.81], atol=2e-3)
+    np.testing.assert_allclose(raw.ft_force, [0, 0, backend.true_payload.mass_kg * 9.81], atol=2e-3)
     # Estimated external wrench equals the ground-truth contact force when pressing.
     noise = SensorNoiseConfig(ft_force_sigma_n=0.0, ft_torque_sigma_nm=0.0, ft_force_bias_n=0.0, ft_torque_bias_nm=0.0,
                               encoder_pos_sigma_mm=0.0, encoder_rot_sigma_deg=0.0)
     sensors = SensorSuite(noise, 0)
-    est = StateEstimator(backend.payload, 0.002, 40.0)
+    est = StateEstimator(backend.true_payload, 0.002, 40.0)
     est.reset(backend.nominal_socket_pose, Pose.identity())
     _, _, _, gt = _descend(backend, depth_target=15.8 * MM)
     for _ in range(50):
@@ -77,7 +77,7 @@ def test_measured_center_of_pressure_matches_forward_model(backend, spec):
     for k, (ox, oy) in enumerate([(2.0, 0.0), (4.0, 0.0), (0.0, 3.0), (2.5, 2.5), (-2.5, 1.0)]):
         backend.reset()
         sensors = SensorSuite(noise, 100 + k)
-        est = StateEstimator(backend.payload, 0.002, noise.ft_filter_cutoff_hz)
+        est = StateEstimator(backend.true_payload, 0.002, noise.ft_filter_cutoff_hz)
         est.reset(S, Pose.identity())
         backend.set_tcp_setpoint(backend.home_tcp_pose)
         for i in range(100):

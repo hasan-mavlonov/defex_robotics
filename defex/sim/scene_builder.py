@@ -37,7 +37,7 @@ from pathlib import Path
 
 import numpy as np
 
-from defex.config import MM, REPO_ROOT, ConnectorSpec, FixtureConfig, SimConfig
+from defex.config import MM, REPO_ROOT, CompliantStageConfig, ConnectorSpec, FixtureConfig, SimConfig
 
 # Nominal layout (metres)
 JIG_BOTTOM_Z = 0.008
@@ -142,8 +142,14 @@ def build_workcell_xml(
     fixture: FixtureConfig | None = None,
     sim: SimConfig | None = None,
     friction: float | None = None,
+    compliance: CompliantStageConfig | None = None,
 ) -> str:
-    """Generate the complete MJCF string for the insertion workcell."""
+    """Generate the complete MJCF string for the insertion workcell.
+
+    ``compliance`` inserts a passive RCC stage (two lateral slides and a torsion
+    hinge, centred at the nominal plug tip) between the F/T sensor and the
+    gripper. Without it the XML is identical to V0.1.
+    """
     spec = spec or ConnectorSpec.load("rect_12x8")
     fixture = fixture or FixtureConfig()
     sim = sim or SimConfig()
@@ -159,6 +165,25 @@ def build_workcell_xml(
     grip_len = spec.plug.grip_length_mm * MM
     solimp = _fmt(sim.contact_solimp)
     solref = f"{sim.contact_timeconst_s:.6g} {sim.contact_dampratio:.6g}"
+    rcc_mass, rcc_open, rcc_close = 0.0, "", ""
+    if compliance is not None:
+        c = compliance
+        rcc_mass = c.moving_mass_kg
+        k_lat = c.lateral_stiffness_n_per_mm / MM
+        m_lat = c.moving_mass_kg + c.lateral_armature_kg + spec.plug.mass_g * 1e-3
+        d_lat = 2.0 * c.damping_ratio * np.sqrt(k_lat * m_lat)
+        k_rot = c.torsional_stiffness_nm_per_rad
+        d_rot = 2.0 * c.damping_ratio * np.sqrt(k_rot * c.torsional_armature_kgm2)
+        lat = c.lateral_travel_mm * MM
+        rot = np.deg2rad(c.torsional_travel_deg)
+        rcc_open = (
+            '                  <body name="rcc">\n'
+            f'                    <inertial pos="0 0 0.026" mass="{rcc_mass:.6g}" diaginertia="1e-6 1e-6 1e-6"/>\n'
+            f'                    <joint name="rcc_x" type="slide" axis="1 0 0" pos="0 0 0" stiffness="{k_lat:.6g}" damping="{d_lat:.6g}" armature="{c.lateral_armature_kg:.6g}" range="{-lat:.6g} {lat:.6g}"/>\n'
+            f'                    <joint name="rcc_y" type="slide" axis="0 1 0" pos="0 0 0" stiffness="{k_lat:.6g}" damping="{d_lat:.6g}" armature="{c.lateral_armature_kg:.6g}" range="{-lat:.6g} {lat:.6g}"/>\n'
+            f'                    <joint name="rcc_rz" type="hinge" axis="0 0 1" pos="0 0 0" stiffness="{k_rot:.6g}" damping="{d_rot:.6g}" armature="{c.torsional_armature_kgm2:.6g}" range="{-rot:.6g} {rot:.6g}"/>\n'
+        )
+        rcc_close = "                  </body>\n"
 
     # ---------------------------------------------------------------- socket body
     socket_geoms = []
@@ -349,10 +374,10 @@ def build_workcell_xml(
                 <inertial pos="0 0 0.040" mass="{wrist_m:.6g}" diaginertia="1e-5 1e-5 1e-5"/>
                 <geom name="flange" type="cylinder" class="visual" pos="0 0 0.0400" size="0.010 0.003" material="mat_alu"/>
                 <body name="tool">
-                  <inertial pos="0 0 0.030" mass="{tool_mass:.6g}" diaginertia="4e-6 4e-6 3e-6"/>
+                  <inertial pos="0 0 0.030" mass="{tool_mass - rcc_mass:.6g}" diaginertia="4e-6 4e-6 3e-6"/>
                   <site name="ft_site" pos="0 0 {FT_SITE_Z:.6g}" size="0.001" rgba="0.2 0.4 1 1"/>
                   <geom name="ft_sensor" type="cylinder" class="visual" pos="0 0 0.034" size="0.0095 0.003" material="mat_sensor"/>
-                  <geom name="palm" type="box" class="plug_col" pos="0 0 {palm_z:.6g}" size="{px + 2 * FINGER_HALF_THICKNESS + 0.0005:.6g} {py + 0.001:.6g} {palm_hz:.6g}" material="mat_alu"/>
+{rcc_open}                  <geom name="palm" type="box" class="plug_col" pos="0 0 {palm_z:.6g}" size="{px + 2 * FINGER_HALF_THICKNESS + 0.0005:.6g} {py + 0.001:.6g} {palm_hz:.6g}" material="mat_alu"/>
                   <geom name="finger_pos" type="box" class="plug_col" pos="{finger_x:.6g} 0 {finger_z0 + finger_hz:.6g}" size="{FINGER_HALF_THICKNESS:.6g} {py:.6g} {finger_hz:.6g}" material="mat_alu_dark"/>
                   <geom name="finger_neg" type="box" class="plug_col" pos="{-finger_x:.6g} 0 {finger_z0 + finger_hz:.6g}" size="{FINGER_HALF_THICKNESS:.6g} {py:.6g} {finger_hz:.6g}" material="mat_alu_dark"/>
                   <body name="connector">
@@ -361,7 +386,7 @@ def build_workcell_xml(
                     <geom name="cable" type="cylinder" class="visual" fromto="0 0 {PALM_Z[1]:.6g} 0 0 {PALM_Z[1] + 0.003:.6g}" size="0.0025" material="mat_cable"/>
                     <site name="tcp" pos="0 0 0" size="0.0006" rgba="1 1 0 1"/>
                   </body>
-                </body>
+{rcc_close}                </body>
               </body>
             </body>
           </body>

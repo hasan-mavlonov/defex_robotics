@@ -18,7 +18,7 @@ from typing import Protocol
 
 import numpy as np
 
-from defex.config import ConnectorSpec
+from defex.config import CompliantStageConfig, ConnectorSpec
 from defex.utils.transforms import Pose
 
 
@@ -30,6 +30,7 @@ class SceneParams:
     friction: float
     socket_pose: Pose  # true world pose of the socket mouth frame
     grasp_offset: Pose = field(default_factory=Pose.identity)  # connector tip relative to the fixture TCP
+    compliance: CompliantStageConfig | None = None  # passive RCC stage (baselines E, F); None = rigid
 
 
 @dataclass(frozen=True)

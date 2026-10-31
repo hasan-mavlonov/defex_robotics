@@ -45,6 +45,7 @@ class InsertionController(ABC):
 
     name: str = "base"
     label: str = "Base controller"
+    compliant_wrist: bool = False  # runs on the passive RCC stage (hardware choice, baselines E and F)
 
     def __init__(self) -> None:
         self.ctx: ControllerContext | None = None

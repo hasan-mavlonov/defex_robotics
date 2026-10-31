@@ -21,7 +21,7 @@ from typing import Callable
 
 import numpy as np
 
-from defex.config import DEG, MM, FixtureConfig, SafetyConfig, SensorNoiseConfig, SimConfig, SuccessCriteria
+from defex.config import DEG, MM, CompliantStageConfig, FixtureConfig, SafetyConfig, SensorNoiseConfig, SimConfig, SuccessCriteria
 from defex.control.base import Command, ControllerContext, InsertionController
 from defex.control.motion import CartesianMotionGenerator
 from defex.logging.metrics import TrialResult
@@ -143,14 +143,14 @@ class InsertionTask:
         self.backend = backend or MuJoCoBackend(self.sim, self.fixture)
         self._payload_fits: dict[str, PayloadFit] = {}
 
-    def payload_fit(self, scenario: Scenario) -> PayloadFit:
-        """Identified payload for this connector (once per connector, nominal grasp)."""
+    def payload_fit(self, scenario: Scenario, compliance: CompliantStageConfig | None = None) -> PayloadFit:
+        """Identified payload for this connector and wrist (once each, nominal grasp)."""
         spec = scenario.connector
-        key = repr((spec.name, spec.plug, spec.socket))
+        key = repr((spec.name, spec.plug, spec.socket, compliance))
         if key not in self._payload_fits:
             be = self.backend
             # Free-space motion 60 mm above the socket: the socket pose plays no role.
-            be.load(SceneParams(spec, scenario.friction, scenario.socket_pose))
+            be.load(SceneParams(spec, scenario.friction, scenario.socket_pose, compliance=compliance))
             self._payload_fits[key] = identify_payload(
                 be, self.fixture, SensorNoiseConfig(), self.sim.control_period_s, calibration_seed(spec.name)
             )
@@ -167,8 +167,11 @@ class InsertionTask:
         wall0 = time.perf_counter()
         dt = self.sim.control_period_s
         be = self.backend
-        payload = self.payload_fit(scenario).payload
-        be.load(SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset))
+        compliance = CompliantStageConfig() if controller.compliant_wrist else None
+        payload = self.payload_fit(scenario, compliance).payload
+        be.load(
+            SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset, compliance)
+        )
 
         sensors = SensorSuite(scenario.noise, scenario.seed)
         vision = sensors.vision_measurement(scenario.socket_pose)

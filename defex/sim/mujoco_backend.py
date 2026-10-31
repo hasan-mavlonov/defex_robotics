@@ -47,13 +47,15 @@ class MuJoCoBackend:
 
     # ------------------------------------------------------------------ setup
     @staticmethod
-    def _spec_key(spec: ConnectorSpec) -> str:
-        return repr((spec.name, spec.plug, spec.socket))
+    def _spec_key(spec: ConnectorSpec, compliance=None) -> str:
+        return repr((spec.name, spec.plug, spec.socket, compliance))
 
     def load(self, params: SceneParams) -> None:
-        key = self._spec_key(params.connector)
+        key = self._spec_key(params.connector, params.compliance)
         if key not in self._cache:
-            xml = build_workcell_xml(params.connector, self.fixture_cfg, self.sim_cfg, params.connector.friction)
+            xml = build_workcell_xml(
+                params.connector, self.fixture_cfg, self.sim_cfg, params.connector.friction, params.compliance
+            )
             model = mujoco.MjModel.from_xml_string(xml)
             self._cache[key] = _CompiledModel(model, WorkcellLayout.from_spec(params.connector, self.fixture_cfg))
         compiled = self._cache[key]

@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from defex.config import DEG, MM, FixedTrajectoryConfig, PositionCorrectionConfig
+from defex.config import DEG, MM, FixedTrajectoryConfig, PassiveComplianceConfig, PositionCorrectionConfig
 from defex.control.base import Command, ControllerContext, InsertionController
 from defex.perception.state_estimator import Observation
 from defex.utils.transforms import Pose
@@ -122,3 +122,19 @@ class PositionCorrectionController(_WaypointProgram):
             _Waypoint("approach", self.fixture_target_for_connector(above, G), c.transit_speed_mm_s * MM),
             _Waypoint("insert", self.fixture_target_for_connector(seat, G), c.insert_speed_mm_s * MM),
         ]
+
+
+class PassiveComplianceController(PositionCorrectionController):
+    """Controller E: B's vision-corrected program on a passive RCC stage, no force feedback.
+
+    The stage (``defex.config.CompliantStageConfig``) lets the chamfer steer the plug
+    laterally and in torsion with less force, as a remote center compliance device
+    does on a conventional cell.
+    """
+
+    name = "correction_rcc"
+    label = "E: Vision correction + passive compliance"
+    compliant_wrist = True
+
+    def __init__(self, cfg: PassiveComplianceConfig | None = None) -> None:
+        super().__init__(cfg or PassiveComplianceConfig())

@@ -26,12 +26,27 @@ import numpy as np  # noqa: E402
 from matplotlib.patches import FancyBboxPatch, Rectangle  # noqa: E402
 
 from defex.config import ConnectorSpec, SafetyConfig  # noqa: E402
-from defex.logging.metrics import TrialResult, read_trials_csv, summarize, wilson_interval  # noqa: E402
+from defex.logging.metrics import TrialResult, is_escape, read_trials_csv, summarize, wilson_interval  # noqa: E402
 from defex.tasks.conditions import MODERATE  # noqa: E402
 
-CONTROLLER_ORDER = ["fixed", "correction", "adaptive"]
-LABELS = {"fixed": "A: Fixed trajectory", "correction": "B: Vision correction", "adaptive": "C: Defex adaptive"}
-SHORT = {"fixed": "A Fixed", "correction": "B Vision", "adaptive": "C Defex"}
+# Conventional cells from weakest to strongest, then C.
+CONTROLLER_ORDER = ["fixed", "correction", "correction_rcc", "spiral", "spiral_rcc", "adaptive"]
+LABELS = {
+    "fixed": "A: Fixed trajectory",
+    "correction": "B: Vision correction",
+    "adaptive": "C: Defex adaptive",
+    "spiral": "D: Spiral search",
+    "correction_rcc": "E: Vision + RCC",
+    "spiral_rcc": "F: Spiral + RCC",
+}
+SHORT = {
+    "fixed": "A Fixed",
+    "correction": "B Vision",
+    "adaptive": "C Defex",
+    "spiral": "D Spiral",
+    "correction_rcc": "E Vision+RCC",
+    "spiral_rcc": "F Spiral+RCC",
+}
 
 THEMES = {
     "light": {
@@ -42,7 +57,8 @@ THEMES = {
         "muted": "#898781",
         "grid": "#e1e0d9",
         "axis": "#c3c2b7",
-        "series": {"fixed": "#2a78d6", "correction": "#1baf7a", "adaptive": "#eb6834"},
+        "series": {"fixed": "#2a78d6", "correction": "#1baf7a", "adaptive": "#eb6834", "spiral": "#7a5bc7",
+                   "correction_rcc": "#8fb83a", "spiral_rcc": "#c2408a"},
         "critical": "#d03b3b",
         "warning": "#fab219",
     },
@@ -54,7 +70,8 @@ THEMES = {
         "muted": "#898781",
         "grid": "#2c2c2a",
         "axis": "#383835",
-        "series": {"fixed": "#3987e5", "correction": "#199e70", "adaptive": "#d95926"},
+        "series": {"fixed": "#3987e5", "correction": "#199e70", "adaptive": "#d95926", "spiral": "#9479dd",
+                   "correction_rcc": "#9cc64a", "spiral_rcc": "#d65a9f"},
         "critical": "#d03b3b",
         "warning": "#fab219",
     },
@@ -364,7 +381,9 @@ def plot_failures(results: list[TrialResult], path: Path, th: dict) -> None:
     plt.close(fig)
 
 
-def plot_dashboard(summary: list[dict], results: list[TrialResult], path: Path, th: dict) -> None:
+def plot_dashboard(
+    summary: list[dict], results: list[TrialResult], path: Path, th: dict, title: str = "simulation benchmark"
+) -> None:
     """Investor dashboard (16:9, 1920x1080)."""
     ctrls = _controllers(results)
     fig = plt.figure(figsize=(12.8, 7.2), dpi=150, facecolor=th["page"])
@@ -372,19 +391,21 @@ def plot_dashboard(summary: list[dict], results: list[TrialResult], path: Path, 
     n_trials = len(results)
     n_conds = len({r.condition for r in results})
     n_per = max((s["n"] for s in summary), default=0)
-    fig.text(0.035, 0.935, "Defex Adaptive Insertion Engine  ·  V0.1 simulation benchmark", color=th["ink"], fontsize=17)
+    fig.text(0.035, 0.935, f"Defex Adaptive Insertion Engine  ·  {title}", color=th["ink"], fontsize=17)
     fig.text(0.035, 0.893,
              f"{n_trials:,} simulated insertions  ·  {n_conds} test conditions x {n_per} paired randomized trials  ·  "
              "MuJoCo physics, ground-truth scoring", color=th["ink2"], fontsize=9.5)
     # Hero tiles: overall success per controller (the tile swatch doubles as the legend)
-    tile_w, tile_h, top = 0.297, 0.175, 0.665
+    many = len(ctrls) > 3
+    gap = 0.0165 if not many else 0.008
+    tile_w, tile_h, top = (0.93 - gap * (len(ctrls) - 1)) / len(ctrls), 0.175, 0.665
     for k, c in enumerate(ctrls):
         rs = [r for r in results if r.controller == c]
         k_s = sum(r.success for r in rs)
         rate = k_s / max(len(rs), 1)
         lo, hi = wilson_interval(k_s, len(rs))
         stops = sum(r.protective_stop for r in rs)
-        x0 = 0.035 + k * (tile_w + 0.0165)
+        x0 = 0.035 + k * (tile_w + gap)
         ax = fig.add_axes((x0, top, tile_w, tile_h))
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
@@ -393,10 +414,17 @@ def plot_dashboard(summary: list[dict], results: list[TrialResult], path: Path, 
                                     mutation_aspect=tile_w / tile_h * 12.8 / 7.2, facecolor=th["surface"],
                                     edgecolor=th["grid"], lw=0.8))
         ax.add_patch(Rectangle((0.045, 0.71), 0.018, 0.15, color=th["series"][c], lw=0))
-        ax.text(0.085, 0.785, LABELS[c], color=th["ink2"], fontsize=10, va="center")
-        ax.text(0.045, 0.40, f"{rate * 100:.1f}%", color=th["ink"], fontsize=30, va="center", fontweight="bold")
-        ax.text(0.045, 0.12, f"{k_s:,} of {len(rs):,} trials  ·  95% CI {lo * 100:.1f}-{hi * 100:.1f}%  ·  "
-                f"{stops:,} safety stop{'' if stops == 1 else 's'}", color=th["muted"], fontsize=7.3)
+        ax.text(0.085, 0.785, LABELS[c], color=th["ink2"], fontsize=10 if not many else 8.5, va="center")
+        ax.text(0.045, 0.43, f"{rate * 100:.1f}%", color=th["ink"], fontsize=30 if not many else 21, va="center",
+                fontweight="bold")
+        esc = sum(is_escape(r) for r in rs)
+        if many:
+            ax.text(0.045, 0.19, f"{k_s:,}/{len(rs):,}  ·  CI {lo * 100:.1f}-{hi * 100:.1f}%", color=th["muted"],
+                    fontsize=6.6)
+            ax.text(0.045, 0.07, f"{stops:,} stops  ·  {esc:,} bad units passed", color=th["muted"], fontsize=6.6)
+        else:
+            ax.text(0.045, 0.12, f"{k_s:,} of {len(rs):,} trials  ·  95% CI {lo * 100:.1f}-{hi * 100:.1f}%  ·  "
+                    f"{stops:,} safety stop{'' if stops == 1 else 's'}", color=th["muted"], fontsize=7.3)
     # Charts row: success curves + gentleness
     def panel_title(ax, title: str, note: str) -> None:
         ax.set_title(title, color=th["ink"], fontsize=10, loc="left", pad=19)
@@ -527,8 +555,9 @@ def evaluate(run_dir: Path, theme: str = "light") -> None:
     plot_cycle_and_force(results, plots / "cycle_time_and_force.png", th)
     plot_recovery(results, plots / "recovery.png", th)
     plot_failures(results, plots / "failure_reasons.png", th)
-    plot_dashboard(summary, results, plots / "dashboard_dark.png", THEMES["dark"])
-    plot_dashboard(summary, results, plots / "dashboard_light.png", THEMES["light"])
+    title = f"{run_dir.name.replace('_', ' ')} simulation benchmark"
+    plot_dashboard(summary, results, plots / "dashboard_dark.png", THEMES["dark"], title)
+    plot_dashboard(summary, results, plots / "dashboard_light.png", THEMES["light"], title)
     write_report(summary, results, run_dir / "report.md")
     print(f"wrote plots to {plots} and {run_dir / 'report.md'}")
 

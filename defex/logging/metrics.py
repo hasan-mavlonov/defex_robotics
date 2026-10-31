@@ -71,14 +71,110 @@ def wilson_interval(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
 
 def _stats(values: list[float]) -> dict[str, float]:
     if not values:
-        return {"mean": float("nan"), "median": float("nan"), "p95": float("nan"), "max": float("nan")}
+        return {"mean": float("nan"), "median": float("nan"), "p95": float("nan"), "p99": float("nan"), "max": float("nan")}
     a = np.asarray(values, dtype=float)
     return {
         "mean": float(a.mean()),
         "median": float(np.median(a)),
         "p95": float(np.percentile(a, 95)),
+        "p99": float(np.percentile(a, 99)),
         "max": float(a.max()),
     }
+
+
+# Operator time to clear a protective stop and restart the cell. Assumed, not
+# measured: it is the main lever in the throughput comparison, so throughput is
+# reported both without it and with it.
+STOP_RESET_S = 60.0
+
+
+def is_escape(r: "TrialResult") -> bool:
+    """A failed unit that leaves the cell as if it were good.
+
+    The cell did not stop and the controller did not declare failure, so nothing
+    flags the part: a false accept for self-checking controllers, and every
+    non-stop failure for controllers that never check their work (A, B, E).
+    """
+    return (not r.success) and (not r.protective_stop) and r.declared_success is not False
+
+
+def throughput_uph(rs: list["TrialResult"], stop_reset_s: float) -> float:
+    """Good units per hour of cell time, counting failed cycles and stop resets."""
+    busy = sum(r.cycle_time_s for r in rs) + stop_reset_s * sum(r.protective_stop for r in rs)
+    return 3600.0 * sum(r.success for r in rs) / busy if busy > 0 else float("nan")
+
+
+def mcnemar_exact(b: int, c: int) -> float:
+    """Two-sided exact McNemar p-value from the discordant pair counts."""
+    n = b + c
+    if n == 0:
+        return 1.0
+    k = min(b, c)
+    tail = sum(math.comb(n, i) for i in range(k + 1)) / (1 << n)  # exact big-int ratio
+    return min(1.0, 2.0 * tail)
+
+
+def paired_comparison(results: Iterable["TrialResult"], reference: str = "adaptive") -> dict[str, dict[str, Any]]:
+    """Paired success comparison of every controller against ``reference``, trial by trial."""
+    by = {(r.controller, r.condition, r.trial_index): r.success for r in results}
+    ctrls = sorted({k[0] for k in by})
+    out = {}
+    for ctl in ctrls:
+        if ctl == reference:
+            continue
+        ref_only = other_only = pairs = 0
+        for (c, cond, i), ok in by.items():
+            if c != ctl or (reference, cond, i) not in by:
+                continue
+            pairs += 1
+            ref_ok = by[(reference, cond, i)]
+            ref_only += ref_ok and not ok
+            other_only += ok and not ref_ok
+        out[ctl] = {
+            "pairs": pairs,
+            "reference_only_success": ref_only,
+            "controller_only_success": other_only,
+            "mcnemar_p": mcnemar_exact(ref_only, other_only),
+        }
+    return out
+
+
+def summarize_overall(results: Iterable["TrialResult"]) -> list[dict[str, Any]]:
+    """One row per controller over all conditions (the README headline table)."""
+    groups: dict[str, list[TrialResult]] = defaultdict(list)
+    for r in results:
+        groups[r.controller].append(r)
+    out = []
+    for ctl, rs in groups.items():
+        n = len(rs)
+        k = sum(r.success for r in rs)
+        lo, hi = wilson_interval(k, n)
+        declared = [r for r in rs if r.declared_success is not None]
+        out.append(
+            {
+                "controller": ctl,
+                "n": n,
+                "successes": k,
+                "success_rate": k / n,
+                "success_ci_low": lo,
+                "success_ci_high": hi,
+                "escapes": int(sum(is_escape(r) for r in rs)),
+                "detected_failures": int(sum((not r.success) and not is_escape(r) for r in rs)),
+                "protective_stops": int(sum(r.protective_stop for r in rs)),
+                "false_accepts": int(sum(1 for r in declared if r.declared_success and not r.gt_seated)),
+                "false_rejects": int(sum(1 for r in declared if (r.declared_success is False) and r.gt_seated)),
+                "self_checks": bool(declared),
+                "cycle_time_s_success": _stats([r.cycle_time_s for r in rs if r.success]),
+                "cycle_time_s_all": _stats([r.cycle_time_s for r in rs]),
+                "throughput_uph_no_reset": throughput_uph(rs, 0.0),
+                "throughput_uph_with_reset": throughput_uph(rs, STOP_RESET_S),
+                "stop_reset_s": STOP_RESET_S,
+                "peak_contact_force_n": _stats([r.peak_contact_force_n for r in rs]),
+                "peak_measured_torque_nm": _stats([r.peak_measured_torque_nm for r in rs]),
+                "retries_mean": float(np.mean([r.retries for r in rs])),
+            }
+        )
+    return out
 
 
 def summarize(results: Iterable[TrialResult]) -> list[dict[str, Any]]:
@@ -126,6 +222,9 @@ def summarize(results: Iterable[TrialResult]) -> list[dict[str, Any]]:
                 "protective_stops": int(sum(r.protective_stop for r in rs)),
                 "false_accepts": int(sum(1 for r in declared if r.declared_success and not r.gt_seated)),
                 "false_rejects": int(sum(1 for r in declared if (r.declared_success is False) and r.gt_seated)),
+                "escapes": int(sum(is_escape(r) for r in rs)),
+                "throughput_uph_no_reset": throughput_uph(rs, 0.0),
+                "throughput_uph_with_reset": throughput_uph(rs, STOP_RESET_S),
                 "failure_reasons": dict(Counter(r.failure_reason for r in rs if not r.success)),
             }
         )

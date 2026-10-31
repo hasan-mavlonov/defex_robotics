@@ -203,6 +203,34 @@ class SensorNoiseConfig:
 
 
 @dataclass(frozen=True)
+class CompliantStageConfig:
+    """Passive remote-center compliance (RCC) stage between the F/T sensor and the gripper.
+
+    Used only by the passive-compliance baselines (E, F). The center of compliance
+    sits at the nominal plug tip. Values from public datasheets:
+
+    * Lateral: ATI 9115-001-A (smallest 9115 model), 33 lb/in = 5.78 N/mm; allowable
+      lateral misalignment for size 000: 0.065 in = 1.65 mm.
+      https://www.ati-ia.com/products/compliance/compensator_9115DataSheet.aspx
+    * Torsion (about the insertion axis): ATI lists no torsional stiffness, only an
+      allowable torsion of 4.5 deg (size 000). Stiffness from PFA AST-75 with MO-30
+      pads: 4.5 N mm/mrad = 4.5 N m/rad. https://www.pfa-inc.com/?p=7093
+    * Cocking (tilt): ATI 9115-001-A 1600 in-lb/rad = 181 N m/rad. At the cell's
+      0.6 N m torque stop that is under 0.2 deg of deflection, so cocking is
+      modeled as rigid (it would also need a far smaller physics step).
+    """
+
+    lateral_stiffness_n_per_mm: float = 5.78
+    lateral_travel_mm: float = 1.65
+    torsional_stiffness_nm_per_rad: float = 4.5
+    torsional_travel_deg: float = 4.5
+    moving_mass_kg: float = 0.010  # gripper share of the 30 g tool, carried by the stage (assumed)
+    lateral_armature_kg: float = 0.02  # moving plate of the compliance device (assumed)
+    torsional_armature_kgm2: float = 6e-6  # assumed: 30 g plate, 20 mm radius
+    damping_ratio: float = 0.3  # elastomer shear pads (assumed)
+
+
+@dataclass(frozen=True)
 class SafetyConfig:
     protective_stop_force_n: float = 30.0  # online, on the measured F/T (all controllers)
     protective_stop_torque_nm: float = 0.6
@@ -281,6 +309,70 @@ class PositionCorrectionConfig:
     insert_speed_mm_s: float = 8.0
     overtravel_mm: float = 0.5
     dwell_s: float = 0.3
+
+
+@dataclass(frozen=True)
+class PassiveComplianceConfig(PositionCorrectionConfig):
+    """Controller E: B's program on the passive RCC stage (tuned separately, see BASELINE_TUNING.md)."""
+
+    approach_height_mm: float = 2.0
+    insert_speed_mm_s: float = 4.0
+    overtravel_mm: float = 1.0
+
+
+@dataclass(frozen=True)
+class SpiralSearchConfig:
+    """Controllers D and F: force-controlled spiral search, as shipped in cobot insertion packages.
+
+    Defaults follow Flexiv's Adaptive Assembly primitives (SearchHole, InsertComp),
+    the only vendor page found that publishes numeric defaults:
+    https://www.flexiv.com/software/primitives/en/3.9/rizon4/Adaptive%20Assembly.html
+    SearchHole: contactForce 5 N (range 2-20), spiralRadius up to 0.015 m, hole found
+    when pushDistance > 0.005 m. InsertComp: insertVel 0.01 m/s, maxContactForce 5 N.
+    Robotiq's FT 300 Insertion node exposes the same spiral inputs (speed, force,
+    radius increment per turn, maximum radius) without published defaults:
+    https://dof.robotiq.com/discussion/1278. Pitch, speed, force and push distance are
+    tuned on the development seed (results/benchmark_v0.2a/BASELINE_TUNING.md).
+    Cell force limits are the same as controller C's.
+    """
+
+    approach_height_mm: float = 2.5  # above the estimated mouth, plus 3 sigma of vision z (as C)
+    transit_speed_mm_s: float = 40.0
+    retract_clearance_mm: float = 3.0
+    retract_speed_mm_s: float = 15.0
+    descent_speed_mm_s: float = 10.0  # Flexiv insertVel default
+    force_gain_mm_s_per_n: float = 1.0
+    contact_force_n: float = 1.0
+    search_force_n: float = 3.0  # tuned; Flexiv SearchHole contactForce default 5 N, range 2-20
+    spiral_pitch_mm: float = 1.0  # tuned; radius increment per turn (Robotiq term)
+    spiral_speed_mm_s: float = 5.0  # tuned; tangential speed along the spiral
+    spiral_max_radius_mm: float = 6.5  # same lateral bound as C's recovery
+    hole_push_mm: float = 0.5  # tuned; depth gained below the face that counts as "hole found"
+    # Lateral stiffness during the spiral (software spring on the stiff servo); 0 = stiff.
+    # Flexiv SearchHole exposes the same choice as searchStiffRatio (0.1-1, default 1).
+    search_lateral_stiffness_n_per_mm: float = 0.0
+    insert_force_n: float = 8.0  # tuned; Flexiv InsertComp maxContactForce default 5 N
+    insert_speed_mm_s: float = 10.0  # Flexiv InsertComp insertVel default
+    lateral_compliance_damping_n_s_per_mm: float = 1.0  # force-mode compliant x/y during insertion
+    max_lateral_compliance_mm: float = 2.0
+    seat_margin_mm: float = 1.0  # declared seated when this close to full depth
+    stall_window_s: float = 0.4
+    stall_progress_mm: float = 0.15
+    max_force_n: float = 20.0
+    max_torque_nm: float = 0.35
+    max_lateral_force_n: float = 10.0
+    max_attempts: int = 2  # tuned; re-descend at the found position after a jam
+    time_limit_s: float = 26.0
+    tare_settle_s: float = 0.06
+    tare_average_s: float = 0.06
+
+
+@dataclass(frozen=True)
+class CompliantSpiralSearchConfig(SpiralSearchConfig):
+    """Controller F: D's routine on the RCC stage, tuned separately (BASELINE_TUNING.md)."""
+
+    insert_force_n: float = 3.0
+    max_attempts: int = 3
 
 
 @dataclass(frozen=True)
@@ -369,6 +461,8 @@ def dataclass_from_dict(cls: type, data: dict[str, Any]) -> Any:
 
 __all__ = [
     "AdaptiveConfig",
+    "CompliantSpiralSearchConfig",
+    "CompliantStageConfig",
     "Condition",
     "ConnectorSpec",
     "DEG",
@@ -377,7 +471,9 @@ __all__ = [
     "FixtureConfig",
     "MM",
     "PlugGeometry",
+    "PassiveComplianceConfig",
     "PositionCorrectionConfig",
+    "SpiralSearchConfig",
     "REPO_ROOT",
     "SafetyConfig",
     "SensorNoiseConfig",

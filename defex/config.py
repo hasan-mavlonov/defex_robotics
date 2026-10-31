@@ -395,7 +395,7 @@ class AdaptiveConfig:
     contact_force_n: float = 1.0
     insert_force_n: float = 6.0
     force_gain_mm_s_per_n: float = 1.0
-    max_insert_speed_mm_s: float = 6.0
+    max_insert_speed_mm_s: float = 10.0  # W6 (V0.1: 6.0); see results/w6_development
     # Active compliance (admittance about the TCP)
     lateral_stiffness_n_per_mm: float = 0.3
     lateral_damping_n_s_per_mm: float = 1.0  # 1 mm/s per N of lateral force
@@ -436,10 +436,10 @@ class AdaptiveConfig:
     # Light axial preload held during probing. Floor friction (mu x preload) must stay
     # below verify_force_n, or the floor rather than a wall could stop a probe.
     verify_preload_n: float = 1.0
-    verify_probe_speed_mm_s: float = 2.5
+    verify_probe_speed_mm_s: float = 5.0  # W6 (V0.1: 2.5)
     # Yaw centering inside the cavity (runs when the vision yaw sigma exceeds the gate)
     yaw_center_gate_deg: float = 1.0
-    yaw_probe_speed_deg_s: float = 10.0
+    yaw_probe_speed_deg_s: float = 25.0  # W6 (V0.1: 10.0)
     yaw_probe_torque_nm: float = 0.02
     yaw_probe_max_deg: float = 7.0
     # ---- Constants moved out of the controller code in W2. Values are unchanged from
@@ -448,7 +448,7 @@ class AdaptiveConfig:
     # Motion and command limits
     max_back_off_speed_mm_s: float = 4.0  # force loop's maximum retreat speed (dev-tuned)
     free_insert_speed_mm_s: float = 15.0  # descent inside the cavity before contact (dev-tuned)
-    near_bottom_speed_mm_s: float = 5.0  # slower descent near the floor (dev-tuned)
+    near_bottom_speed_mm_s: float = 10.0  # W6 (V0.1: 5.0): slower descent near the floor
     near_bottom_margin_mm: float = 2.0  # "near the floor" starts this far above it, plus 3 sigma
     force_phase_speed_cap_mm_s: float = 30.0  # motion-generator cap while the force loop moves the setpoint
     slow_phase_speed_cap_mm_s: float = 10.0  # cap for yaw probing and terminal holds

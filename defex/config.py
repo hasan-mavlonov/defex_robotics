@@ -434,6 +434,87 @@ class AdaptiveConfig:
     yaw_probe_speed_deg_s: float = 10.0
     yaw_probe_torque_nm: float = 0.02
     yaw_probe_max_deg: float = 7.0
+    # ---- Constants moved out of the controller code in W2. Values are unchanged from
+    # V0.1; the basis says where each came from. "dev-tuned" means chosen by hand on
+    # development seed 2026 (see the W2 sensitivity sweep for how much each matters).
+    # Motion and command limits
+    max_back_off_speed_mm_s: float = 4.0  # force loop's maximum retreat speed (dev-tuned)
+    free_insert_speed_mm_s: float = 15.0  # descent inside the cavity before contact (dev-tuned)
+    near_bottom_speed_mm_s: float = 5.0  # slower descent near the floor (dev-tuned)
+    near_bottom_margin_mm: float = 2.0  # "near the floor" starts this far above it, plus 3 sigma
+    force_phase_speed_cap_mm_s: float = 30.0  # motion-generator cap while the force loop moves the setpoint
+    slow_phase_speed_cap_mm_s: float = 10.0  # cap for yaw probing and terminal holds
+    verify_return_speed_factor: float = 2.0  # probe return speed relative to the probe speed
+    # Reached-target tolerances (setpoint vs commanded target)
+    reach_tol_mm: float = 0.002
+    reach_tol_rad: float = 1e-4
+    retract_reach_tol_mm: float = 0.005
+    retract_reach_tol_rad: float = 2e-3
+    probe_reach_tol_mm: float = 0.02
+    yaw_reach_tol_rad: float = 2e-4
+    # Depth uncertainty bookkeeping (multiples of the depth sigma)
+    touch_depth_sigma_mm: float = 0.1  # depth uncertainty after touching the top face (encoder + CoP model)
+    approach_sigma_k: float = 3.0
+    engage_sigma_k: float = 3.0
+    near_bottom_sigma_k: float = 3.0
+    mouth_sigma_k: float = 3.0
+    seat_sigma_k: float = 2.5  # looser than 3: the bottoming force confirms the seat (dev-tuned)
+    # Vision prior for the hole localizer
+    min_prior_sigma_mm: float = 0.15  # floor so a perfect camera still leaves a usable prior
+    prior_sigma_scale: float = 1.3  # widen the characterized sigma (dev-tuned)
+    # Free-space tare before each attempt
+    tare_settle_s: float = 0.06
+    tare_end_s: float = 0.12
+    # Contact detection hysteresis (multiples of contact_force_n)
+    contact_on_norm_factor: float = 1.5
+    contact_off_axial_factor: float = 0.5
+    contact_off_norm_factor: float = 0.75
+    # Bottoming detection during INSERT
+    bottom_force_fraction: float = 0.8  # of insert_force_n
+    bottom_hold_s: float = 0.08
+    # DETECT
+    excess_diagnosis_samples: int = 10  # samples used when an excess-force stop skips the hold
+    recent_samples: int = 25
+    surface_conform_delay_s: float = 0.04
+    bottomed_hold_s: float = 0.05
+    detect_discard_divisor: int = 3  # discard the first third of a window (transient)
+    slide_in_depth_mm: float = 0.8  # depth gained during conform that means "slid into the lead-in"
+    conform_window_s: float = 0.06
+    conform_min_s: float = 0.1
+    conform_rate_deg: float = 0.03  # settled when the tilt moved less than this over the window
+    conform_saturation_fraction: float = 0.97
+    measure_s: float = 0.1
+    surface_cop_margin_mm: float = 0.3  # CoP may sit this far outside the plug face (noise)
+    surface_lateral_ratio: float = 0.35  # lateral/axial force ratio of a flat face contact
+    surface_lateral_offset_n: float = 0.5
+    touch_higher_support_mm: float = 0.15  # a support this much higher re-calibrates the mouth
+    tilt_fold_cop_mm: float = 0.4  # CoP this close to centre means the plug sat flat
+    seat_lateral_ratio: float = 0.6  # deep stall with more side load than this is a jam
+    seat_lateral_offset_n: float = 1.0
+    # RECOVER
+    retract_stuck_force_factor: float = 1.2  # of max_force_n
+    retract_stuck_delay_s: float = 0.3
+    yaw_search_entry_probability: float = 0.6  # a block where entry was this likely counts toward yaw search
+    clean_cop_mm: float = 0.4
+    unclean_cop_sigma_mm: float = 1.2  # CoP noise assumed for mixed face/lead-in support
+    yaw_search_step_deg: float = 3.0  # yaw search tries +/-step, +/-2 step, ...
+    yaw_search_steps: int = 4
+    # Hole localizer model
+    localizer_outlier_weight: float = 0.1
+    localizer_entry_likelihood: float = 0.05
+    localizer_band_stick_probability: float = 0.35
+    localizer_prior_uniform_weight: float = 0.1  # heavy tail on the vision prior
+    localizer_exclude_fraction: float = 0.75  # of the strict clearance, around blocked probes
+    localizer_exclude_min_cells: float = 0.6
+    localizer_min_support_mm: float = 0.02  # support strips narrower than this do not carry load
+    # VERIFY
+    verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance
+    seat_conform_min_s: float = 0.08
+    seat_conform_max_s: float = 0.8
+    preload_tolerance_n: float = 0.2
+    preload_min_s: float = 0.1
+    preload_settle_s: float = 0.05
+    preload_max_s: float = 0.8
 
 
 # --------------------------------------------------------------------------------------

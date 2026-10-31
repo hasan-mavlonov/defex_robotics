@@ -23,6 +23,8 @@ import numpy as np
 from defex.config import MM, AdaptiveConfig
 from defex.perception.state_estimator import Observation
 
+_WINDOW_FILL = 0.98  # window counts as full despite sample-time jitter (numerical, not tuned)
+
 
 class InsertionMonitor:
     def __init__(self, cfg: AdaptiveConfig) -> None:
@@ -40,7 +42,7 @@ class InsertionMonitor:
             return None
         t_now, d_now = self._hist[-1]
         t_old, d_old = self._hist[0]
-        if t_now - t_old < self.cfg.stall_window_s * 0.98:
+        if t_now - t_old < self.cfg.stall_window_s * _WINDOW_FILL:
             return None
         return d_now - d_old
 

@@ -38,7 +38,17 @@ from functools import lru_cache
 
 import numpy as np
 
-from defex.config import MM, ConnectorSpec
+from defex.config import MM, AdaptiveConfig, ConnectorSpec
+
+# Numerical guards (not tuned): geometric tie tolerances and a log floor.
+_ORIGIN_TOL = 1e-12
+_ANGLE_TOL = 1e-9
+_GRID_TOL = 1e-9
+_LOG_FLOOR = 1e-300
+_SIGMA_FLOOR = 1e-6  # m, keeps a zero prior sigma finite
+_NO_PREDICTION = 1e3  # m, stands in for "no CoP predicted" in squared distances
+_TABLE_CHUNK = 4096  # rows per vectorized block when building the contact table
+_DEFAULT_MIN_SUPPORT = 0.02 * MM
 
 
 @dataclass(frozen=True)
@@ -77,8 +87,8 @@ def _hull_projection(P: np.ndarray, V: np.ndarray) -> np.ndarray:
         last = np.take_along_axis(ang, np.maximum(cnt - 1, 0)[:, None], axis=1)[:, 0]
         wrap = np.where(cnt > 0, first + 2.0 * np.pi - last, np.inf)
     max_gap = np.maximum(gaps.max(axis=1), wrap)
-    at_origin = (V & (np.hypot(P[..., 0], P[..., 1]) < 1e-12)).any(axis=1)
-    inside = any_valid & ((max_gap < np.pi - 1e-9) | at_origin)
+    at_origin = (V & (np.hypot(P[..., 0], P[..., 1]) < _ORIGIN_TOL)).any(axis=1)
+    inside = any_valid & ((max_gap < np.pi - _ANGLE_TOL) | at_origin)
     # Otherwise the closest hull point lies on a segment between two valid points.
     iu, ju = np.triu_indices(P.shape[1], k=1)
     A = P[:, iu]
@@ -165,6 +175,7 @@ def _contact_table(
     outer_half: tuple[float, float],
     step: float,
     max_offset: float,
+    min_support: float = _DEFAULT_MIN_SUPPORT,
 ) -> _ContactTable:
     px, py = plug_half
     hx, hy = cavity_half
@@ -178,9 +189,9 @@ def _contact_table(
     missed = np.zeros(o.shape[0], dtype=bool)
     cop = np.full((o.shape[0], 2), np.nan)
     cop_band = np.full((o.shape[0], 2), np.nan)
-    chunk = 4096
+    chunk = _TABLE_CHUNK
     for a in range(0, o.shape[0], chunk):
-        b_, m_, c_ = _support_cop(o[a : a + chunk], (px, py), (ex, ey), outer_half, min_width=0.02 * MM)
+        b_, m_, c_ = _support_cop(o[a : a + chunk], (px, py), (ex, ey), outer_half, min_width=min_support)
         blocked[a : a + chunk] = b_
         missed[a : a + chunk] = m_
         cop[a : a + chunk] = c_
@@ -212,10 +223,27 @@ class HoleLocalizer:
         extent: float,
         resolution: float,
         cop_sigma: float,
-        outlier_weight: float = 0.1,
-        entry_likelihood: float = 0.05,
-        band_stick_probability: float = 0.35,
+        outlier_weight: float | None = None,
+        entry_likelihood: float | None = None,
+        band_stick_probability: float | None = None,
+        prior_uniform_weight: float | None = None,
+        exclude_fraction: float | None = None,
+        exclude_min_cells: float | None = None,
+        min_support: float | None = None,
     ) -> None:
+        # Unset model parameters take AdaptiveConfig's localizer_* defaults (single source).
+        d = AdaptiveConfig()
+        outlier_weight = d.localizer_outlier_weight if outlier_weight is None else outlier_weight
+        entry_likelihood = d.localizer_entry_likelihood if entry_likelihood is None else entry_likelihood
+        band_stick_probability = (
+            d.localizer_band_stick_probability if band_stick_probability is None else band_stick_probability
+        )
+        prior_uniform_weight = d.localizer_prior_uniform_weight if prior_uniform_weight is None else prior_uniform_weight
+        exclude_fraction = d.localizer_exclude_fraction if exclude_fraction is None else exclude_fraction
+        exclude_min_cells = d.localizer_exclude_min_cells if exclude_min_cells is None else exclude_min_cells
+        min_support = d.localizer_min_support_mm * MM if min_support is None else min_support
+        self.exclude_fraction = exclude_fraction
+        self.exclude_min_cells = exclude_min_cells
         self.res = resolution
         self.extent = extent
         self.cop_sigma = cop_sigma
@@ -231,16 +259,17 @@ class HoleLocalizer:
             spec.chamfer,
             spec.outer_half,
             resolution,
-            2.0 * extent + max(spec.plug_half[0], spec.plug_half[1]),
+            2 * extent + max(spec.plug_half[0], spec.plug_half[1]),  # probe and hole both within +/- extent
+            min_support,
         )
         self.capture_half = self.table.capture_half
         self.p_stick = band_stick_probability
         self._uniform_cop_density = 1.0 / (4.0 * spec.plug_half[0] * spec.plug_half[1])
         # Heavy-tailed prior: Gaussian around the vision estimate + uniform floor.
         r2 = self.hx**2 + self.hy**2
-        gauss = np.exp(-0.5 * r2 / max(prior_sigma, 1e-6) ** 2)
+        gauss = np.exp(-0.5 * r2 / max(prior_sigma, _SIGMA_FLOOR) ** 2)
         gauss /= gauss.sum()
-        self.log_post = np.log(0.9 * gauss + 0.1 / gauss.size)
+        self.log_post = np.log((1 - prior_uniform_weight) * gauss + prior_uniform_weight / gauss.size)
         self.n_updates = 0
 
     # ------------------------------------------------------------------ inference
@@ -287,10 +316,10 @@ class HoleLocalizer:
             s2 = (self.cop_sigma if cop_sigma is None else cop_sigma) ** 2
             c = np.asarray(cop)
             pred = np.where(blocked[..., None], cop_top, np.where(band[..., None], cop_band, np.nan))
-            d2 = ((np.nan_to_num(pred, nan=1e3) - c) ** 2).sum(axis=-1)
+            d2 = ((np.nan_to_num(pred, nan=_NO_PREDICTION) - c) ** 2).sum(axis=-1)
             gauss = np.where(blocked | band, np.exp(-0.5 * d2 / s2) / (2.0 * np.pi * s2), 0.0)
             like = p_block * ((1.0 - self.outlier) * gauss + self.outlier * self._uniform_cop_density)
-        self.log_post += np.log(like + 1e-300)
+        self.log_post += np.log(like + _LOG_FLOOR)
         self.log_post -= self.log_post.max()
         self.n_updates += 1
 
@@ -306,8 +335,8 @@ class HoleLocalizer:
         self.n_updates += 1
 
     def _box(self, p: np.ndarray, half: tuple[float, float]) -> np.ndarray:
-        kx = max(int(np.floor(half[0] / self.res + 1e-9)), 0)
-        ky = max(int(np.floor(half[1] / self.res + 1e-9)), 0)
+        kx = max(int(np.floor(half[0] / self.res + _GRID_TOL)), 0)
+        ky = max(int(np.floor(half[1] / self.res + _GRID_TOL)), 0)
         n = p.shape[0]
         c = np.zeros((n + 1, n + 1))
         c[1:, 1:] = p.cumsum(0).cumsum(1)
@@ -342,13 +371,13 @@ class HoleLocalizer:
         pc = self.entry_probability()
         mask = (self.hx**2 + self.hy**2) <= max_radius**2
         if exclude:
-            r = min(self.table.strict_half) * 0.75 if exclude_radius is None else exclude_radius
-            r = max(r, 0.6 * self.res)
+            r = min(self.table.strict_half) * self.exclude_fraction if exclude_radius is None else exclude_radius
+            r = max(r, self.exclude_min_cells * self.res)
             for q in exclude:
                 mask &= (self.hx - q[0]) ** 2 + (self.hy - q[1]) ** 2 > r**2
         pc = np.where(mask, pc, -1.0)
         best = pc.max()
-        cand = np.argwhere(pc >= best - 1e-9)
+        cand = np.argwhere(pc >= best - _GRID_TOL)
         mean = self.mean()
         pts = np.stack([self.grid[cand[:, 0]], self.grid[cand[:, 1]]], axis=1)
         k = int(np.argmin(((pts - mean) ** 2).sum(axis=1)))
@@ -363,9 +392,17 @@ def predicted_cop(spec: ConnectorSpec, offset: np.ndarray) -> np.ndarray | None:
         (spec.plug_half[0], spec.plug_half[1]),
         (ex, ey),
         spec.outer_half,
-        min_width=0.02 * MM,
+        min_width=_DEFAULT_MIN_SUPPORT,
     )
     return cop[0].copy() if blocked[0] else None
 
 
-YAW_SEARCH_SEQUENCE_DEG = (3.0, -3.0, 6.0, -6.0, 9.0, -9.0, 12.0, -12.0)
+def yaw_search_sequence_deg(step_deg: float, steps: int) -> tuple[float, ...]:
+    """+step, -step, +2 step, -2 step, ... (AdaptiveConfig.yaw_search_step_deg / _steps)."""
+    out: list[float] = []
+    for k in range(1, steps + 1):
+        out += [k * step_deg, -k * step_deg]
+    return tuple(out)
+
+
+YAW_SEARCH_SEQUENCE_DEG = yaw_search_sequence_deg(3.0, 4)  # V0.1 default, kept for imports

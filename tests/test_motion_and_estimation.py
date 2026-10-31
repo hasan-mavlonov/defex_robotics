@@ -95,3 +95,16 @@ def test_harness_identifies_the_payload_instead_of_reading_the_simulator():
     src = (ROOT / "defex" / "tasks" / "insertion.py").read_text()
     assert "true_payload" not in src
     assert "StateEstimator(payload" in src
+
+
+def test_adaptive_controller_has_no_bare_tuning_constants():
+    """W2: every tuned number in C's state machine lives in AdaptiveConfig."""
+    tree = ast.parse((ROOT / "defex" / "control" / "adaptive_fsm.py").read_text())
+    found = [
+        (n.lineno, n.value)
+        for fn in ast.walk(tree)
+        if isinstance(fn, ast.FunctionDef)
+        for n in ast.walk(fn)
+        if isinstance(n, ast.Constant) and type(n.value) is float and n.value not in (0.0, 1.0, 0.5)
+    ]
+    assert not found, found

@@ -46,7 +46,7 @@ from defex.control.base import Command, ControllerContext, InsertionController
 from defex.control.compliance import Admittance, ForceGuidedAxis
 from defex.perception.state_estimator import Observation
 from defex.recovery.failure_detector import ContactDiagnoser, ContactDiagnosis, InsertionMonitor
-from defex.recovery.search_policy import YAW_SEARCH_SEQUENCE_DEG, HoleLocalizer
+from defex.recovery.search_policy import HoleLocalizer, yaw_search_sequence_deg
 from defex.utils.transforms import Pose, matrix_to_rotvec, norm3, rot_z, rotvec_to_matrix
 
 APPROACH, ALIGN, INSERT, DETECT, RECOVER, VERIFY, SUCCESS, FAILURE = (
@@ -60,6 +60,7 @@ APPROACH, ALIGN, INSERT, DETECT, RECOVER, VERIFY, SUCCESS, FAILURE = (
     "FAILURE",
 )
 FSM_STATES = (APPROACH, ALIGN, INSERT, DETECT, RECOVER, VERIFY, SUCCESS, FAILURE)
+_EPS = 1e-6  # guards divisions by a force or a direction component (numerical, not tuned)
 
 
 class AdaptiveInsertionController(InsertionController):
@@ -72,7 +73,10 @@ class AdaptiveInsertionController(InsertionController):
         c = self.cfg
         self.monitor = InsertionMonitor(c)
         self.diagnoser = ContactDiagnoser(c)
-        self.force_axis = ForceGuidedAxis(c.force_gain_mm_s_per_n * MM, c.max_insert_speed_mm_s * MM, 4.0 * MM)
+        self.force_axis = ForceGuidedAxis(
+            c.force_gain_mm_s_per_n * MM, c.max_insert_speed_mm_s * MM, c.max_back_off_speed_mm_s * MM
+        )
+        self.yaw_sequence = yaw_search_sequence_deg(c.yaw_search_step_deg, c.yaw_search_steps)
         self.adm_lat = Admittance(
             c.lateral_stiffness_n_per_mm / MM, c.lateral_damping_n_s_per_mm / MM, c.max_lateral_compliance_mm * MM, 2
         )
@@ -114,7 +118,7 @@ class AdaptiveInsertionController(InsertionController):
         self.phase_t = 0.0
         self._trigger = ""
         self._window: list[Observation] = []
-        self._recent: deque[Observation] = deque(maxlen=25)
+        self._recent: deque[Observation] = deque(maxlen=c.recent_samples)
         self._contact = False
         self._conf_hist: deque[tuple[float, np.ndarray]] = deque()
         self._conf_saturated = False
@@ -126,16 +130,24 @@ class AdaptiveInsertionController(InsertionController):
         self._yaw_results: list[float] = []
         self._yaw_base = 0.0
         self._bottom_since: float | None = None
-        sigma_xy = max(ctx.vision_accuracy.vision_xy_sigma_mm, 0.15) * MM
+        sigma_xy = max(ctx.vision_accuracy.vision_xy_sigma_mm, c.min_prior_sigma_mm) * MM
         bias = ctx.vision_accuracy.vision_bias_mm * MM
         self.localizer = HoleLocalizer(
             spec,
-            prior_sigma=float(np.hypot(1.3 * sigma_xy, bias)),
+            prior_sigma=float(np.hypot(c.prior_sigma_scale * sigma_xy, bias)),
             extent=c.search_extent_mm * MM,
             resolution=c.search_resolution_mm * MM,
             cop_sigma=c.cop_sigma_mm * MM,
+            outlier_weight=c.localizer_outlier_weight,
+            entry_likelihood=c.localizer_entry_likelihood,
+            band_stick_probability=c.localizer_band_stick_probability,
+            prior_uniform_weight=c.localizer_prior_uniform_weight,
+            exclude_fraction=c.localizer_exclude_fraction,
+            exclude_min_cells=c.localizer_exclude_min_cells,
+            min_support=c.localizer_min_support_mm * MM,
         )
-        self.verify_probe = max(c.verify_probe_mm, 2.0 * spec.socket.clearance_mm + 0.35) * MM
+        # Both walls: the plug crosses the clearance twice.
+        self.verify_probe = max(c.verify_probe_mm, 2 * spec.socket.clearance_mm + c.verify_probe_margin_mm) * MM
 
     # ------------------------------------------------------------------ helpers
     def _wrench(self, obs: Observation) -> tuple[np.ndarray, np.ndarray]:
@@ -145,18 +157,21 @@ class AdaptiveInsertionController(InsertionController):
         return obs.depth - self.depth_offset
 
     def _sigma_depth(self) -> float:
-        return 0.1 * MM if self.touch_calibrated else self.sigma_z
+        return self.cfg.touch_depth_sigma_mm * MM if self.touch_calibrated else self.sigma_z
 
     def _engaged(self, depth: float) -> bool:
         """Confidently inside the cavity (accounting for depth uncertainty)."""
-        return depth > self.cfg.engage_depth_mm * MM + 3.0 * self._sigma_depth()
+        return depth > self._engage_threshold()
+
+    def _engage_threshold(self) -> float:
+        return self.cfg.engage_depth_mm * MM + self.cfg.engage_sigma_k * self._sigma_depth()
 
     def _seat_threshold(self) -> float:
-        return self.depth - self.cfg.seat_depth_margin_mm * MM - 2.5 * self._sigma_depth()
+        return self.depth - self.cfg.seat_depth_margin_mm * MM - self.cfg.seat_sigma_k * self._sigma_depth()
 
     def _mouth_z(self) -> float:
         """Height of the true mouth plane in the estimated socket frame (conservative)."""
-        return -self.depth_offset if self.touch_calibrated else 3.0 * self.sigma_z
+        return -self.depth_offset if self.touch_calibrated else self.cfg.mouth_sigma_k * self.sigma_z
 
     def _target(self) -> Pose:
         xy = self.xy + self.adm_lat.x
@@ -171,7 +186,9 @@ class AdaptiveInsertionController(InsertionController):
         self.markers["target"] = target @ self.G
         return Command(target, speed_mm_s * MM, self.ctx.fixture.max_angular_speed_deg_s * DEG)
 
-    def _reached(self, obs: Observation, tol: float = 2e-6, rot_tol: float = 1e-4) -> bool:
+    def _reached(self, obs: Observation, tol: float | None = None, rot_tol: float | None = None) -> bool:
+        tol = self.cfg.reach_tol_mm * MM if tol is None else tol
+        rot_tol = self.cfg.reach_tol_rad if rot_tol is None else rot_tol
         target = self._target()
         dp = norm3(obs.setpoint.p - target.p)
         dr = norm3(matrix_to_rotvec(target.R @ obs.setpoint.R.T))
@@ -195,7 +212,7 @@ class AdaptiveInsertionController(InsertionController):
             self.S = obs.socket_pose
             self.G = obs.grasp_offset
             self.t_start = obs.t
-            self.z = c.approach_height_mm * MM + 3.0 * self.sigma_z
+            self.z = c.approach_height_mm * MM + c.approach_sigma_k * self.sigma_z
             self._enter(obs.t, APPROACH)
         self._recent.append(obs)
         if self.state not in (SUCCESS, FAILURE) and obs.t - self.t_start > c.time_limit_s:
@@ -227,9 +244,9 @@ class AdaptiveInsertionController(InsertionController):
                 self._tare_buf = []
             return self._cmd(c.reposition_speed_mm_s)
         # settle + free-space tare of the wrench (removes residual gravity/orientation error)
-        if obs.t - self.phase_t > 0.06:
+        if obs.t - self.phase_t > c.tare_settle_s:
             self._tare_buf.append((obs.force.copy(), obs.torque.copy()))
-        if obs.t - self.phase_t > 0.12:
+        if obs.t - self.phase_t > c.tare_end_s:
             if self._tare_buf:
                 self.bias_f = np.mean([f for f, _ in self._tare_buf], axis=0)
                 self.bias_t = np.mean([t for _, t in self._tare_buf], axis=0)
@@ -254,35 +271,38 @@ class AdaptiveInsertionController(InsertionController):
         f_ax = float(F[2])
         depth = self._corrected_depth(obs)
         # contact state with hysteresis
-        if f_ax > c.contact_force_n or norm3(F) > 1.5 * c.contact_force_n:
+        if f_ax > c.contact_force_n or norm3(F) > c.contact_on_norm_factor * c.contact_force_n:
             self._contact = True
-        elif f_ax < 0.5 * c.contact_force_n and norm3(F) < 0.75 * c.contact_force_n:
+        elif (
+            f_ax < c.contact_off_axial_factor * c.contact_force_n
+            and norm3(F) < c.contact_off_norm_factor * c.contact_force_n
+        ):
             self._contact = False
         engaged = self._engaged(depth)
-        near_bottom = depth > self.depth - (2.0 * MM + 3.0 * self._sigma_depth())
+        near_bottom = depth > self.depth - (c.near_bottom_margin_mm * MM + c.near_bottom_sigma_k * self._sigma_depth())
         if self._contact:
             v = self.force_axis.velocity(c.insert_force_n, f_ax)
             self.adm_lat.update(F[:2], dt)
             self.adm_rot.update(T, dt, active=np.array([engaged, engaged, True], dtype=float))
-        elif not engaged and depth < c.engage_depth_mm * MM + 3.0 * self._sigma_depth():
+        elif not engaged and depth < self._engage_threshold():
             v = c.max_insert_speed_mm_s * MM
         elif near_bottom:
-            v = 5.0 * MM
+            v = c.near_bottom_speed_mm_s * MM
         else:
-            v = 15.0 * MM
+            v = c.free_insert_speed_mm_s * MM
         self.z -= v * dt
         # Bottoming: deep enough and pushing at the target force -> diagnose quickly.
-        if depth >= self._seat_threshold() and f_ax > 0.8 * c.insert_force_n:
+        if depth >= self._seat_threshold() and f_ax > c.bottom_force_fraction * c.insert_force_n:
             if self._bottom_since is None:
                 self._bottom_since = obs.t
-            elif obs.t - self._bottom_since > 0.08:
+            elif obs.t - self._bottom_since > c.bottom_hold_s:
                 return self._to_detect(obs, "bottomed")
         else:
             self._bottom_since = None
         reason = self.monitor.update_values(obs.t, depth, F, T, c.insert_force_n)
         if reason is not None:
             return self._to_detect(obs, reason)
-        return self._cmd(30.0)
+        return self._cmd(c.force_phase_speed_cap_mm_s)
 
     # ------------------------------------------------------------------ DETECT
     def _to_detect(self, obs: Observation, trigger: str) -> Command:
@@ -291,10 +311,10 @@ class AdaptiveInsertionController(InsertionController):
         self._enter(obs.t, DETECT, "hold", trigger)
         if trigger.startswith("excess"):
             # Do not keep pressing: diagnose from the most recent samples and back off.
-            self.diagnosis = self._diagnose(list(self._recent)[-10:], trigger)
+            self.diagnosis = self._diagnose(list(self._recent)[-self.cfg.excess_diagnosis_samples :], trigger)
             self.log(obs.t, "detect", self.diagnosis.describe())
             return self._begin_recover(obs)
-        return self._cmd(30.0)
+        return self._cmd(self.cfg.force_phase_speed_cap_mm_s)
 
     def _diagnose(self, window: list[Observation], trigger: str) -> ContactDiagnosis:
         forces, torques = [], []
@@ -311,7 +331,7 @@ class AdaptiveInsertionController(InsertionController):
             self.depth_offset,
             self._seat_threshold(),
             trigger,
-            engage_threshold=self.cfg.engage_depth_mm * MM + 3.0 * self._sigma_depth(),
+            engage_threshold=self._engage_threshold(),
         )
 
     def _detect_step(self, obs: Observation) -> Command:
@@ -321,7 +341,7 @@ class AdaptiveInsertionController(InsertionController):
             self._window.append(obs)
             depth = self._corrected_depth(obs)
             possibly_surface = not self._engaged(depth) and depth < self._seat_threshold()
-            if possibly_surface and obs.t - self.phase_t >= 0.04:
+            if possibly_surface and obs.t - self.phase_t >= c.surface_conform_delay_s:
                 # Possibly stopped on the top face: let the plug face conform first so the
                 # center of pressure reflects the support geometry, not the tilt error.
                 self.adm_conf.reset()
@@ -329,11 +349,11 @@ class AdaptiveInsertionController(InsertionController):
                 self._conf_saturated = False
                 self._conf_depth0 = depth
                 self.phase, self.phase_t = "conform", obs.t
-                return self._cmd(30.0)
-            hold = 0.05 if self._trigger == "bottomed" else c.detect_hold_s
+                return self._cmd(c.force_phase_speed_cap_mm_s)
+            hold = c.bottomed_hold_s if self._trigger == "bottomed" else c.detect_hold_s
             if obs.t - self.phase_t < hold:
-                return self._cmd(30.0)
-            return self._conclude_detect(obs, self._window[len(self._window) // 3 :])
+                return self._cmd(c.force_phase_speed_cap_mm_s)
+            return self._conclude_detect(obs, self._window[len(self._window) // c.detect_discard_divisor :])
         if self.phase == "conform":
             F, T = self._wrench(obs)
             self.z -= self.force_axis.velocity(c.conform_force_n, float(F[2])) * dt
@@ -342,44 +362,49 @@ class AdaptiveInsertionController(InsertionController):
             # the lead-in, the chamfer reaction is allowed to guide it into the cavity.
             self.adm_lat.update(F[:2], dt)
             self.adm_rot.update(T, dt, active=np.array([0.0, 0.0, 1.0]))
-            if self._corrected_depth(obs) - self._conf_depth0 > 0.8 * MM:
+            if self._corrected_depth(obs) - self._conf_depth0 > c.slide_in_depth_mm * MM:
                 self.log(obs.t, "conform", "plug slid into the lead-in: resuming insertion")
                 self.monitor.reset(obs.t)
                 self._enter(obs.t, INSERT)
-                return self._cmd(30.0)
+                return self._cmd(c.force_phase_speed_cap_mm_s)
             self._conf_hist.append((obs.t, self.adm_conf.x.copy()))
-            while self._conf_hist and obs.t - self._conf_hist[0][0] > 0.06:
+            while self._conf_hist and obs.t - self._conf_hist[0][0] > c.conform_window_s:
                 self._conf_hist.popleft()
             elapsed = obs.t - self.phase_t
             rate = norm3(self._conf_hist[-1][1] - self._conf_hist[0][1])
-            saturated = norm3(self.adm_conf.x) >= 0.97 * c.conform_limit_deg * DEG
-            if (elapsed > 0.1 and (rate < 0.03 * DEG or saturated)) or elapsed > c.conform_max_s:
+            saturated = norm3(self.adm_conf.x) >= c.conform_saturation_fraction * c.conform_limit_deg * DEG
+            if (elapsed > c.conform_min_s and (rate < c.conform_rate_deg * DEG or saturated)) or elapsed > c.conform_max_s:
                 self._conf_saturated = saturated
                 self.phase, self.phase_t = "measure", obs.t
                 self._window = []
-            return self._cmd(30.0)
+            return self._cmd(c.force_phase_speed_cap_mm_s)
         # measure: tilt frozen, keep the conform force, average the wrench
         F, T = self._wrench(obs)
         self.z -= self.force_axis.velocity(c.conform_force_n, float(F[2])) * dt
         self.adm_lat.update(F[:2], dt)
         self.adm_rot.update(T, dt, active=np.array([0.0, 0.0, 1.0]))
-        if self._corrected_depth(obs) - self._conf_depth0 > 0.8 * MM:
+        if self._corrected_depth(obs) - self._conf_depth0 > c.slide_in_depth_mm * MM:
             self.log(obs.t, "conform", "plug slid into the lead-in: resuming insertion")
             self.monitor.reset(obs.t)
             self._enter(obs.t, INSERT)
-            return self._cmd(30.0)
+            return self._cmd(c.force_phase_speed_cap_mm_s)
         self._window.append(obs)
-        if obs.t - self.phase_t < 0.1:
-            return self._cmd(30.0)
-        return self._conclude_detect(obs, self._window[len(self._window) // 3 :])
+        if obs.t - self.phase_t < c.measure_s:
+            return self._cmd(c.force_phase_speed_cap_mm_s)
+        return self._conclude_detect(obs, self._window[len(self._window) // c.detect_discard_divisor :])
 
     def _surface_consistent(self, diag: ContactDiagnosis) -> bool:
         """Contact signature of a flat face resting on the top surface."""
         if diag.cop is None:
             return False
+        c = self.cfg
         px, py = self.plug_half
-        inside_face = abs(diag.cop[0]) <= px + 0.3 * MM and abs(diag.cop[1]) <= py + 0.3 * MM
-        lateral_small = float(np.hypot(*diag.lateral_force)) <= 0.35 * max(diag.axial_force, 1e-6) + 0.5
+        m = c.surface_cop_margin_mm * MM
+        inside_face = abs(diag.cop[0]) <= px + m and abs(diag.cop[1]) <= py + m
+        lateral_small = (
+            float(np.hypot(*diag.lateral_force))
+            <= c.surface_lateral_ratio * max(diag.axial_force, _EPS) + c.surface_lateral_offset_n
+        )
         return bool(inside_face and lateral_small)
 
     def _touch_calibrate(self, obs: Observation, diag: ContactDiagnosis) -> None:
@@ -390,13 +415,13 @@ class AdaptiveInsertionController(InsertionController):
         """
         rel = obs.rel_pose
         n = rel.R[:, 2]
-        h = -(n[0] * diag.cop[0] + n[1] * diag.cop[1]) / max(n[2], 1e-6)
+        h = -(n[0] * diag.cop[0] + n[1] * diag.cop[1]) / max(n[2], _EPS)
         offset = float(-(rel.p[2] + h))
         if not self.touch_calibrated:
             self.depth_offset = offset
             self.touch_calibrated = True
             self.log(obs.t, "touch_calibration", f"mouth {self.depth_offset / MM:+.2f} mm below vision estimate")
-        elif offset < self.depth_offset - 0.15 * MM:
+        elif offset < self.depth_offset - self.cfg.touch_higher_support_mm * MM:
             self.log(obs.t, "touch_calibration", f"higher support found: mouth {offset / MM:+.2f} mm "
                                                  f"(was {self.depth_offset / MM:+.2f})")
             self.depth_offset = offset
@@ -414,7 +439,7 @@ class AdaptiveInsertionController(InsertionController):
             if diag.kind == "surface_block":
                 self._touch_calibrate(obs, diag)
                 diag.depth = self._corrected_depth(obs)
-                if not self._conf_saturated and norm3(np.append(diag.cop, 0.0)) < 0.4 * MM:
+                if not self._conf_saturated and norm3(np.append(diag.cop, 0.0)) < self.cfg.tilt_fold_cop_mm * MM:
                     # Settled flat on the top face: that rotation measures the residual
                     # socket tilt. Fold it into the reference orientation.
                     self.R_corr = rotvec_to_matrix(conf) @ self.R_corr
@@ -423,7 +448,7 @@ class AdaptiveInsertionController(InsertionController):
         self.log(obs.t, "detect", diag.describe())
         if diag.kind == "seated_candidate":
             lat = float(np.hypot(*diag.lateral_force))
-            if lat <= 0.6 * diag.axial_force + 1.0:
+            if lat <= self.cfg.seat_lateral_ratio * diag.axial_force + self.cfg.seat_lateral_offset_n:
                 return self._begin_verify(obs)
             diag.kind = "partial_jam"
             self.log(obs.t, "detect", "deep stall with high lateral load: treated as jam")
@@ -440,10 +465,10 @@ class AdaptiveInsertionController(InsertionController):
     def _recover_step(self, obs: Observation) -> Command:
         c = self.cfg
         F, _ = self._wrench(obs)
-        if norm3(F) > c.max_force_n * 1.2 and obs.t - self.phase_t > 0.3:
+        if norm3(F) > c.max_force_n * c.retract_stuck_force_factor and obs.t - self.phase_t > c.retract_stuck_delay_s:
             return self._fail(obs, "stuck_during_retract")
         self.z = self._retract_height()
-        if self._reached(obs, tol=5e-6, rot_tol=2e-3):
+        if self._reached(obs, tol=c.retract_reach_tol_mm * MM, rot_tol=c.retract_reach_tol_rad):
             return self._plan_correction(obs)
         return self._cmd(c.retract_speed_mm_s)
 
@@ -459,20 +484,22 @@ class AdaptiveInsertionController(InsertionController):
         if diag.kind in ("surface_block", "no_contact"):
             # A block where entry was expected is evidence of a yaw error (corners on the
             # lead-in) or a sticking lead-in; repeated surprises trigger the yaw search.
-            if self.localizer.entry_probability_at(diag.probe_xy) > 0.6:
+            if self.localizer.entry_probability_at(diag.probe_xy) > c.yaw_search_entry_probability:
                 self.blocks_at_best += 1
             # CoP reliability: a conform that settled flat (CoP ~ 0) or tipped onto a
             # pivot edge matches the contact model; an intermediate stop indicates mixed
             # support (top face + lead-in) whose CoP magnitude is biased.
-            clean = self._conf_saturated or (diag.cop is not None and norm3(np.append(diag.cop, 0.0)) < 0.4 * MM)
-            sigma = self.cfg.cop_sigma_mm * MM if clean else 1.2 * MM
+            clean = self._conf_saturated or (
+                diag.cop is not None and norm3(np.append(diag.cop, 0.0)) < c.clean_cop_mm * MM
+            )
+            sigma = c.cop_sigma_mm * MM if clean else c.unclean_cop_sigma_mm * MM
             self.localizer.update_blocked(
                 diag.probe_xy, diag.cop if diag.kind == "surface_block" else None, cop_sigma=sigma
             )
             self._blocked_probes.append(diag.probe_xy.copy())
             new_xy, p_cap = self.localizer.best_probe(lim_xy, exclude=self._blocked_probes)
-            if self.blocks_at_best >= 2 and self.yaw_search_idx < len(YAW_SEARCH_SEQUENCE_DEG):
-                self.yaw_offset = YAW_SEARCH_SEQUENCE_DEG[self.yaw_search_idx] * DEG
+            if self.blocks_at_best >= 2 and self.yaw_search_idx < len(self.yaw_sequence):
+                self.yaw_offset = self.yaw_sequence[self.yaw_search_idx] * DEG
                 self.yaw_search_idx += 1
                 self.blocks_at_best = 0
                 rv = matrix_to_rotvec(self.R_corr)
@@ -522,16 +549,16 @@ class AdaptiveInsertionController(InsertionController):
             self.adm_conf.update(T, dt, active=np.array([1.0, 1.0, 0.0]))
             self.adm_lat.update(F[:2], dt)
             self._conf_hist.append((obs.t, self.adm_conf.x.copy()))
-            while self._conf_hist and obs.t - self._conf_hist[0][0] > 0.06:
+            while self._conf_hist and obs.t - self._conf_hist[0][0] > c.conform_window_s:
                 self._conf_hist.popleft()
             elapsed = obs.t - self.phase_t
             rate = norm3(self._conf_hist[-1][1] - self._conf_hist[0][1])
-            if (elapsed > 0.08 and rate < 0.03 * DEG) or elapsed > 0.8:
+            if (elapsed > c.seat_conform_min_s and rate < c.conform_rate_deg * DEG) or elapsed > c.seat_conform_max_s:
                 conf = self.adm_conf.x
                 self.log(obs.t, "seat_conform", f"tilt aligned to floor by ({conf[0] / DEG:+.2f},{conf[1] / DEG:+.2f}) deg")
                 self.phase, self.phase_t = "preload", obs.t
                 self._preload_unsettled_t = obs.t
-            return self._cmd(30.0)
+            return self._cmd(c.force_phase_speed_cap_mm_s)
         if self.phase == "preload":
             self._hold_preload(F, dt)
             self.adm_lat.update(F[:2], dt)
@@ -539,10 +566,12 @@ class AdaptiveInsertionController(InsertionController):
             # force) stays below the wall-reaction threshold, so wait until the axial
             # force has really come down from the seating force to the light preload
             # (the force loop's time constant is about 0.1 s).
-            if abs(float(F[2]) - c.verify_preload_n) > 0.2:
+            if abs(float(F[2]) - c.verify_preload_n) > c.preload_tolerance_n:
                 self._preload_unsettled_t = obs.t
             elapsed = obs.t - self.phase_t
-            if (elapsed > 0.1 and obs.t - self._preload_unsettled_t >= 0.05) or elapsed > 0.8:
+            if (
+                elapsed > c.preload_min_s and obs.t - self._preload_unsettled_t >= c.preload_settle_s
+            ) or elapsed > c.preload_max_s:
                 self._verify_base = self.adm_lat.x.copy()
                 # Probe along the socket's short axis (y): it carries the lighter gantry
                 # axis (smaller wall-impact transients) and two opposing walls are enough
@@ -550,7 +579,7 @@ class AdaptiveInsertionController(InsertionController):
                 self._verify_dirs = [np.array(d, dtype=float) for d in ((0, 1), (0, -1))]
                 self._verify_results = []
                 self.phase, self.phase_t = "probe_out", obs.t
-            return self._cmd(30.0)
+            return self._cmd(c.force_phase_speed_cap_mm_s)
         if self.phase in ("probe_out", "probe_back", "center", "yaw_out", "yaw_back"):
             self._hold_preload(F, dt)
         if self.phase == "probe_out":
@@ -564,23 +593,23 @@ class AdaptiveInsertionController(InsertionController):
                 self.phase, self.phase_t = "probe_back", obs.t
             else:
                 self.adm_lat.x = self.adm_lat.x + d * c.verify_probe_speed_mm_s * MM * dt
-            return self._cmd(c.verify_probe_speed_mm_s * 2.0)
+            return self._cmd(c.verify_probe_speed_mm_s * c.verify_return_speed_factor)
         if self.phase == "probe_back":
             self.adm_lat.x = self._verify_base.copy()
-            if self._reached(obs, tol=2e-5):
+            if self._reached(obs, tol=c.probe_reach_tol_mm * MM):
                 if len(self._verify_results) == len(self._verify_dirs):
                     return self._lateral_verdict(obs)
                 self.phase, self.phase_t = "probe_out", obs.t
-            return self._cmd(c.verify_probe_speed_mm_s * 2.0)
+            return self._cmd(c.verify_probe_speed_mm_s * c.verify_return_speed_factor)
         if self.phase == "center":
-            if self._reached(obs, tol=2e-5):
+            if self._reached(obs, tol=c.probe_reach_tol_mm * MM):
                 if self.yaw_sigma > c.yaw_center_gate_deg * DEG:
                     self._yaw_base = self.yaw_adj
                     self._yaw_results = []
                     self.phase, self.phase_t = "yaw_out", obs.t
                 else:
                     return self._succeed(obs)
-            return self._cmd(c.verify_probe_speed_mm_s * 2.0)
+            return self._cmd(c.verify_probe_speed_mm_s * c.verify_return_speed_factor)
         if self.phase == "yaw_out":
             sgn = 1.0 if not self._yaw_results else -1.0
             reaction = -float(T[2]) * sgn
@@ -590,12 +619,12 @@ class AdaptiveInsertionController(InsertionController):
                 self.phase, self.phase_t = "yaw_back", obs.t
             else:
                 self.yaw_adj += sgn * c.yaw_probe_speed_deg_s * DEG * dt
-            return self._cmd(10.0)
+            return self._cmd(c.slow_phase_speed_cap_mm_s)
         if self.phase == "yaw_back":
             if len(self._yaw_results) == 2:
                 lo, hi = sorted(self._yaw_results)
                 self.yaw_adj = self._yaw_base + 0.5 * (lo + hi)
-                if self._reached(obs, tol=2e-5, rot_tol=2e-4):
+                if self._reached(obs, tol=c.probe_reach_tol_mm * MM, rot_tol=c.yaw_reach_tol_rad):
                     self.log(
                         obs.t,
                         "yaw_centering",
@@ -604,10 +633,10 @@ class AdaptiveInsertionController(InsertionController):
                     return self._succeed(obs)
             else:
                 self.yaw_adj = self._yaw_base
-                if self._reached(obs, tol=2e-5, rot_tol=2e-4):
+                if self._reached(obs, tol=c.probe_reach_tol_mm * MM, rot_tol=c.yaw_reach_tol_rad):
                     self.phase, self.phase_t = "yaw_out", obs.t
-            return self._cmd(10.0)
-        return self._cmd(30.0)
+            return self._cmd(c.slow_phase_speed_cap_mm_s)
+        return self._cmd(c.force_phase_speed_cap_mm_s)
 
     def _hold_preload(self, F: np.ndarray, dt: float) -> None:
         """Regulate the light axial preload used during verification probes."""
@@ -634,19 +663,19 @@ class AdaptiveInsertionController(InsertionController):
         cy = 0.5 * (travels[0] - travels[1])
         self.adm_lat.x = self._verify_base + np.array([0.0, cy])
         self.phase, self.phase_t = "center", obs.t
-        return self._cmd(c.verify_probe_speed_mm_s * 2.0)
+        return self._cmd(c.verify_probe_speed_mm_s * c.verify_return_speed_factor)
 
     def _succeed(self, obs: Observation) -> Command:
         self._enter(obs.t, SUCCESS)
         self.finish(obs.t, True)
-        return self._cmd(10.0)
+        return self._cmd(self.cfg.slow_phase_speed_cap_mm_s)
 
     # ------------------------------------------------------------------ terminal states
     def _success_step(self, obs: Observation) -> Command:
         F, _ = self._wrench(obs)
         v = self.force_axis.velocity(self.cfg.verify_preload_n, float(F[2]))
         self.z -= v * self.ctx.control_period_s
-        return self._cmd(10.0)
+        return self._cmd(self.cfg.slow_phase_speed_cap_mm_s)
 
     def _failure_step(self, obs: Observation) -> Command:
         # Back out along the current compliant pose, exactly as RECOVER's retract does.
@@ -654,6 +683,7 @@ class AdaptiveInsertionController(InsertionController):
         # the cavity commands a sudden re-orientation against the walls, and a wedged
         # plug then loads the wrist past the cell's torque stop.
         self.z = self._retract_height()
-        if not self.done and self._reached(obs, tol=5e-6, rot_tol=2e-3):
+        c = self.cfg
+        if not self.done and self._reached(obs, tol=c.retract_reach_tol_mm * MM, rot_tol=c.retract_reach_tol_rad):
             self.finish(obs.t, False, getattr(self, "_fail_reason", "unknown"))
         return self._cmd(self.cfg.retract_speed_mm_s)

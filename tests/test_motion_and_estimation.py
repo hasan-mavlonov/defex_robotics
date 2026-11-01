@@ -75,6 +75,9 @@ def test_controller_code_cannot_reach_the_simulator():
     """Controllers, recovery and estimation must not import MuJoCo or ground truth."""
     paths = [p for sub in CONTROLLER_SIDE for p in (ROOT / "defex" / sub).rglob("*.py")]
     assert len(paths) >= 10
+    # W9: the learned prior and controller G are controller-side code too.
+    names = {p.relative_to(ROOT).as_posix() for p in paths}
+    assert {"defex/recovery/learned_prior.py", "defex/control/adaptive_learned.py"} <= names
     for path in paths:
         tree = ast.parse(path.read_text())
         for node in ast.walk(tree):
@@ -90,6 +93,18 @@ def test_controller_code_cannot_reach_the_simulator():
             for mod in mods:
                 assert not mod.startswith(FORBIDDEN_MODULES), (path, mod)
                 assert "mujoco_backend" not in mod and "arm_backend" not in mod, (path, mod)
+
+
+def test_learned_prior_is_numpy_and_json_only():
+    """W9: the learned contact prior runs on observations and its model file, nothing else."""
+    tree = ast.parse((ROOT / "defex" / "recovery" / "learned_prior.py").read_text())
+    mods = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            mods |= {a.name for a in node.names}
+        elif isinstance(node, ast.ImportFrom):
+            mods.add(node.module or "")
+    assert mods <= {"__future__", "json", "functools", "pathlib", "numpy", "defex.config"}, mods
 
 
 def test_harness_identifies_the_payload_instead_of_reading_the_simulator():

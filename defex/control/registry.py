@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Callable
 
 from defex.control.adaptive_fsm import AdaptiveInsertionController
+from defex.control.adaptive_learned import AdaptiveLearnedController
 from defex.control.base import InsertionController
 from defex.control.baselines import FixedTrajectoryController, PassiveComplianceController, PositionCorrectionController
 from defex.control.spiral_search import CompliantSpiralSearchController, SpiralSearchController
@@ -16,7 +17,12 @@ CONTROLLERS: dict[str, Callable[[], InsertionController]] = {
     "spiral": SpiralSearchController,
     "correction_rcc": PassiveComplianceController,
     "spiral_rcc": CompliantSpiralSearchController,
+    "adaptive_learned": AdaptiveLearnedController,  # W9: C + learned contact prior (opt-in)
 }
+
+# The benchmark cells A-F. Scripts that run "every controller" by default use this, so
+# registering G (W9) does not change what an unqualified benchmark run contains.
+BENCHMARK_CONTROLLERS = ("fixed", "correction", "adaptive", "spiral", "correction_rcc", "spiral_rcc")
 
 LABELS = {
     "fixed": "A: Fixed trajectory",
@@ -25,6 +31,7 @@ LABELS = {
     "spiral": "D: Spiral search",
     "correction_rcc": "E: Vision correction + passive compliance",
     "spiral_rcc": "F: Spiral search + passive compliance",
+    "adaptive_learned": "G: Defex adaptive + learned contact prior",
 }
 
 COLORS = {
@@ -34,6 +41,7 @@ COLORS = {
     "spiral": "#2e9e6b",
     "correction_rcc": "#8a63c9",
     "spiral_rcc": "#c94f6d",
+    "adaptive_learned": "#705010",
 }
 
 

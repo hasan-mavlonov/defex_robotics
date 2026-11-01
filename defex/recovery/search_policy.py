@@ -295,14 +295,24 @@ class HoleLocalizer:
         i, j = np.unravel_index(int(np.argmax(self.log_post)), self.log_post.shape)
         return np.array([self.grid[i], self.grid[j]])
 
-    def update_gaussian(self, mean: np.ndarray, precision: np.ndarray, weight: float) -> None:
-        """Add ``weight`` x log N(h; mean, precision^-1) to the posterior (W9 learned contact prior).
+    def update_gaussian(
+        self, mean: np.ndarray, precision: np.ndarray, weight: float, outlier_weight: float = 0.0
+    ) -> None:
+        """Add ``weight`` x log[(1 - e) N(h; mean, precision^-1) + e / area] to the posterior (W9).
 
-        ``weight`` < 1 tempers the term (equivalent to inflating its covariance by 1 / weight).
+        ``weight`` < 1 tempers the term; ``outlier_weight`` e mixes in a uniform density over
+        the hypothesis grid, so a confidently wrong prediction cannot rule out the true mouth
+        (the same construction as the CoP likelihood's outlier floor). e = 0: pure Gaussian.
         """
+        P = np.asarray(precision, dtype=float)
         d = np.stack([self.hx - mean[0], self.hy - mean[1]], axis=-1)
-        maha = np.einsum("...i,ij,...j->...", d, np.asarray(precision, dtype=float), d)
-        self.log_post += -0.5 * weight * maha
+        maha = np.einsum("...i,ij,...j->...", d, P, d)
+        if outlier_weight <= 0.0:
+            self.log_post += -0.5 * weight * maha
+        else:
+            dens = np.exp(-0.5 * maha) * np.sqrt(max(float(np.linalg.det(P)), 0.0)) / (2.0 * np.pi)
+            area = (self.grid.size * self.res) ** 2
+            self.log_post += weight * np.log((1.0 - outlier_weight) * dens + outlier_weight / area + _LOG_FLOOR)
         self.log_post -= self.log_post.max()
         self.n_updates += 1
 

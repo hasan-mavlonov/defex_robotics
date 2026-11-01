@@ -22,7 +22,8 @@ from pathlib import Path
 import numpy as np
 
 from defex.config import REPO_ROOT, FixtureConfig, SimConfig, to_dict
-from defex.control.registry import CONTROLLERS, make_controller
+from defex.control.registry import BENCHMARK_CONTROLLERS as CONTROLLERS
+from defex.control.registry import make_controller
 from defex.logging.metrics import TrialResult, summarize_overall, write_csv
 from defex.tasks.conditions import conditions_by_name
 from defex.tasks.insertion import InsertionTask

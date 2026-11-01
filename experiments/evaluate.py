@@ -30,7 +30,7 @@ from defex.logging.metrics import TrialResult, is_escape, read_trials_csv, summa
 from defex.tasks.conditions import MODERATE  # noqa: E402
 
 # Conventional cells from weakest to strongest, then C.
-CONTROLLER_ORDER = ["fixed", "correction", "correction_rcc", "spiral", "spiral_rcc", "adaptive"]
+CONTROLLER_ORDER = ["fixed", "correction", "correction_rcc", "spiral", "spiral_rcc", "adaptive", "adaptive_learned"]
 LABELS = {
     "fixed": "A: Fixed trajectory",
     "correction": "B: Vision correction",
@@ -38,6 +38,7 @@ LABELS = {
     "spiral": "D: Spiral search",
     "correction_rcc": "E: Vision + RCC",
     "spiral_rcc": "F: Spiral + RCC",
+    "adaptive_learned": "G: Defex + learned prior",
 }
 SHORT = {
     "fixed": "A Fixed",
@@ -46,8 +47,12 @@ SHORT = {
     "spiral": "D Spiral",
     "correction_rcc": "E Vision+RCC",
     "spiral_rcc": "F Spiral+RCC",
+    "adaptive_learned": "G Defex+prior",
 }
 
+# G (adaptive_learned, W9): umber in light mode, muted brown in dark, each checked with the
+# dataviz palette validator against every other series of its theme (worst pair: CVD
+# delta E 15.7 light / 9.7 dark, normal vision 23.6 / 16.8).
 THEMES = {
     "light": {
         "surface": "#fcfcfb",
@@ -58,7 +63,7 @@ THEMES = {
         "grid": "#e1e0d9",
         "axis": "#c3c2b7",
         "series": {"fixed": "#2a78d6", "correction": "#1baf7a", "adaptive": "#eb6834", "spiral": "#7a5bc7",
-                   "correction_rcc": "#8fb83a", "spiral_rcc": "#c2408a"},
+                   "correction_rcc": "#8fb83a", "spiral_rcc": "#c2408a", "adaptive_learned": "#705010"},
         "critical": "#d03b3b",
         "warning": "#fab219",
     },
@@ -71,7 +76,7 @@ THEMES = {
         "grid": "#2c2c2a",
         "axis": "#383835",
         "series": {"fixed": "#3987e5", "correction": "#199e70", "adaptive": "#d95926", "spiral": "#9479dd",
-                   "correction_rcc": "#9cc64a", "spiral_rcc": "#d65a9f"},
+                   "correction_rcc": "#9cc64a", "spiral_rcc": "#d65a9f", "adaptive_learned": "#806060"},
         "critical": "#d03b3b",
         "warning": "#fab219",
     },

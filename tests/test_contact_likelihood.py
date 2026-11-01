@@ -175,3 +175,35 @@ def test_the_fitted_floor_keeps_a_confident_wrong_term_from_erasing_the_truth(c_
     centre = (loc.grid.size // 2, loc.grid.size // 2)
     assert loc.posterior[centre] > 1e-8
     assert n_outputs(3) == 18
+
+
+def test_tempered_residual_gradient_and_runtime_tempering(c_run, task):
+    rng = np.random.default_rng(5)
+    n, c = 6, 30
+    x, t = rng.normal(size=(n, 5)), 1.5 * rng.normal(size=(n, c, 2))
+    base, cell = rng.normal(size=(n, c)), rng.integers(0, c, n)
+    net = init_net(rng, 5, (6, 4), 2, temper=True)
+    net.zeta = 0.4
+    args = (2, 0.05, 1.0, 1e-3, 0.0)
+    _, _, (_, d_zeta) = batch_loss_grads(net, x, t, base, cell, *args)
+    h = 1e-6
+    net.zeta = 0.4 + h
+    lp = batch_loss_grads(net, x, t, base, cell, *args)[0]
+    net.zeta = 0.4 - h
+    lm = batch_loss_grads(net, x, t, base, cell, *args)[0]
+    assert abs((lp - lm) / (2 * h) - d_zeta) < 1e-6
+    # Run time: log_post <- tau * log_post + term; tau = 1 leaves the posterior as update_log_term did before.
+    spec = ConnectorSpec.load("rect_12x8")
+    a = HoleLocalizer(spec, prior_sigma=2 * MM, extent=7 * MM, resolution=0.25 * MM, cop_sigma=0.5 * MM)
+    b = HoleLocalizer(spec, prior_sigma=2 * MM, extent=7 * MM, resolution=0.25 * MM, cop_sigma=0.5 * MM)
+    zero = np.zeros_like(a.log_post)
+    a.update_log_term(zero, 1.0)
+    b.update_log_term(zero, 0.5)
+    assert np.allclose(a.posterior, HoleLocalizer(spec, prior_sigma=2 * MM, extent=7 * MM, resolution=0.25 * MM,
+                                                  cop_sigma=0.5 * MM).posterior)
+    assert np.allclose(np.log(b.posterior) - np.log(b.posterior).max(),
+                       0.5 * (np.log(a.posterior) - np.log(a.posterior).max()))
+    recs = [r for r in c_run[1].contact_records if "analytic_mean_mm" in r]
+    data = _v2_model(recs, task.backend.fixture_dynamics)
+    assert ContactLikelihood(data).base_temperature == 1.0
+    assert ContactLikelihood({**data, "base_temperature": 0.7}).base_temperature == 0.7

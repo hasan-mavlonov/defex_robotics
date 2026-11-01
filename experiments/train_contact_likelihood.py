@@ -82,6 +82,8 @@ NUMPY_SEED = 11
 GRID = {"hidden": [(32, 32)], "lr": [3e-3], "weight_decay": [1e-4, 1e-3]}
 INIT_OUTLIER = 0.1  # starting value of the fitted floor (C's localizer_outlier_weight)
 MIN_OUTLIER = 1e-3  # the floor is never fitted to zero: a confident wrong term must not erase the truth
+INIT_TAU = 0.9  # starting temperature of C's posterior in the tempered residual mode
+MIN_TAU = 0.05  # C's posterior is never switched off entirely
 COMPONENT_SPREAD = 0.5  # initial spread of the mixture means (standardized units), breaks the symmetry
 
 
@@ -184,16 +186,21 @@ def grid_mm(cfg: AdaptiveConfig) -> tuple[np.ndarray, float, float]:
 class Net:
     """Parameters of one v2 model while training: MLP layers and the floor logit."""
 
-    def __init__(self, layers, eta: float):
+    def __init__(self, layers, eta: float, zeta: float | None = None):
         self.layers = layers
         self.eta = eta
+        self.zeta = zeta  # None: C's posterior enters untempered (tau = 1)
+
+    @property
+    def tau(self) -> float:
+        return 1.0 if self.zeta is None else MIN_TAU + (1.0 - MIN_TAU) / (1.0 + np.exp(-self.zeta))
 
     @property
     def outlier(self) -> float:
         return MIN_OUTLIER + (1.0 - MIN_OUTLIER) / (1.0 + np.exp(-self.eta))
 
 
-def init_net(rng, n_in: int, hidden, components: int) -> Net:
+def init_net(rng, n_in: int, hidden, components: int, temper: bool = False) -> Net:
     sizes = [n_in, *hidden, n_outputs(components)]
     layers = []
     for k, (a, b) in enumerate(zip(sizes[:-1], sizes[1:])):
@@ -209,7 +216,8 @@ def init_net(rng, n_in: int, hidden, components: int) -> Net:
                     bias[6 * j + 1] = COMPONENT_SPREAD * np.sin(ang[j])
         layers.append((W, bias))
     p = (INIT_OUTLIER - MIN_OUTLIER) / (1.0 - MIN_OUTLIER)
-    return Net(layers, float(np.log(p / (1.0 - p))))
+    q = (INIT_TAU - MIN_TAU) / (1.0 - MIN_TAU)
+    return Net(layers, float(np.log(p / (1.0 - p))), float(np.log(q / (1.0 - q))) if temper else None)
 
 
 def head_grads(raw, t, components, floor_std, outlier, wvec):
@@ -240,7 +248,8 @@ def batch_loss_grads(net: Net, x, t, base, cell, components, floor_std, weight, 
     raw, acts = mlp_forward(net.layers, x)
     raw_h, t, base = raw.astype(dtype), t.astype(dtype), base.astype(dtype)
     g, _ = floored_log_density(raw_h, t, components, floor_std, net.outlier)
-    z = base + weight * (g - jac)
+    tau = net.tau
+    z = tau * base + weight * (g - jac)
     zmax = z.max(axis=1, keepdims=True)
     lse = zmax[:, 0] + np.log(np.exp(z - zmax).sum(axis=1))
     n = x.shape[0]
@@ -249,6 +258,7 @@ def batch_loss_grads(net: Net, x, t, base, cell, components, floor_std, weight, 
     q = np.exp(z - lse[:, None])
     wvec = q.copy()
     wvec[ar, cell] -= 1.0
+    d_tau = float((wvec * base).sum()) / n
     wvec *= weight / n
     _, graw, d_out = head_grads(raw_h, t, components, floor_std, net.outlier, wvec)
     graw = graw.astype(np.float64)
@@ -257,6 +267,9 @@ def batch_loss_grads(net: Net, x, t, base, cell, components, floor_std, weight, 
     e = net.outlier
     d_eta = d_out * (e - MIN_OUTLIER) * (1.0 - (e - MIN_OUTLIER) / (1.0 - MIN_OUTLIER))
     loss += 0.5 * weight_decay * sum(float((W**2).sum()) for W, _ in net.layers)
+    if net.zeta is not None:
+        d_zeta = d_tau * (tau - MIN_TAU) * (1.0 - (tau - MIN_TAU) / (1.0 - MIN_TAU))
+        return loss, grads, (d_eta, d_zeta)
     return loss, grads, d_eta
 
 
@@ -314,8 +327,30 @@ def recurrent_base(p: Prepared, net: Net, components, floor_std, jac, weight: fl
     return b
 
 
+def tempered_pre(p: Prepared, net: Net, components, floor_std, jac, weight: float) -> np.ndarray:
+    """Tempered residual mode: what G tempers at contact i, P_prev + (b_i - b_prev), with
+    P_i = tau * pre_i + weight * g_i the posterior G holds after contact i (earlier values not
+    differentiated). With tau = 1 this is recurrent_base."""
+    tau = net.tau
+    pre = p.base.copy()
+    needed = set(int(j) for j in p.needed)
+    g = g_rows(net, p, p.needed, components, floor_std, jac) if p.needed.size else None
+    at = {int(j): k for k, j in enumerate(p.needed)}
+    post: dict[int, np.ndarray] = {}
+    for i, js in enumerate(p.earlier):
+        if js:
+            j = js[-1]
+            pre[i] = post[j] + (p.base[i] - p.base[j])
+        if i in needed:
+            post[i] = (tau * pre[i] + weight * g[at[i]]).astype(np.float32)
+    return pre
+
+
 def split_loss(net, p: Prepared, components, floor_std, weight, jac, recurrent: bool) -> float:
-    b = recurrent_base(p, net, components, floor_std, jac, weight) if recurrent else p.base
+    if net.zeta is not None:
+        b = net.tau * tempered_pre(p, net, components, floor_std, jac, weight)
+    else:
+        b = recurrent_base(p, net, components, floor_std, jac, weight) if recurrent else p.base
     total = 0.0
     n = p.x.shape[0]
     for a in range(0, n, 256):
@@ -329,9 +364,9 @@ def split_loss(net, p: Prepared, components, floor_std, weight, jac, recurrent: 
 
 def train(fit: Prepared, stop: Prepared, hidden, lr, weight_decay, components, floor_std, jac, recurrent: bool,
           weight: float = 1.0, seed: int = NUMPY_SEED, batch: int = 128, max_epochs: int = 400,
-          patience: int = 40) -> dict:
+          patience: int = 40, temper: bool = False) -> dict:
     rng = np.random.default_rng(seed)
-    net = init_net(rng, fit.x.shape[1], hidden, components)
+    net = init_net(rng, fit.x.shape[1], hidden, components, temper)
     params = [*(W for W, _ in net.layers), *(b for _, b in net.layers)]
     m = [np.zeros_like(q) for q in params] + [0.0]
     v = [np.zeros_like(q) for q in params] + [0.0]
@@ -341,26 +376,31 @@ def train(fit: Prepared, stop: Prepared, hidden, lr, weight_decay, components, f
     history = []
     nl = len(net.layers)
     for epoch in range(max_epochs):
-        base = recurrent_base(fit, net, components, floor_std, jac, weight) if recurrent else fit.base
+        if net.zeta is not None:
+            base = tempered_pre(fit, net, components, floor_std, jac, weight)
+        else:
+            base = recurrent_base(fit, net, components, floor_std, jac, weight) if recurrent else fit.base
         order = rng.permutation(fit.x.shape[0])
         for a0 in range(0, order.size, batch):
             idx = order[a0 : a0 + batch]
             _, grads, d_eta = batch_loss_grads(net, fit.x[idx], fit.t(idx), base[idx], fit.cell[idx], components,
                                                floor_std, weight, weight_decay, jac, dtype=np.float32)
             step += 1
-            gl = [gW for gW, _ in grads] + [gb for _, gb in grads] + [d_eta]
-            cur = [W for W, _ in net.layers] + [b for _, b in net.layers] + [net.eta]
+            scal = list(d_eta) if isinstance(d_eta, tuple) else [d_eta]
+            gl = [gW for gW, _ in grads] + [gb for _, gb in grads] + scal
+            cur = [W for W, _ in net.layers] + [b for _, b in net.layers] + [net.eta] + ([net.zeta] if net.zeta is not None else [])
             c1, c2 = 1 - b1**step, 1 - b2**step
             new = []
             for k, (q, gq) in enumerate(zip(cur, gl)):
                 m[k] = b1 * m[k] + (1 - b1) * gq
                 v[k] = b2 * v[k] + (1 - b2) * gq**2
                 new.append(q - lr * (m[k] / c1) / (np.sqrt(v[k] / c2) + eps))
-            net = Net([(new[k], new[nl + k]) for k in range(nl)], float(new[-1]))
+            net = Net([(new[k], new[nl + k]) for k in range(nl)], float(new[2 * nl]),
+                      float(new[2 * nl + 1]) if net.zeta is not None else None)
         val = split_loss(net, stop, components, floor_std, weight, jac, recurrent)
         history.append((epoch, val))
         if val < best[0]:
-            best = (val, Net([(W.copy(), b.copy()) for W, b in net.layers], net.eta), epoch)
+            best = (val, Net([(W.copy(), b.copy()) for W, b in net.layers], net.eta, net.zeta), epoch)
         elif epoch - best[2] >= patience:
             break
     return {"net": best[1], "best_epoch": best[2], "stop_loss": best[0], "epochs_run": len(history),
@@ -401,6 +441,20 @@ def term_on_grid(model, rec: dict, grid: np.ndarray, area: float) -> np.ndarray:
     return np.log((1.0 - e) * dens + e / area + 1e-300)
 
 
+def tempered_posterior(model, rows: Rows, i: int, weight: float, tau: float, grid, area, terms, posts) -> np.ndarray:
+    """G's posterior after contact i with a tempered model: tau * (P_prev + b_i - b_prev) + weight * g_i."""
+    if i in posts:
+        return posts[i]
+    if i not in terms:
+        terms[i] = term_on_grid(model, rows.records[i], grid, area)
+    pre = rows.base[i].astype(float)
+    if rows.earlier[i]:
+        j = rows.earlier[i][-1]
+        pre = tempered_posterior(model, rows, j, weight, tau, grid, area, terms, posts) + pre - rows.base[j]
+    posts[i] = tau * pre + weight * terms[i]
+    return posts[i]
+
+
 def evaluate(models: dict, rows: Rows, cfg: AdaptiveConfig, backend: str) -> dict:
     """Combined-posterior metrics per candidate on one split (C = no learned term).
 
@@ -416,11 +470,15 @@ def evaluate(models: dict, rows: Rows, cfg: AdaptiveConfig, backend: str) -> dic
     locs: dict[str, HoleLocalizer] = {}
     for name, (model, weight) in models.items():
         terms: dict[int, np.ndarray] = {}
+        posts: dict[int, np.ndarray] = {}
         nll, err, hpd, hit, hit_strict = [], [], [], [], []
         for i in keep:
             rec = rows.records[i]
             b = rows.base[i].astype(float)
-            if model is not None and weight > 0:
+            tau = getattr(model, "base_temperature", 1.0) if model is not None else 1.0
+            if model is not None and weight > 0 and tau != 1.0:
+                b = tempered_posterior(model, rows, i, weight, tau, grid, area, terms, posts)
+            elif model is not None and weight > 0:
                 for j in (*rows.earlier[i], i):
                     if j not in terms:
                         terms[j] = term_on_grid(model, rows.records[j], grid, area)
@@ -514,6 +572,8 @@ def cmd_fit(args) -> None:
     fit = prepare(fit_rows, names, x_mean, x_std, o_mean, o_std, grid, train_mode)
     stop = prepare(stop_rows, names, x_mean, x_std, o_mean, o_std, grid, train_mode)
     recurrent = train_mode == "residual" and not args.no_recurrent
+    if args.temper and not recurrent:
+        raise SystemExit("--temper needs the recurrent residual mode")
     print(f"{args.backend}/{mode}/K={args.components}: {fit.x.shape[0]} fit / {stop.x.shape[0]} stop contacts "
           f"(replay max deviation {fit_rows.replay_max_dev_mm} mm), {len(names)} features, recurrent={recurrent}",
           flush=True)
@@ -528,13 +588,14 @@ def cmd_fit(args) -> None:
     for hidden, lr, wd in itertools.product(grid_hp["hidden"], grid_hp["lr"], grid_hp["weight_decay"]):
         t1 = time.time()
         res = train(fit, stop, hidden, lr, wd, args.components, floor_std, jac, recurrent,
-                    max_epochs=args.max_epochs, patience=args.patience)
+                    max_epochs=args.max_epochs, patience=args.patience, temper=args.temper)
         entry = {"hidden": list(hidden), "lr": lr, "weight_decay": wd, "best_epoch": res["best_epoch"],
                  "epochs_run": res["epochs_run"], "stop_grid_nll_nats": res["stop_loss"] + float(np.log(cell_area)),
-                 "outlier_weight": res["net"].outlier, "wall_s": time.time() - t1}
+                 "outlier_weight": res["net"].outlier, "base_temperature": res["net"].tau, "wall_s": time.time() - t1}
         search.append(entry)
         print(f"  hidden={hidden} lr={lr:g} wd={wd:g}: best epoch {res['best_epoch']}/{res['epochs_run']}, "
-              f"stop NLL {entry['stop_grid_nll_nats']:.4f}, e={entry['outlier_weight']:.3f}, {entry['wall_s']:.0f} s",
+              f"stop NLL {entry['stop_grid_nll_nats']:.4f}, e={entry['outlier_weight']:.3f}, "
+              f"tau={entry['base_temperature']:.3f}, {entry['wall_s']:.0f} s",
               flush=True)
         if best is None or entry["stop_grid_nll_nats"] < best[0]["stop_grid_nll_nats"]:
             best = (entry, res)
@@ -544,7 +605,7 @@ def cmd_fit(args) -> None:
         "format": FORMAT_V2, "backend": args.backend, "mode": mode, "components": args.components,
         "feature_set": args.feature_set, "feature_names": list(names),
         "x_mean": x_mean.tolist(), "x_std": x_std.tolist(), "o_mean_mm": o_mean.tolist(), "o_std_mm": o_std.tolist(),
-        "outlier_weight": net.outlier, "activation": "tanh",
+        "outlier_weight": net.outlier, "base_temperature": net.tau, "activation": "tanh",
         "layers": [{"W": W.tolist(), "b": b.tolist()} for W, b in net.layers],
         "applies_to_kinds": ["surface_block"], "integration_weight": 1.0, "fixture_dynamics": fixture,
         "metadata": {
@@ -642,6 +703,8 @@ def main() -> None:
     f.add_argument("--max-epochs", type=int, default=300)
     f.add_argument("--patience", type=int, default=30)
     f.add_argument("--no-recurrent", action="store_true", help="residual mode: base without the earlier terms")
+    f.add_argument("--temper", action="store_true",
+                   help="residual mode: also fit a temperature tau on C's posterior (G tempers it at each contact)")
     e = sub.add_parser("evaluate")
     e.add_argument("--backend", choices=["gantry", "arm"], required=True)
     e.add_argument("--sources", required=True)

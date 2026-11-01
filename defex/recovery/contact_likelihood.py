@@ -130,6 +130,8 @@ class ContactLikelihood:
         self.backend = data.get("backend", "")
         self.fixture_dynamics = data.get("fixture_dynamics") or {}
         self.marginal = data.get("offset_marginal")
+        # Tempered residual mode: G multiplies its posterior by this before adding the term (1: untempered).
+        self.base_temperature = float(data.get("base_temperature", 1.0))
         if self.mode == "ratio" and not self.marginal:
             raise ValueError(f"ratio model without an offset marginal: {path}")
 

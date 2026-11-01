@@ -321,8 +321,11 @@ class HoleLocalizer:
         """Area of the hypothesis grid (m^2), the support of the uniform outlier floors."""
         return (self.grid.size * self.res) ** 2
 
-    def update_log_term(self, term: np.ndarray) -> None:
-        """Add a log-likelihood term evaluated on the hypothesis grid (v0.2c learned contact term)."""
+    def update_log_term(self, term: np.ndarray, temperature: float = 1.0) -> None:
+        """Add a log-likelihood term evaluated on the hypothesis grid (v0.2c learned contact term),
+        after tempering the current posterior by ``temperature`` (1: unchanged)."""
+        if temperature != 1.0:
+            self.log_post = temperature * (self.log_post - self.log_post.max())
         self.log_post += np.asarray(term, dtype=float)
         self.log_post -= self.log_post.max()
         self.n_updates += 1

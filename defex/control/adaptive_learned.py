@@ -78,7 +78,7 @@ class AdaptiveLearnedController(AdaptiveInsertionController):
             # v0.2c: mixture / likelihood-type term, evaluated on the localizer's own grid.
             loc = self.localizer
             term = self.prior.localizer_log_term(record, loc.hx, loc.hy, loc.area)
-            loc.update_log_term(self.prior_weight * term)
+            loc.update_log_term(self.prior_weight * term, self.prior.base_temperature)
             record["learned_mean_mm"] = self.prior.mixture_mean_mm(record).tolist()
             record["combined_mean_mm"] = (loc.mean() / MM).tolist()
             return

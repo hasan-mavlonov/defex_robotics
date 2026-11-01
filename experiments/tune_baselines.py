@@ -104,6 +104,11 @@ ARM_SPIRAL_SPEED = [
     {"hole_push_mm": push, "insert_speed_mm_s": v, "descent_speed_mm_s": v, "hole_at_measured_position": lag}
     for push in (0.3, 0.5, 1.0) for v in (10.0, 25.0) for lag in (False, True)
 ]
+# Two-speed guarded moves (arm only, amendment 1 of SELECTION_RULE.md): the speed stage showed that a
+# faster single speed aborts on the floor contact (20 N). Offered on the speed winner: a free speed in
+# the cavity of 15 mm/s nominal (C's free_insert_speed_mm_s) or 25 mm/s, slowing to the tuned speed
+# 2 mm (C's near_bottom_margin_mm) or 4 mm above the floor.
+ARM_SPIRAL_SPEED2 = [{"free_speed_mm_s": v, "near_floor_margin_mm": m} for v in (15.0, 25.0) for m in (2.0, 4.0)]
 ARM_CORRECTION_GRID = CORRECTION_GRID
 
 _TASK: InsertionTask | None = None
@@ -182,17 +187,29 @@ def _arm_stage(args, out: Path) -> tuple[list[dict], tuple[str, ...]]:
         return _grid(ARM_SPIRAL_GRID if spiral else ARM_CORRECTION_GRID), ARM_COARSE_CONDITIONS
     if not spiral and args.stage != "confirm":
         raise SystemExit("E has a coarse and a confirm stage only")
-    prev = {"fine": "coarse", "speed": "fine", "confirm": "speed" if spiral else "coarse"}[args.stage]
-    prev_rows = list(csv.DictReader((out / f"tuning_{args.controller}_{prev}.csv").open()))[: args.top]
+    prev = {"fine": "coarse", "speed": "fine", "speed2": "speed", "confirm": "speed2" if spiral else "coarse"}[args.stage]
     keys = {"coarse": list(ARM_SPIRAL_GRID), "fine": list(ARM_SPIRAL_GRID) + list(ARM_SPIRAL_FINE),
-            "speed": list(ARM_SPIRAL_GRID) + list(ARM_SPIRAL_FINE) + list(ARM_SPIRAL_SPEED[0])}[prev]
+            "speed": list(ARM_SPIRAL_GRID) + list(ARM_SPIRAL_FINE) + list(ARM_SPIRAL_SPEED[0])}.get(prev)
     if not spiral:
         keys = list(ARM_CORRECTION_GRID)
+    if prev == "speed2":
+        # Confirm ranks the speed and speed2 settings together (same 21 conditions and trials); a
+        # speed-stage setting has the two-speed option off.
+        keys = list(ARM_SPIRAL_GRID) + list(ARM_SPIRAL_FINE) + list(ARM_SPIRAL_SPEED[0]) + list(ARM_SPIRAL_SPEED2[0])
+        off = {"free_speed_mm_s": "0.0", "near_floor_margin_mm": "2.0"}
+        rows = [{**off, **r} for r in csv.DictReader((out / f"tuning_{args.controller}_speed.csv").open())]
+        rows += list(csv.DictReader((out / f"tuning_{args.controller}_speed2.csv").open()))
+        rows.sort(key=lambda r: (-int(r["ok"]) / int(r["n"]), float(r["median_cycle_s"]), float(r["p95_cycle_s"])))
+        prev_rows = rows[: args.top]
+    else:
+        prev_rows = list(csv.DictReader((out / f"tuning_{args.controller}_{prev}.csv").open()))[: args.top]
     base = [{k: _parse(k, r[k]) for k in keys} for r in prev_rows]
     if args.stage == "fine":
         return [{**b, **f} for b in base for f in _grid(ARM_SPIRAL_FINE)], ARM_COARSE_CONDITIONS
     if args.stage == "speed":
         return [{**base[0], **e} for e in ARM_SPIRAL_SPEED], ARM_CONFIRM_CONDITIONS
+    if args.stage == "speed2":
+        return [{**base[0], **e} for e in ARM_SPIRAL_SPEED2], ARM_CONFIRM_CONDITIONS
     return base, ARM_CONFIRM_CONDITIONS
 
 
@@ -207,7 +224,7 @@ def _parse(key: str, value: str):
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--controller", required=True, choices=["spiral", "spiral_rcc", "correction_rcc"])
-    ap.add_argument("--stage", choices=["coarse", "fine", "edge", "speed", "confirm"], default="coarse")
+    ap.add_argument("--stage", choices=["coarse", "fine", "edge", "speed", "speed2", "confirm"], default="coarse")
     ap.add_argument("--trials", type=int, default=10)
     ap.add_argument("--top", type=int, default=5, help="settings carried from the previous stage")
     ap.add_argument("--out", default="benchmark_v0.2a/tuning")
@@ -224,8 +241,8 @@ def main() -> None:
         if args.stage == "edge":
             raise SystemExit("the arm protocol has no edge stage (its coarse grid includes the edge values)")
         settings, conditions = _arm_stage(args, out)
-    elif args.stage == "speed":
-        raise SystemExit("the speed stage is part of the arm protocol only")
+    elif args.stage in ("speed", "speed2"):
+        raise SystemExit("the speed stages are part of the arm protocol only")
     elif args.stage == "coarse":
         settings = _grid(SPIRAL_GRID if spiral else CORRECTION_GRID)
         conditions = COARSE_CONDITIONS

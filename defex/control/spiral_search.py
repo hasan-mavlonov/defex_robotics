@@ -106,6 +106,8 @@ class SpiralSearchController(InsertionController):
         self._v_descent = c.descent_speed_mm_s * MM * s
         self._v_insert = c.insert_speed_mm_s * MM * s
         self._v_spiral = c.spiral_speed_mm_s * MM * s
+        self._v_free = c.free_speed_mm_s * MM * s  # v0.2c two-speed guarded moves; 0 = off
+        self._chamfer = ctx.connector.socket.chamfer_mm * MM
         self.force_axis = ForceGuidedAxis(c.force_gain_mm_s_per_n * MM, self._v_descent, 4.0 * MM)
         self.insert_axis = ForceGuidedAxis(c.force_gain_mm_s_per_n * MM, self._v_insert, 4.0 * MM)
         self.adm = Admittance(0.0, c.lateral_compliance_damping_n_s_per_mm / MM, c.max_lateral_compliance_mm * MM, 2)
@@ -130,6 +132,10 @@ class SpiralSearchController(InsertionController):
         target = self._target()
         self.markers["target"] = target @ self.G
         return Command(target, speed_mm_s * MM, self.ctx.fixture.max_angular_speed_deg_s * DEG)
+
+    def _free_or(self, v: float, depth: float, lo: float, hi: float) -> float:
+        """Two-speed guarded move (v0.2c): the free speed while the depth is between lo and hi, else v."""
+        return self._v_free if self._v_free > 0.0 and lo < depth < hi else v
 
     def _reached(self, obs: Observation, tol: float = 2e-6) -> bool:
         return norm3(obs.setpoint.p - self._target().p) < tol
@@ -216,6 +222,9 @@ class SpiralSearchController(InsertionController):
         f_ax = float(F[2])
         if f_ax < c.contact_force_n:
             v = self._v_descent  # guarded move until contact
+            if self._v_free > 0.0:  # below the mouth band without contact: inside the cavity
+                v = self._free_or(v, obs.depth, self._mouth_z() + self._chamfer,
+                                  self.depth - c.near_floor_margin_mm * MM - 3.0 * self.sigma_z)
         else:
             v = self.force_axis.velocity(c.search_force_n, f_ax)
         self.z -= v * dt
@@ -286,6 +295,9 @@ class SpiralSearchController(InsertionController):
         f_ax = float(F[2])
         if f_ax < c.contact_force_n:
             v = self._v_insert
+            if self._v_free > 0.0 and self.face_depth is not None:  # floor = face + socket depth (measured)
+                v = self._free_or(v, obs.depth, self.face_depth + self._chamfer,
+                                  self.face_depth + self.depth - c.near_floor_margin_mm * MM)
         else:
             v = self.insert_axis.velocity(c.insert_force_n, f_ax)
         self.z -= v * dt

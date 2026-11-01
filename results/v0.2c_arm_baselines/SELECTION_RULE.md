@@ -59,3 +59,33 @@ Before/after on dev seed 2027 (arm, standard 5-condition set and latching suite,
 5-condition set and latching suite). Gantry rule-3 set, A-G, for field identity.
 Validation seed 4002 is not used by this rule; seeds 3032, 3031, 4001 and all
 reserved benchmark seeds are not run.
+
+## Amendment 1 (committed before any run that uses it)
+
+Written after D's coarse, fine and speed stages and before D's confirm stage
+finished (it was stopped with no output) or any F or E run.
+
+**What was seen.** In D's speed stage, the faster guarded speed (25 mm/s nominal,
+10 mm/s on the arm) seated 3 or 4 of 63 against 59 or 60 of 63 at 10 mm/s nominal.
+A diagnostic trace (nominal, trials 0-2) shows why: the floor contact at 10 mm/s with
+the arm's 0.2 s lag trips D's 20 N force abort (21.7-23.4 N). So the W5 speed scaling
+is what keeps D inside its force budget, and a single faster speed cannot be used.
+The `hole_at_measured_position` option made no difference to success (60 against
+60) and is left to the rule.
+
+**What is added.** The fix an integrator would make, and the one C already has
+(`free_insert_speed_mm_s`, `near_bottom_*`): two speeds. Inside the cavity, outside
+the mouth band (3 sigma of vision z plus the chamfer) and more than a margin above
+the floor (plus 3 sigma when the face was not touched), move at a free speed, then at
+the tuned guarded speed. New config fields `free_speed_mm_s` (0 = off, the default and
+every gantry value) and `near_floor_margin_mm`; the W5 contact-speed rule scales the
+free speed like the others.
+
+**New stage "speed2"** (D and F, after "speed"): the speed winner x free speed {15, 25}
+mm/s nominal (C's free-insert speed, and the faster value above) x near-floor margin
+{2, 4} mm (C's 2 mm, and double): 4 settings on the 21 confirm conditions, 3 trials.
+
+**Confirm** then takes the top 3 of the speed and speed2 settings ranked together
+(same 21 conditions and trials; a speed-stage setting has the two-speed option off),
+by the same rule. Nothing else changes. D resumes at speed2 with its coarse, fine and
+speed results kept.

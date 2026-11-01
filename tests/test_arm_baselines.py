@@ -186,10 +186,31 @@ def test_arm_tuning_protocol_stages(tmp_path):
     speed, conds = tb._arm_stage(SimpleNamespace(controller="spiral", stage="speed", top=1), tmp_path)
     assert len(speed) == 12 and conds == tb.ARM_CONFIRM_CONDITIONS
     assert all(s["max_attempts"] == fine[0]["max_attempts"] for s in speed)
-    write("speed", [dict(setting=k, **s) for k, s in enumerate(speed[:5])])
+    stats = lambda ok, med: dict(n=63, ok=ok, median_cycle_s=med, p95_cycle_s=9.0)  # noqa: E731
+    write("speed", [dict(setting=k, **s, **stats(60, 6.5 + k)) for k, s in enumerate(speed[:5])])
+    speed2, _ = tb._arm_stage(SimpleNamespace(controller="spiral", stage="speed2", top=1), tmp_path)
+    assert len(speed2) == 4 and all(s2["hole_push_mm"] == speed[0]["hole_push_mm"] for s2 in speed2)
+    write("speed2", [dict(setting=k, **s, **stats(60, 5.0 + k)) for k, s in enumerate(speed2)])
     confirm, _ = tb._arm_stage(SimpleNamespace(controller="spiral", stage="confirm", top=3), tmp_path)
-    assert confirm == speed[:3]  # booleans and ints survive the CSV round trip
-    assert isinstance(confirm[1]["hole_at_measured_position"], bool) and isinstance(confirm[0]["max_attempts"], int)
+    # Pooled ranking of both speed stages: two-speed settings at 5.0 and 6.0 s, then the speed winner at 6.5 s.
+    off = {"free_speed_mm_s": 0.0, "near_floor_margin_mm": 2.0}
+    assert confirm == [speed2[0], speed2[1], {**speed[0], **off}]
+    assert isinstance(confirm[2]["hole_at_measured_position"], bool) and isinstance(confirm[0]["max_attempts"], int)
     # Every tuned key is a field of the stiff-fixture config it is applied to.
     names = {f.name for f in fields(SpiralSearchStiffFixtureConfig)}
     assert set(confirm[0]) <= names
+
+
+def test_two_speed_guarded_moves_off_by_default_and_banded_when_on():
+    spec = ConnectorSpec()
+    for cfg in (SpiralSearchConfig(), CompliantSpiralSearchConfig()):
+        assert cfg.free_speed_mm_s == 0.0
+    c = SpiralSearchController()
+    c.reset(_ctx(spec, _gantries(spec)[0]))
+    assert c._v_free == 0.0 and c._free_or(0.01, 5e-3, 0.0, 1.0) == 0.01
+    c = SpiralSearchController(stiff_fixture_cfg=replace(SpiralSearchStiffFixtureConfig(), free_speed_mm_s=25.0))
+    c.reset(_ctx(spec, ARM))
+    s = (1.0 / ARM.effective_mass_kg) ** 0.5  # W5 contact-speed rule applies to the free speed too
+    assert c._v_free == pytest.approx(25e-3 * s)
+    assert c._free_or(0.004, 5e-3, 1e-3, 12e-3) == c._v_free
+    assert c._free_or(0.004, 0.5e-3, 1e-3, 12e-3) == 0.004 and c._free_or(0.004, 13e-3, 1e-3, 12e-3) == 0.004

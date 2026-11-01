@@ -456,6 +456,12 @@ class SpiralSearchConfig:
     # spiral point. With servo following lag the command runs speed x lag ahead of the plug (UR5e:
     # 0.2 s); a force-mode search that stops on the hole holds where the tool is.
     hole_at_measured_position: bool = False
+    # v0.2c: two-speed guarded moves; 0 = off (the vendor's single insertVel). Inside the cavity, clear of
+    # the mouth band (3 sigma of vision z plus the chamfer) and more than near_floor_margin_mm above the
+    # floor (plus 3 sigma when the face was not touched), move at this speed, scaled by the W5 contact-speed
+    # rule like the others. C does the same (AdaptiveConfig.free_insert_speed_mm_s, near_bottom_*).
+    free_speed_mm_s: float = 0.0
+    near_floor_margin_mm: float = 2.0  # as AdaptiveConfig.near_bottom_margin_mm
 
 
 @dataclass(frozen=True)

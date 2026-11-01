@@ -46,6 +46,8 @@ $PY -m experiments.train_contact_prior --backend arm --feature-set contact --roo
 $PY -m experiments.train_contact_prior --backend arm --feature-set all --root $A
 $PY -m experiments.eval_learned_prior $A/validation/variants.json --backend arm --seed 4001 --trials 60 \
     --conditions noise_0.5mm,noise_1mm,noise_2mm,friction_1,mf_noise_1mm --name validation/weights --root $A --workers 4
+# (After the review fixes, installing needs --complete-fixture-dynamics: the trained file predates the
+#  rotational servo lag field, and models now must state every FixtureDynamics field. See review_fixes/commands.sh.)
 $PY -m experiments.train_contact_prior --backend arm --feature-set contact --install-existing --weight 1 \
     --weight-source $A/validation/weights/paired.md --root $A
 

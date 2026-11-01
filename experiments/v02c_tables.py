@@ -39,7 +39,15 @@ def _pair(a, b):
 def closed_loop(dirs: list[Path], refs: list[str], title: str) -> str:
     results = [r for d in dirs for r in read_trials_csv(d / "trials.csv")]
     by: dict[str, list] = defaultdict(list)
+    seen: dict[tuple, object] = {}
     for r in results:
+        key = (r.controller, r.condition, r.trial_index, r.seed)
+        if key in seen:  # the same trial in two run parts (C is re-run as each part's paired reference)
+            a, b = seen[key].to_row(), r.to_row()
+            if any(a[k] != b[k] for k in a if k != "wall_time_s"):
+                raise SystemExit(f"trial {key} differs between run parts")
+            continue
+        seen[key] = r
         by[r.controller].append(r)
     conds = list(dict.fromkeys(r.condition for r in results))
     lines = [f"### {title}", "", "Sources: " + ", ".join(f"`{d}`" for d in dirs), ""]

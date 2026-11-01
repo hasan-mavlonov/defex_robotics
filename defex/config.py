@@ -410,9 +410,9 @@ class SpiralSearchConfig:
     descent_speed_mm_s: float = 10.0  # Flexiv insertVel default
     force_gain_mm_s_per_n: float = 1.0
     contact_force_n: float = 1.0
-    search_force_n: float = 3.0  # tuned; Flexiv SearchHole contactForce default 5 N, range 2-20
+    search_force_n: float = 2.0  # tuned (edge stage); Flexiv SearchHole contactForce default 5 N, range 2-20
     spiral_pitch_mm: float = 1.0  # tuned; radius increment per turn (Robotiq term)
-    spiral_speed_mm_s: float = 5.0  # tuned; tangential speed along the spiral
+    spiral_speed_mm_s: float = 2.5  # tuned (edge stage); tangential speed along the spiral
     spiral_max_radius_mm: float = 6.5  # same lateral bound as C's recovery
     hole_push_mm: float = 0.5  # tuned; depth gained below the face that counts as "hole found"
     # Lateral stiffness during the spiral (software spring on the stiff servo); 0 = stiff.
@@ -422,7 +422,10 @@ class SpiralSearchConfig:
     insert_speed_mm_s: float = 10.0  # Flexiv InsertComp insertVel default
     lateral_compliance_damping_n_s_per_mm: float = 1.0  # force-mode compliant x/y during insertion
     max_lateral_compliance_mm: float = 2.0
-    seat_margin_mm: float = 1.0  # declared seated when this close to full depth
+    # Declared seated when this close to full depth. D's search force, spiral speed and seat
+    # margin are edge-stage setting 5 (results/benchmark_v0.2a/tuning/tuning_spiral_edge.csv),
+    # which the ranking rule selects; benchmark_v0.2a ran 3 N, 5 mm/s, 1.0 mm (BASELINE_TUNING.md).
+    seat_margin_mm: float = 0.5
     stall_window_s: float = 0.4
     stall_progress_mm: float = 0.15
     max_force_n: float = 20.0
@@ -438,6 +441,9 @@ class SpiralSearchConfig:
 class CompliantSpiralSearchConfig(SpiralSearchConfig):
     """Controller F: D's routine on the RCC stage, tuned separately (BASELINE_TUNING.md)."""
 
+    search_force_n: float = 3.0
+    spiral_speed_mm_s: float = 5.0
+    seat_margin_mm: float = 1.0
     insert_force_n: float = 3.0
     max_attempts: int = 3
 

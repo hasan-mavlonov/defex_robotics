@@ -714,7 +714,7 @@ class AdaptiveInsertionController(InsertionController):
             rv[2] = float(np.clip(rv[2], -c.max_yaw_correction_deg * DEG, c.max_yaw_correction_deg * DEG))
             self.R_corr = rotvec_to_matrix(rv)
             detail = f"jam: re-aim tilt=({rv[0] / DEG:+.1f},{rv[1] / DEG:+.1f}) yaw={rv[2] / DEG:+.1f} deg"
-        elif diag.kind == "verify_failed" and self._reaim_verify:
+        elif diag.kind == "verify_failed" and self._reaim_verify and not self.latching:
             # v0.2c: the plug entered here; retry with what the attempt learned (lateral offset, in-cavity
             # tilt and the seat conform), as after a jam, instead of repeating the identical attempt.
             self.localizer.update_entered(diag.probe_xy)

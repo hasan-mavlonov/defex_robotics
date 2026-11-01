@@ -684,8 +684,10 @@ class AdaptiveConfig:
     # Turn rate: the plug's upper end overshoots by rate x lag x depth = 2 x 0.2 s x 15 mm = 0.1 mm on the
     # UR5e, inside the 0.5 mm clearance (Micro-Fit: 0.06 mm at 8 mm depth, inside 0.15 mm).
     unjam_speed_deg_s: float = 2.0
-    # A failed verification on a stiff wrist is retried with the orientation and lateral offset the
-    # attempt learned (as after a jam), not at the identical pose (which repeated the same failure).
+    # A failed wall-probe verification on a stiff wrist is retried with the orientation and lateral offset
+    # the attempt learned (as after a jam), not at the identical pose (which repeated the same failure).
+    # Not for latching parts: push-click-pull cannot see tilt, and on dev seed 2026 a re-aimed retry
+    # latched a plug 3.04 deg tilted (one bad unit passed) with no gain in seated parts.
     reaim_after_verify_fail: bool = True
     # The wall-yaw check probes the two walls again (from the centre) when its first pair is
     # inconsistent with a rigid yawed plug (lever arms of opposite sign): one probe was stopped by

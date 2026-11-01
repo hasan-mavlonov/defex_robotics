@@ -67,6 +67,9 @@ class GroundTruth:
     tcp_speed: float  # m/s
     joint_limit_hit: bool
     actuator_saturated: bool
+    # "simulator": exact. "measured": a hardware run, where pose comes from encoders and
+    # force from the wrist sensor; seating is confirmed by the post-trial inspection.
+    source: str = "simulator"
 
 
 class SimBackend(Protocol):

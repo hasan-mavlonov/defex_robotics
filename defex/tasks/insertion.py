@@ -142,6 +142,9 @@ class InsertionTask:
         self.criteria = success or SuccessCriteria()
         self.backend = backend or MuJoCoBackend(self.sim, self.fixture)
         self._payload_fits: dict[str, PayloadFit] = {}
+        # Synthetic noise added to the readings during payload identification; zero it on
+        # hardware (defex.hardware.backend.hardware_noise), where the sensor has its own.
+        self.identification_noise = SensorNoiseConfig()
 
     def payload_fit(self, scenario: Scenario, compliance: CompliantStageConfig | None = None) -> PayloadFit:
         """Identified payload for this connector and wrist (once each, nominal grasp)."""
@@ -152,7 +155,7 @@ class InsertionTask:
             # Free-space motion 60 mm above the socket: the socket pose plays no role.
             be.load(SceneParams(spec, scenario.friction, scenario.socket_pose, compliance=compliance))
             self._payload_fits[key] = identify_payload(
-                be, self.fixture, SensorNoiseConfig(), self.sim.control_period_s, calibration_seed(spec.name)
+                be, self.fixture, self.identification_noise, self.sim.control_period_s, calibration_seed(spec.name)
             )
         return self._payload_fits[key]
 

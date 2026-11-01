@@ -110,6 +110,28 @@ D and F event paths (contact, hole found, retries, aborts), trials per path:
 | F spiral_rcc | seated | 26 |
 | F spiral_rcc | abort:time_limit | 3 |
 
+Jam retries after the hole was found, before v0.2c (noise_1mm, noise_2mm, friction_1; dev seed 2026):
+
+| Machine | Controller | Trials with hole found | Of which a jam retry followed |
+|---|---|---|---|
+| gantry | D spiral | 37 | 12 |
+| gantry | F spiral_rcc | 32 | 4 |
+| arm | D spiral | 34 | 13 |
+| arm | F spiral_rcc | 34 | 5 |
+
+`results/v0.2c_arm_baselines/diagnosis/false_jams.json` (mode jams, seed 2026, commit a47e8d8, dirty False):
+
+- trial nominal|spiral|1, jam_t_s 7.28, true_depth_below_mouth_mm 14.93, estimated_depth_mm 15.18, socket_depth_mm 15.00, first_contact face at depth 1.10 mm: spiral search, seat_margin_mm 0.50, success True
+- trial lateral_3mm|spiral|13, jam_t_s 7.29, true_depth_below_mouth_mm 14.91, estimated_depth_mm 14.85, socket_depth_mm 15.00, first_contact face at depth 0.78 mm: spiral search, seat_margin_mm 0.50, success True
+- trial noise_1mm|spiral|0, jam_t_s 8.54, true_depth_below_mouth_mm 14.78, estimated_depth_mm 15.48, socket_depth_mm 15.00, first_contact face at depth 1.51 mm: spiral search, seat_margin_mm 0.50, success True
+- trial friction_1|spiral|9, jam_t_s 8.69, true_depth_below_mouth_mm 14.99, estimated_depth_mm 15.13, socket_depth_mm 15.00, first_contact face at depth 0.72 mm: spiral search, seat_margin_mm 0.50, success True
+
+`results/v0.2c_arm_baselines/diagnosis/single_speed_25.json` (mode speed, seed 2026, commit a47e8d8, dirty False):
+
+- trial nominal|spiral|0, success False, failure_reason aborted:excess_force, peak_measured_force_n 22.56, abort_threshold_n 20.00
+- trial nominal|spiral|1, success False, failure_reason aborted:excess_force, peak_measured_force_n 21.74, abort_threshold_n 20.00
+- trial nominal|spiral|2, success False, failure_reason aborted:excess_force, peak_measured_force_n 23.38, abort_threshold_n 20.00
+
 ## Arm tuning (dev seed 2026, SELECTION_RULE.md)
 
 ### D spiral, coarse: 81 settings x 8 conditions x 3 trials (commit efcc75c, dirty False, 33 min)
@@ -583,15 +605,15 @@ After: C and G against each conventional cell, paired (good-part conditions):
 
 ### Arm, dev seed 2027, standard 5-condition set and latching good parts pooled (160 trials per controller)
 
-| Controller | Success before -> after | After vs before (p) | After: C-only / other-only (p) | After: G-only / other-only (p) | Cycle p50 before -> after (s) | Good units/h after, 0 s / 60 s per stop |
-|---|---|---|---|---|---|---|
-| A fixed | 44 -> 44 | 0 / 0 (1) | 96 / 1 (<1e-6) | 101 / 1 (<1e-6) | 4.32 -> 4.32 | 337 / 21 |
-| B correction | 96 -> 96 | 0 / 0 (1) | 43 / 0 (<1e-6) | 48 / 0 (<1e-6) | 4.31 -> 4.31 | 608 / 82 |
-| E correction_rcc | 110 -> 110 | 0 / 0 (1) | 32 / 3 (<1e-6) | 36 / 2 (<1e-6) | 6.32 -> 4.07 | 725 / 118 |
-| D spiral | 113 -> 132 | 20 / 1 (2.1e-05) | 9 / 2 (0.065) | 12 / 0 (0.00049) | 6.52 -> 4.77 | 442 / 398 |
-| F spiral_rcc | 140 -> 138 | 2 / 4 (0.69) | 8 / 7 (1) | 12 / 6 (0.24) | 6.49 -> 4.78 | 403 / 403 |
-| C adaptive | 139 -> 139 | 0 / 0 (1) | - | 5 / 0 (0.062) | 8.39 -> 8.39 | 275 / 229 |
-| G adaptive_learned | 144 -> 144 | 0 / 0 (1) | 0 / 5 (0.062) | - | 8.42 -> 8.42 | 288 / 247 |
+| Controller | Success before -> after | After vs before (p) | Before: C-only / other-only (p) | After: C-only / other-only (p) | After: G-only / other-only (p) | Cycle p50 before -> after (s) | Good units/h, 60 s per stop, before -> after |
+|---|---|---|---|---|---|---|---|
+| A fixed | 44 -> 44 | 0 / 0 (1) | 96 / 1 (<1e-6) | 96 / 1 (<1e-6) | 101 / 1 (<1e-6) | 4.32 -> 4.32 | 21 -> 21 |
+| B correction | 96 -> 96 | 0 / 0 (1) | 43 / 0 (<1e-6) | 43 / 0 (<1e-6) | 48 / 0 (<1e-6) | 4.31 -> 4.31 | 82 -> 82 |
+| E correction_rcc | 110 -> 110 | 0 / 0 (1) | 32 / 3 (<1e-6) | 32 / 3 (<1e-6) | 36 / 2 (<1e-6) | 6.32 -> 4.07 | 109 -> 118 |
+| D spiral | 113 -> 132 | 20 / 1 (2.1e-05) | 26 / 0 (<1e-6) | 9 / 2 (0.065) | 12 / 0 (0.00049) | 6.52 -> 4.77 | 198 -> 398 |
+| F spiral_rcc | 140 -> 138 | 2 / 4 (0.69) | 6 / 7 (1) | 8 / 7 (1) | 12 / 6 (0.24) | 6.49 -> 4.78 | 364 -> 403 |
+| C adaptive | 139 -> 139 | 0 / 0 (1) | - | - | 5 / 0 (0.062) | 8.39 -> 8.39 | 229 -> 229 |
+| G adaptive_learned | 144 -> 144 | 0 / 0 (1) | 0 / 5 (0.062) | 0 / 5 (0.062) | - | 8.42 -> 8.42 | 247 -> 247 |
 
 ## Field identity (scripts/compare_trials.py, wall_time_s ignored)
 

@@ -1028,7 +1028,10 @@ class AdaptiveInsertionController(InsertionController):
         clicked, drop = self._click_in_trace(bottom)
         self.log(obs.t, "latch", f"click {'seen' if clicked else 'not seen'}: drop {drop:.1f} N near the snap")
         self._pull_target = self.cfg.pull_test_fraction * m.latch_retention_force_n
-        self._pull_limit = (m.latch_post_snap_stroke_mm + self.cfg.pull_test_margin_mm) * MM
+        if self.cfg.pull_limit_wipe_fraction > 0.0:
+            self._pull_limit = self.cfg.pull_limit_wipe_fraction * m.terminal_wipe_mm * MM
+        else:
+            self._pull_limit = (m.latch_post_snap_stroke_mm + self.cfg.pull_test_margin_mm) * MM
         self._pull_start = bottom
         self._clicked = clicked
         self._enter(obs.t, VERIFY, "pull")
@@ -1052,7 +1055,7 @@ class AdaptiveInsertionController(InsertionController):
             self.z -= self.force_axis.velocity(-self._pull_target, f_ax) * dt
             held = f_ax <= -self._pull_target
             if held or moved > self._pull_limit or obs.t - self.phase_t > c.pull_test_max_s:
-                ok = held and moved <= self._pull_limit and self._clicked
+                ok = held and moved <= self._pull_limit and (self._clicked or not c.click_required)
                 self.log(obs.t, "verify", f"pull {-f_ax:.1f} N at {moved / MM:.2f} mm, click "
                                           f"{'seen' if self._clicked else 'not seen'} -> {'PASS' if ok else 'FAIL'}")
                 if not ok and self._verdict:
@@ -1074,6 +1077,14 @@ class AdaptiveInsertionController(InsertionController):
                 if self._bottom_since is None:
                     self._bottom_since = obs.t
                 elif obs.t - self._bottom_since > c.bottom_hold_s:
+                    if self._corrected_depth(obs) < self._seat_threshold():
+                        # Held short of the seat depth: the same depth gate as a seated_candidate. The click
+                        # window and the pull limit are relative to where the plug stopped, so they cannot tell.
+                        self._no_retract = True
+                        self.z = float(obs.rel_pose.p[2])
+                        self.log(obs.t, "gentle_retract", f"held at {self._corrected_depth(obs) / MM:.2f} mm, short "
+                                                          f"of the seat depth: not checked")
+                        return self._fail(obs, "stuck_during_retract")
                     return self._begin_latch_verify(obs)
             else:
                 self._bottom_since = None

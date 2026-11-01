@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from defex.config import DEG, MM, Condition, ConnectorSpec, SensorNoiseConfig
+from defex.config import DEG, MM, Condition, ConnectorSpec, PartVariation, SensorNoiseConfig
 from defex.utils.transforms import Pose, rot_z, rotvec_to_matrix, tilt_matrix
 
 
@@ -31,6 +31,7 @@ class Scenario:
     noise: SensorNoiseConfig
     characterized_noise: SensorNoiseConfig | None = None  # what controllers are told; None = noise
     defect: str | None = None  # deliberately bad part; never told to controllers
+    part_variation: PartVariation | None = None  # mating values off nominal; never told to controllers
     disturbance: dict[str, float] = field(default_factory=dict)
 
 
@@ -83,6 +84,15 @@ def sample_scenario(condition: Condition, trial_index: int, base_seed: int, nomi
     grasp = Pose(grip_center + Rg @ (np.array([0.0, g_lat * MM, g_ax * MM]) - grip_center), Rg)
 
     friction = spec.friction if condition.friction is None else condition.friction
+    variation = None
+    extra: dict[str, float] = {}
+    if condition.part_spread is not None:
+        # Drawn after every other value, so conditions without a spread keep their exact draws.
+        ps = condition.part_spread
+        variation = PartVariation(float(rng.uniform(*ps.latch_shift_mm)), float(rng.uniform(*ps.latch_peak_scale)),
+                                  float(rng.uniform(*ps.terminal_scale)))
+        extra = {"latch_shift_mm": variation.latch_shift_mm, "latch_peak_scale": variation.latch_peak_scale,
+                 "terminal_scale": variation.terminal_scale}
     return Scenario(
         condition=condition.name,
         group=condition.group,
@@ -95,6 +105,7 @@ def sample_scenario(condition: Condition, trial_index: int, base_seed: int, nomi
         noise=condition.noise,
         characterized_noise=condition.characterized_noise,
         defect=condition.defect,
+        part_variation=variation,
         disturbance={
             "dx_mm": float(dx),
             "dy_mm": float(dy),
@@ -106,5 +117,6 @@ def sample_scenario(condition: Condition, trial_index: int, base_seed: int, nomi
             "grasp_lateral_mm": float(g_lat),
             "grasp_axial_mm": float(g_ax),
             "grasp_tilt_deg": float(g_tilt),
+            **extra,
         },
     )

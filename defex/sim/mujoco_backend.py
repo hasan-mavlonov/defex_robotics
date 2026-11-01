@@ -81,9 +81,11 @@ class MuJoCoBackend:
     def _setup_mating(self, params: SceneParams) -> None:
         """Terminal and latch forces for connectors that model them (W3); None keeps V0.1 physics."""
         spec = params.connector
-        self._mating = MatingForce(spec, params.defect) if spec.mating is not None else None
+        self._mating = MatingForce(spec, params.defect, params.part_variation) if spec.mating is not None else None
         if self._mating is None and params.defect is not None:
             raise ValueError(f"defect {params.defect!r} needs a connector with a mating model")
+        if self._mating is None and params.part_variation is not None:
+            raise ValueError("a part variation needs a connector with a mating model")
 
     def _index_model(self) -> None:
         m = self.model

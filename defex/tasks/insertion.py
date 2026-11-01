@@ -180,7 +180,7 @@ class InsertionTask:
         payload = self.payload_fit(scenario, compliance).payload
         be.load(
             SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset, compliance,
-                        scenario.defect)
+                        scenario.defect, scenario.part_variation)
         )
 
         sensors = SensorSuite(scenario.noise, scenario.seed)

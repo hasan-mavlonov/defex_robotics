@@ -18,7 +18,7 @@ from typing import Protocol
 
 import numpy as np
 
-from defex.config import CompliantStageConfig, ConnectorSpec
+from defex.config import CompliantStageConfig, ConnectorSpec, PartVariation
 from defex.utils.transforms import Pose
 
 
@@ -32,6 +32,7 @@ class SceneParams:
     grasp_offset: Pose = field(default_factory=Pose.identity)  # connector tip relative to the fixture TCP
     compliance: CompliantStageConfig | None = None  # passive RCC stage (baselines E, F); None = rigid
     defect: str | None = None  # deliberately bad part (defex.sim.mating.DEFECTS); None = good part
+    part_variation: PartVariation | None = None  # mating values off nominal (v0.2c review); None = nominal
 
 
 @dataclass(frozen=True)

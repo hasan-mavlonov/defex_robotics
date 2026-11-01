@@ -51,7 +51,8 @@ COLORS = {
 
 def make_controller(name: str) -> InsertionController:
     """``name`` or, for development comparisons, ``name@variant``: config overrides for ``variant`` come
-    from the JSON file named by the environment variable DEFEX_CONTROLLER_VARIANTS ({variant: {field: value}})."""
+    from the JSON file named by the environment variable DEFEX_CONTROLLER_VARIANTS ({variant: {field: value}}).
+    For D, E and F the overrides apply to both the gantry config and the arm's stiff_fixture_cfg."""
     base, _, variant = name.partition("@")
     try:
         ctrl = CONTROLLERS[base]()
@@ -63,5 +64,10 @@ def make_controller(name: str) -> InsertionController:
             raise ValueError(f"'{name}': set DEFEX_CONTROLLER_VARIANTS to a variants JSON file")
         overrides = json.loads(Path(path).read_text())[variant]
         ctrl.cfg = replace(ctrl.cfg, **overrides)
+        if hasattr(ctrl, "stiff_fixture_cfg"):
+            # D, E and F run stiff_fixture_cfg on the arm (v0.2c): the variant applies on every machine.
+            ctrl.stiff_fixture_cfg = replace(ctrl.stiff_fixture_cfg, **overrides)
+        if hasattr(ctrl, "dwell_s"):
+            ctrl.dwell_s = ctrl.cfg.dwell_s  # A and B copy it at construction
         ctrl.name = name
     return ctrl

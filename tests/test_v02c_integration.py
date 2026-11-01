@@ -109,3 +109,20 @@ def test_installed_models_state_every_fixture_field_and_their_selection():
     gantry = json.loads((Path(DEFAULT_MODEL_DIR) / "contact_prior_gantry.json").read_text())
     if gantry.get("format") is not None and "selection_rule" in gantry.get("metadata", {}):
         assert gantry["metadata"]["selection_rule"].endswith("SELECTION_RULE.md")
+
+
+def test_variants_reach_the_config_each_machine_runs(tmp_path, monkeypatch):
+    """Review fix: a D/E/F variant also changes the arm's stiff_fixture_cfg, and A/B pick up a dwell override."""
+    import json
+
+    from defex.control.registry import make_controller
+
+    path = tmp_path / "variants.json"
+    path.write_text(json.dumps({"v": {"insert_speed_mm_s": 1.5}, "d": {"dwell_s": 0.7}}))
+    monkeypatch.setenv("DEFEX_CONTROLLER_VARIANTS", str(path))
+    for name in ("spiral", "correction_rcc", "spiral_rcc"):
+        ctrl = make_controller(f"{name}@v")
+        assert ctrl.cfg.insert_speed_mm_s == 1.5 and ctrl.stiff_fixture_cfg.insert_speed_mm_s == 1.5
+    for name in ("fixed", "correction"):
+        ctrl = make_controller(f"{name}@d")
+        assert ctrl.dwell_s == 0.7

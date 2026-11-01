@@ -138,17 +138,23 @@ def per_condition(rows: list[dict]) -> list[str]:
     return out
 
 
-def defect_table(rows: list[dict]) -> list[str]:
+def defect_table(rows: list[dict], good: list[dict] | None = None) -> list[str]:
+    """Bad parts passed per defect; with ``good``, each controller's good-part success in the same suite
+    underneath (a controller that rarely seats a good part also rarely passes a bad one)."""
     ctrls = controllers(rows)
+    defects = list(dict.fromkeys(r["condition"] for r in rows))
+    total = "all four" if set(defects) <= set(DEFECTS) else f"all {len(defects)} bad-part conditions"
+    if set(defects) <= set(DEFECTS):
+        defects = [d for d in DEFECTS if d in defects] if defects else list(DEFECTS)
     out = ["", "Deliberately bad parts passed as good (escapes / trials; Wilson 95% upper bound of the "
            "false-accept rate). Protective stops on bad parts in the second table.", "",
            "| Defect | " + " | ".join(LETTER[c] for c in ctrls) + " |", "|---" * (len(ctrls) + 1) + "|"]
     stops = ["", "| Defect, protective stops | " + " | ".join(LETTER[c] for c in ctrls) + " |",
              "|---" * (len(ctrls) + 1) + "|"]
-    for d in DEFECTS + ("all four",):
+    for d in defects + [total]:
         cells, sc = [], []
         for c in ctrls:
-            rs = [r for r in rows if r["controller"] == c and (r["condition"] in DEFECTS if d == "all four"
+            rs = [r for r in rows if r["controller"] == c and (r["condition"] in defects if d == total
                                                                else r["condition"] == d)]
             if not rs:
                 cells.append("")
@@ -159,6 +165,12 @@ def defect_table(rows: list[dict]) -> list[str]:
             sc.append(f"{sum(stop(r) for r in rs)}/{len(rs)}")
         out.append(f"| {d} | " + " | ".join(cells) + " |")
         stops.append(f"| {d} | " + " | ".join(sc) + " |")
+    if good:
+        cells = []
+        for c in ctrls:
+            rs = [r for r in good if r["controller"] == c]
+            cells.append(f"{sum(ok(r) for r in rs)}/{len(rs)}" if rs else "")
+        out.append("| for reference: good parts seated | " + " | ".join(cells) + " |")
     return out + stops
 
 
@@ -230,12 +242,12 @@ def main() -> None:
         rows = load(folder)
         backend, _, suite = folder.name.partition("_")
         lines.append(f"\n## {backend}, {suite} suite")
-        if suite == "latching":
-            good = [r for r in rows if r["condition"] not in DEFECTS]
-            bad = [r for r in rows if r["condition"] in DEFECTS]
+        if suite in ("latching", "latch_spread"):
+            good = [r for r in rows if r["group"] != "bad_part"]
+            bad = [r for r in rows if r["group"] == "bad_part"]
             lines += success_table(good, "Good parts:")
             lines += per_condition(good)
-            lines += defect_table(bad)
+            lines += defect_table(bad, good)
             rules += decisions(f"{backend}, {suite} (good parts)", good)
             rules += defect_decision(f"{backend}, {suite} (bad parts)", bad)
         else:

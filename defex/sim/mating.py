@@ -18,6 +18,8 @@ the plug along the socket axis, as a function of insertion depth and velocity:
   ``stubbed_terminal`` (a bent pin butts the header 0.2 mm after the terminals
   start), ``wrong_polarization`` (the key stops the plug 1 mm into the cavity).
   Obstructions are stiff, damped end stops.
+* Part variation (v0.2c review, optional): one part's latch position, latch peak and
+  terminal forces off the model's nominal values. Simulator side only.
 
 All forces act only while the plug is laterally inside the cavity (terminals and
 latch cannot engage while it rests on the face).
@@ -29,7 +31,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from defex.config import MM, ConnectorSpec
+from defex.config import MM, ConnectorSpec, PartVariation
 
 DEFECTS = ("half_latched", "broken_latch", "stubbed_terminal", "wrong_polarization")
 _BRISTLE = 0.05 * MM  # m, elastic pre-sliding deflection of the terminal contacts
@@ -49,7 +51,8 @@ class MatingState:
 
 
 class MatingForce:
-    def __init__(self, spec: ConnectorSpec, defect: str | None = None) -> None:
+    def __init__(self, spec: ConnectorSpec, defect: str | None = None,
+                 variation: PartVariation | None = None) -> None:
         if defect is not None and defect not in DEFECTS:
             raise ValueError(f"unknown defect {defect!r}; choose from {DEFECTS}")
         self.spec = spec
@@ -68,6 +71,15 @@ class MatingForce:
         self.lpeak = m.latch_peak_depth_mm * MM
         self.snap = m.latch_snap_depth_mm * MM
         self.latch_peak = 0.0 if defect == "broken_latch" else m.latch_peak_force_n
+        self.variation = variation
+        if variation is not None:
+            shift = variation.latch_shift_mm * MM
+            self.onset += shift
+            self.lpeak += shift
+            self.snap += shift
+            self.latch_peak *= variation.latch_peak_scale
+            self.peak_t *= variation.terminal_scale
+            self.slide_t *= variation.terminal_scale
         self.retention = 0.0 if defect == "broken_latch" else m.latch_retention_force_n
         self.stop = {
             "half_latched": self.snap - 0.3 * MM,

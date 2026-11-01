@@ -316,6 +316,27 @@ class SuccessCriteria:
 
 
 @dataclass(frozen=True)
+class PartVariation:
+    """One part's mating values off the connector model's nominal (simulator side only; v0.2c review).
+
+    The controller is never told: it keeps the drawing and datasheet values in ConnectorSpec.
+    """
+
+    latch_shift_mm: float = 0.0  # latch onset, peak and snap all move by this (negative: shallower)
+    latch_peak_scale: float = 1.0  # x MatingSpec latch_peak_force_n
+    terminal_scale: float = 1.0  # x terminal peak and slide forces
+
+
+@dataclass(frozen=True)
+class PartSpread:
+    """Part-to-part spread of the mating values: each trial draws a PartVariation uniformly in [lo, hi]."""
+
+    latch_shift_mm: tuple[float, float] = (0.0, 0.0)
+    latch_peak_scale: tuple[float, float] = (1.0, 1.0)
+    terminal_scale: tuple[float, float] = (1.0, 1.0)
+
+
+@dataclass(frozen=True)
 class DisturbanceSpec:
     """How the true socket/grasp pose deviates from nominal for one condition.
 
@@ -353,6 +374,8 @@ class Condition:
     # What the cell integrator believes the vision accuracy is (handed to controllers).
     # None: the true noise above (correctly characterized, as in V0.1).
     characterized_noise: SensorNoiseConfig | None = None
+    # v0.2c review: part-to-part spread of the mating model (simulator side; None: every part nominal).
+    part_spread: PartSpread | None = None
 
 
 # --------------------------------------------------------------------------------------
@@ -784,6 +807,16 @@ class AdaptiveConfig:
     pull_test_margin_mm: float = 0.3  # allowed movement beyond the post-snap stroke
     pull_test_max_s: float = 3.0
     reseat_tolerance_mm: float = 0.05  # after the pull, back within this of the depth it bottomed at
+    # v0.2c review (results/v0.2c_integration/review_fixes). The W3 click detector and pull limit use the
+    # connector model's latch geometry and 6 N latch peak, which the connector file lists as assumed (Molex
+    # publishes neither). On dev seed 2026 the "click" is the terminal friction falling from its entry peak
+    # to sliding (8 N, inside the click window on every part): all 40 broken latches per backend showed one.
+    # click_required False: the click is logged but the verdict rests on the retention pull alone.
+    click_required: bool = True
+    # 0: W3 pull limit (the model's post-snap stroke + pull_test_margin_mm, 0.8 mm; a latch that engages
+    # 0.15 mm earlier than the model fails it). > 0: the plug must hold the pull before it has backed out by
+    # this fraction of the datasheet terminal wipe (1.75 mm), so its terminals stay mated by the rest.
+    pull_limit_wipe_fraction: float = 0.0
     # v0.2c: defect verdict, gentle retract and polarization guard. Latching parts only (a connector with a
     # mating spec); with defect_verdict False, or on a housing-only connector, none of this runs.
     # Evidence is observation-only, compared with the drawing and the datasheet (ConnectorSpec, ForceBudget).

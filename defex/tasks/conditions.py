@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from defex.config import Condition, DisturbanceSpec, SensorNoiseConfig
+from defex.config import Condition, DisturbanceSpec, PartSpread, SensorNoiseConfig
 
 NOMINAL_NOISE = SensorNoiseConfig()
 
@@ -203,3 +203,34 @@ def latching_conditions() -> list[Condition]:
 
 def latching_conditions_by_name() -> dict[str, Condition]:
     return {c.name: c for c in latching_conditions()}
+
+
+# --------------------------------------------------------------------------------------
+# v0.2c review: part-to-part spread of the Micro-Fit mating values (simulator side). The
+# model's latch geometry and 6 N latch peak are assumed (no value is published) and its
+# terminal forces sit inside the datasheet range, so a controller tuned on the nominal part
+# may depend on those exact values. Ranges: latch position +/-0.2 mm, latch peak +/-50%,
+# terminal forces from the datasheet unmating minimum (2.4 N / 3 N slide = 0.8 x) to the
+# datasheet mating maximum (8 N / 5 N peak = 1.6 x). Controllers are told nothing.
+# --------------------------------------------------------------------------------------
+
+LATCH_SPREAD = PartSpread(latch_shift_mm=(-0.2, 0.2), latch_peak_scale=(0.5, 1.5), terminal_scale=(0.8, 1.6))
+
+
+def latch_spread_conditions() -> list[Condition]:
+    def one(name, spread, description, defect=None):
+        return Condition(name, "bad_part" if defect else "latch_spread", MODERATE, NOMINAL_NOISE,
+                         connector=LATCHING_CONNECTOR, defect=defect, part_spread=spread, description=description)
+
+    return [
+        one("mf_spread", LATCH_SPREAD, "Micro-Fit 3.0, moderate disturbance, every mating value drawn from its range"),
+        one("mf_latch_early", PartSpread(latch_shift_mm=(-0.2, -0.2)), "latch 0.2 mm shallower than the model"),
+        one("mf_latch_late", PartSpread(latch_shift_mm=(0.2, 0.2)), "latch 0.2 mm deeper than the model"),
+        one("mf_latch_weak", PartSpread(latch_peak_scale=(0.5, 0.5)), "latch peak force 0.5 x the model's"),
+        one("mf_terminal_max", PartSpread(terminal_scale=(1.6, 1.6)), "terminal forces at the datasheet maximum"),
+        one("mf_terminal_min", PartSpread(terminal_scale=(0.8, 0.8)), "terminal slide at the datasheet minimum"),
+        one("mf_spread_half_latched", LATCH_SPREAD, "bad part, half latched, mating values drawn", "half_latched"),
+        one("mf_spread_broken_latch", LATCH_SPREAD, "bad part, broken latch, mating values drawn", "broken_latch"),
+        one("mf_terminal_max_broken_latch", PartSpread(terminal_scale=(1.6, 1.6)),
+            "bad part, broken latch, terminal forces at the datasheet maximum", "broken_latch"),
+    ]

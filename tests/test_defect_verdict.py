@@ -126,3 +126,57 @@ def test_slide_out_counts_as_evidence_only_from_a_flat_bottom():
     assert c._seat_on_face(_diag(kind="seated_candidate", cop_mm=(2.0, -1.9)))  # stiff wrist, plug on the floor
     assert not c._seat_on_face(_diag(kind="seated_candidate", cop_mm=(px / MM + 1.5, -1.9)))  # off the face: wedged
     assert not c._seat_on_face(None)
+
+
+def _held_obs(t: float, depth_mm: float, f_ax: float):
+    from defex.perception.state_estimator import Observation
+    from defex.utils.transforms import Pose
+
+    p = Pose(np.array([0.0, 0.0, -depth_mm * MM]), np.eye(3))
+    z3 = np.zeros(3)
+    return Observation(t, p, p, p, Pose.identity(), Pose.identity(), p, depth_mm * MM, np.zeros(2),
+                       np.array([0.0, 0.0, f_ax]), z3, z3, z3, True)
+
+
+@pytest.mark.parametrize("depth_mm,checked", [(6.0, False), (8.0, True)])
+def test_held_reseat_checks_the_latch_only_at_the_seat_depth(depth_mm, checked):
+    """Review fix: a plug held while backing out is re-pushed; it is checked only if it reaches the seat depth
+    (the gate a seated_candidate passes), otherwise it is failed in place without a pull."""
+    c = _ctrl("microfit3_4ckt")
+    c.S = c.G = c.ctx.home_pose
+    c.touch_calibrated, c.depth_offset = True, 0.0
+    c._held_reseated, c._bottom_since = True, None
+    c._enter(0.0, "VERIFY", "held_reseat")
+    f = c.cfg.insert_force_n
+    t = 0.0
+    while t < 2 * c.cfg.bottom_hold_s and c.phase == "held_reseat" and c.state == "VERIFY":
+        t += c.ctx.control_period_s
+        c._latch_verify_step(_held_obs(t, depth_mm, f))
+    if checked:
+        assert c.phase == "pull" and c._pull_start == pytest.approx(depth_mm * MM)
+    else:
+        assert c.state == "FAILURE" and c._fail_reason == "stuck_during_retract" and c._no_retract
+
+
+def _at_pull(cfg: AdaptiveConfig | None = None) -> AdaptiveInsertionController:
+    c = _ctrl("microfit3_4ckt", cfg)
+    c.S = c.G = c.ctx.home_pose
+    c.touch_calibrated, c.depth_offset = True, 0.0
+    c._trace = []  # a flat trace: no click
+    c._begin_latch_verify(_held_obs(1.0, 8.0, c.cfg.insert_force_n))
+    return c
+
+
+def test_pull_limit_from_the_model_stroke_or_the_datasheet_wipe():
+    m = ConnectorSpec.load("microfit3_4ckt").mating
+    assert _at_pull()._pull_limit == pytest.approx((m.latch_post_snap_stroke_mm + 0.3) * MM)  # W3: 0.8 mm
+    c = _at_pull(replace(AdaptiveConfig(), pull_limit_wipe_fraction=0.6))
+    assert c._pull_limit == pytest.approx(0.6 * m.terminal_wipe_mm * MM)
+
+
+@pytest.mark.parametrize("required,phase", [(True, "latched_reseat"), (False, "release")])
+def test_a_held_pull_without_a_click_passes_only_when_the_click_is_not_required(required, phase):
+    c = _at_pull(replace(AdaptiveConfig(), click_required=required))
+    assert not c._clicked and c.phase == "pull"
+    c._latch_verify_step(_held_obs(1.1, 7.5, -c._pull_target - 1.0))  # held, 0.5 mm back
+    assert c.phase == phase

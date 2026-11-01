@@ -5,7 +5,8 @@ that C's latch check uses the connector file's *assumed* latch geometry, the sam
 values the simulator builds every part from, so the dev seeds cannot show what a
 part-to-part spread does. This repeats the check on the Checkpoint 2 code
 (883db25, the code of benchmark_v0.2b) on dev seed 2027, which the review did not
-use. Development measurement; tables in `tables.md`
+use. Runs at 587dee7 (883db25 plus the hook and the run script; `git_dirty: false`).
+Development measurement; tables in `tables.md`
 (`python -m experiments.latch_spread_tables`); commands in `run.sh`.
 
 The only change is a simulator-side hook in `defex/sim/mating.py` (environment
@@ -22,7 +23,8 @@ friction. The controllers keep the connector file's values.
 | latch snaps 0.15 mm earlier | **4 / 30** | 53 / 57 | 0 / 0 | 42 / 59 |
 | latch snaps 0.2 mm earlier | **1** / - | 53 / - | 0 / - | 39 / - |
 | latch snaps 0.2 mm later | 56 / - | 53 / - | 0 / - | 59 / - |
-| latch peak force x0.5 / x1.5 | 57 / 57 | 53 / 53 | 0 / 0 | 43 / 59 |
+| latch peak force x0.5 | 57 / - | 53 / - | 0 / - | 43 / - |
+| latch peak force x1.5 | 57 / - | 53 / - | 0 / - | 59 / - |
 | terminal friction at the datasheet maximum (8 N per circuit) | 0 / 0 | 0 / 0 | 0 / 0 | 54 / 54 |
 
 - **C's good-part success collapses if the latch engages 0.15 mm earlier than the

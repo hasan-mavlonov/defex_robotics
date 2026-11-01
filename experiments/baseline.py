@@ -16,7 +16,7 @@ from __future__ import annotations
 import argparse
 
 from defex.config import REPO_ROOT
-from defex.control.registry import CONTROLLERS
+from defex.control.registry import BENCHMARK_CONTROLLERS as CONTROLLERS
 from defex.tasks.conditions import conditions_by_name
 from experiments.runner import default_workers, run_suite
 

@@ -641,6 +641,23 @@ class AdaptiveConfig:
     preload_max_s: float = 0.8
 
 
+@dataclass(frozen=True)
+class LearnedPriorConfig:
+    """W9 controller G: C plus a learned contact prior in the hole localizer."""
+
+    # Weight of the learned log-likelihood term. None: the weight stored with the model,
+    # chosen on validation seed 4001 (results/w9_development); 0 switches the term off.
+    weight: float | None = None
+    # A model applies only when each stored fixture-dynamics value matches the running
+    # fixture within this relative tolerance (gantry and UR5e differ by 2x to 30x).
+    fixture_match_rel_tol: float = 0.01
+    # Uniform floor mixed into the learned Gaussian term, as C's CoP likelihood does
+    # (AdaptiveConfig.localizer_outlier_weight, same value, not tuned). Added because the
+    # model's errors are heavy-tailed on validation: 5-6% of contacts beyond 3 sigma (2D
+    # Gaussian: 1.1%), from mirror-ambiguous contacts a single Gaussian cannot represent.
+    outlier_weight: float = 0.1
+
+
 # --------------------------------------------------------------------------------------
 # Serialization helpers
 # --------------------------------------------------------------------------------------
@@ -674,6 +691,7 @@ __all__ = [
     "DisturbanceSpec",
     "FixedTrajectoryConfig",
     "FixtureConfig",
+    "LearnedPriorConfig",
     "MM",
     "PlugGeometry",
     "PassiveComplianceConfig",

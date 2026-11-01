@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 from defex.config import REPO_ROOT
-from defex.control.registry import CONTROLLERS
+from defex.control.registry import BENCHMARK_CONTROLLERS
 from defex.tasks.conditions import heldout_conditions, latching_conditions, standard_conditions
 from experiments.runner import default_workers, run_suite
 
@@ -32,7 +32,8 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=default_workers())
     ap.add_argument("--seed", type=int, default=2026, help="base seed (paired across controllers)")
     ap.add_argument("--conditions", type=str, default="", help="comma-separated condition names (default: all)")
-    ap.add_argument("--controllers", type=str, default=",".join(CONTROLLERS), help="comma-separated controllers")
+    ap.add_argument("--controllers", type=str, default=",".join(BENCHMARK_CONTROLLERS),
+                    help="comma-separated controllers (default A-F; G is adaptive_learned)")
     ap.add_argument("--name", type=str, default="robustness", help="output folder name under results/")
     ap.add_argument("--record", type=int, default=0, help="save trajectories for the first N trials of each cell")
     ap.add_argument("--list", action="store_true", help="list the available conditions and exit")

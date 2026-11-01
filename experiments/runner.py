@@ -200,6 +200,11 @@ def run_suite(
         "workers": workers,
         "backend": backend_name(),
         "controller_configs": {c: to_dict(getattr(make_controller(c), "cfg", None)) for c in controllers},
+        # v0.2c: what D, E and F run on fixtures outside the gantry family (the UR5e arm).
+        "stiff_fixture_configs": {
+            c: to_dict(make_controller(c).stiff_fixture_cfg)
+            for c in controllers if hasattr(make_controller(c), "stiff_fixture_cfg")
+        },
         "compliant_stage": to_dict(CompliantStageConfig()),
     }
     write_json(meta, out_dir / "config.json")

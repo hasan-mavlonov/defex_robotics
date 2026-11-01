@@ -385,6 +385,23 @@ class PassiveComplianceConfig(PositionCorrectionConfig):
     approach_height_mm: float = 2.0
     insert_speed_mm_s: float = 4.0
     overtravel_mm: float = 1.0
+    # v0.2c: fixtures outside the gantry family run PassiveComplianceStiffFixtureConfig instead. Same
+    # thresholds and basis as AdaptiveConfig.stiff_wrist_min_ratio / lagging_servo_min_ratio: every
+    # gantry (nominal and sim-randomized) runs this config, the UR5e the stiff-fixture one.
+    stiff_wrist_min_ratio: float = 4.0
+    lagging_servo_min_ratio: float = 2.0
+
+
+@dataclass(frozen=True)
+class PassiveComplianceStiffFixtureConfig(PassiveComplianceConfig):
+    """Controller E on fixtures outside the gantry family (the UR5e): tuned on the arm with the W1
+    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep E's gantry values.
+
+    Confirm-stage rank 1 (tuning/tuning_correction_rcc_confirm.csv, 189/210, 21 protective stops, cycle
+    4.08 s). Overtravel 1.0 mm and approach 2 mm are the gantry values.
+    """
+
+    insert_speed_mm_s: float = 8.0  # arm coarse/confirm (gantry 4 mm/s); E has no W5 speed scaling
 
 
 @dataclass(frozen=True)
@@ -435,6 +452,22 @@ class SpiralSearchConfig:
     time_limit_s: float = 26.0
     tare_settle_s: float = 0.06
     tare_average_s: float = 0.06
+    # v0.2c: fixtures outside the gantry family run the controller's stiff-fixture config instead
+    # (SpiralSearchStiffFixtureConfig, CompliantSpiralSearchStiffFixtureConfig). Same thresholds and
+    # basis as AdaptiveConfig.stiff_wrist_min_ratio / lagging_servo_min_ratio: every gantry (nominal
+    # and sim-randomized) runs this config, the UR5e the stiff-fixture one.
+    stiff_wrist_min_ratio: float = 4.0
+    lagging_servo_min_ratio: float = 2.0
+    # v0.2c: when the hole is found, continue from the measured tip position rather than the commanded
+    # spiral point. With servo following lag the command runs speed x lag ahead of the plug (UR5e:
+    # 0.2 s); a force-mode search that stops on the hole holds where the tool is.
+    hole_at_measured_position: bool = False
+    # v0.2c: two-speed guarded moves; 0 = off (the vendor's single insertVel). Inside the cavity, clear of
+    # the mouth band (3 sigma of vision z plus the chamfer) and more than near_floor_margin_mm above the
+    # floor (plus 3 sigma when the face was not touched), move at this speed, scaled by the W5 contact-speed
+    # rule like the others. C does the same (AdaptiveConfig.free_insert_speed_mm_s, near_bottom_*).
+    free_speed_mm_s: float = 0.0
+    near_floor_margin_mm: float = 2.0  # as AdaptiveConfig.near_bottom_margin_mm
 
 
 @dataclass(frozen=True)
@@ -446,6 +479,48 @@ class CompliantSpiralSearchConfig(SpiralSearchConfig):
     seat_margin_mm: float = 1.0
     insert_force_n: float = 3.0
     max_attempts: int = 3
+
+
+@dataclass(frozen=True)
+class SpiralSearchStiffFixtureConfig(SpiralSearchConfig):
+    """Controller D on fixtures outside the gantry family (the UR5e): tuned on the arm with the W1
+    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep D's gantry values.
+
+    Confirm-stage rank 1 (tuning/tuning_spiral_confirm.csv, 198/210, median cycle 4.76 s); ranks 1-3
+    tied on success and differ only in the two-speed values.
+    """
+
+    search_force_n: float = 5.0  # arm coarse/fine (gantry 2 N); Flexiv SearchHole default 5 N
+    spiral_speed_mm_s: float = 10.0  # arm coarse (gantry 2.5); 4 mm/s on the UR5e after the W5 rule
+    # Arm coarse: the top 14 settings all search with lateral compliance (Flexiv searchStiffRatio); mean
+    # successes over the 27 settings per stiffness: stiff 18.4, 0.5 N/mm 20.1, 2 N/mm 20.1 of 24.
+    search_lateral_stiffness_n_per_mm: float = 0.5
+    insert_force_n: float = 5.0  # arm fine (gantry 8 N); Flexiv InsertComp default 5 N
+    # Arm fine (gantry 0.5 mm): a chamfer contact taken for the face made full seats look 0.5-1.5 mm short.
+    seat_margin_mm: float = 1.0
+    free_speed_mm_s: float = 25.0  # arm speed2 (amendment 1): 10 mm/s in the free cavity on the UR5e
+    near_floor_margin_mm: float = 2.0  # arm speed2, C's near_bottom_margin_mm
+
+
+@dataclass(frozen=True)
+class CompliantSpiralSearchStiffFixtureConfig(CompliantSpiralSearchConfig):
+    """Controller F on fixtures outside the gantry family (the UR5e): tuned on the arm with the W1
+    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep F's gantry values.
+
+    Confirm-stage rank 1 (tuning/tuning_spiral_rcc_confirm.csv, 202/210, median cycle 4.75 s); ranks 1-3
+    tied on success and differ only in the two-speed values. F's arm landscape is flat: coarse settings
+    scored 20-22 of 24, F's gantry setting 21 (rank 55 of 81), so most choices below are tie-breaks.
+    """
+
+    search_force_n: float = 2.0  # arm coarse (gantry 3 N); Flexiv SearchHole minimum 2 N
+    spiral_pitch_mm: float = 1.5  # arm coarse (gantry 1.0)
+    search_lateral_stiffness_n_per_mm: float = 0.5  # arm coarse (gantry stiff); Flexiv searchStiffRatio
+    insert_force_n: float = 8.0  # arm fine (gantry 3 N)
+    max_attempts: int = 2  # arm fine (gantry 3)
+    seat_margin_mm: float = 0.5  # arm fine (gantry 1.0)
+    hole_push_mm: float = 0.3  # arm speed stage (gantry 0.5)
+    free_speed_mm_s: float = 25.0  # arm speed2 (amendment 1): 10 mm/s in the free cavity on the UR5e
+    near_floor_margin_mm: float = 2.0  # arm speed2, C's near_bottom_margin_mm
 
 
 @dataclass(frozen=True)
@@ -699,6 +774,7 @@ def dataclass_from_dict(cls: type, data: dict[str, Any]) -> Any:
 __all__ = [
     "AdaptiveConfig",
     "CompliantSpiralSearchConfig",
+    "CompliantSpiralSearchStiffFixtureConfig",
     "CompliantStageConfig",
     "Condition",
     "ConnectorSpec",
@@ -710,8 +786,10 @@ __all__ = [
     "MM",
     "PlugGeometry",
     "PassiveComplianceConfig",
+    "PassiveComplianceStiffFixtureConfig",
     "PositionCorrectionConfig",
     "SpiralSearchConfig",
+    "SpiralSearchStiffFixtureConfig",
     "REPO_ROOT",
     "SafetyConfig",
     "SensorNoiseConfig",

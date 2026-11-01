@@ -22,7 +22,7 @@ from pathlib import Path
 
 from defex.config import REPO_ROOT
 from defex.control.registry import CONTROLLERS
-from defex.tasks.conditions import heldout_conditions, standard_conditions
+from defex.tasks.conditions import heldout_conditions, latching_conditions, standard_conditions
 from experiments.runner import default_workers, run_suite
 
 
@@ -39,14 +39,14 @@ def main() -> None:
     ap.add_argument("--no-plots", action="store_true")
     ap.add_argument("--backend", choices=["gantry", "arm"], default="gantry",
                     help="arm: UR5e serial arm (W5; run scripts/fetch_menagerie.py first)")
-    ap.add_argument("--suite", choices=["standard", "heldout"], default="standard",
+    ap.add_argument("--suite", choices=["standard", "heldout", "latching"], default="standard",
                     help="heldout: the W2 held-out families (pre-registered runs only)")
     args = ap.parse_args()
     os.environ["DEFEX_BACKEND"] = args.backend
 
     if args.suite == "heldout" and "--seed" not in sys.argv:
         raise SystemExit("--suite heldout needs an explicit --seed (the default 2026 is the tuning seed)")
-    conds = standard_conditions() if args.suite == "standard" else heldout_conditions()
+    conds = {"standard": standard_conditions, "heldout": heldout_conditions, "latching": latching_conditions}[args.suite]()
     if args.list:
         for c in conds:
             print(f"{c.name:26s} [{c.group}] {c.description}")

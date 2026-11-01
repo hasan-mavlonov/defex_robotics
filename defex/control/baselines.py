@@ -78,6 +78,19 @@ class _WaypointProgram(InsertionController):
         return Command(last.target, last.speed, ang_speed)
 
 
+def taught_overtravel(ctx: ControllerContext, programmed_mm: float) -> float:
+    """Overtravel (mm) a position program needs to reach the connector's insertion force (W3).
+
+    An integrator teaches the program to push hard enough to seat the part: with a
+    force budget, the servo deflection that produces the insertion target force.
+    """
+    budget = ctx.connector.force_budget
+    if budget is None:
+        return programmed_mm
+    k = ctx.fixture_dynamics.translational_stiffness_n_per_mm if ctx.fixture_dynamics else 10.0
+    return max(programmed_mm, budget.insert_target_n / k)
+
+
 class FixedTrajectoryController(_WaypointProgram):
     name = "fixed"
     label = "A: Fixed trajectory"
@@ -92,7 +105,7 @@ class FixedTrajectoryController(_WaypointProgram):
         S = self.ctx.nominal_socket_pose  # taught pose, never re-measured
         depth = self.ctx.connector.depth
         above = self.socket_frame_pose(S, [0.0, 0.0, c.approach_height_mm * MM])
-        seat = self.socket_frame_pose(S, [0.0, 0.0, -(depth + c.overtravel_mm * MM)])
+        seat = self.socket_frame_pose(S, [0.0, 0.0, -(depth + taught_overtravel(self.ctx, c.overtravel_mm) * MM)])
         self.markers = {"target": S}
         # Nominal grasp assumed: connector tip == fixture TCP.
         return [
@@ -116,7 +129,7 @@ class PositionCorrectionController(_WaypointProgram):
         G = obs.grasp_offset  # in-hand estimate
         depth = self.ctx.connector.depth
         above = self.socket_frame_pose(S, [0.0, 0.0, c.approach_height_mm * MM])
-        seat = self.socket_frame_pose(S, [0.0, 0.0, -(depth + c.overtravel_mm * MM)])
+        seat = self.socket_frame_pose(S, [0.0, 0.0, -(depth + taught_overtravel(self.ctx, c.overtravel_mm) * MM)])
         self.markers = {"target": S}
         return [
             _Waypoint("approach", self.fixture_target_for_connector(above, G), c.transit_speed_mm_s * MM),

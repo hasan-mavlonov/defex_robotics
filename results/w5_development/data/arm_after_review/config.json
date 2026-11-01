@@ -1,5 +1,5 @@
 {
-  "created_utc": "2026-11-01T01:01:36.896133+00:00",
+  "created_utc": "2026-11-01T01:23:17.774763+00:00",
   "n_trials_per_condition": 20,
   "base_seed": 2026,
   "controllers": [
@@ -50,6 +50,7 @@
       "clearance_mm": null,
       "chamfer_mm": null,
       "description": "Correctly aligned socket",
+      "defect": null,
       "characterized_noise": null
     },
     {
@@ -91,6 +92,7 @@
       "clearance_mm": null,
       "chamfer_mm": null,
       "description": "Socket displaced 3 mm in a random horizontal direction",
+      "defect": null,
       "characterized_noise": null
     },
     {
@@ -132,6 +134,7 @@
       "clearance_mm": null,
       "chamfer_mm": null,
       "description": "Moderate disturbance, vision sigma 1 mm (z 1 mm, yaw 1.7 deg, tilt 1 deg)",
+      "defect": null,
       "characterized_noise": null
     },
     {
@@ -173,6 +176,7 @@
       "clearance_mm": null,
       "chamfer_mm": null,
       "description": "Moderate disturbance, vision sigma 2 mm (z 2 mm, yaw 3.3 deg, tilt 2 deg)",
+      "defect": null,
       "characterized_noise": null
     },
     {
@@ -214,6 +218,7 @@
       "clearance_mm": null,
       "chamfer_mm": null,
       "description": "Moderate disturbance, friction coefficient 1",
+      "defect": null,
       "characterized_noise": null
     }
   ],
@@ -283,7 +288,7 @@
     "mujoco": "3.17.0",
     "numpy": "2.5.4",
     "matplotlib": "3.11.2",
-    "git_commit": "a74c00af02923d7a59d337c5a84f246c686648d3",
+    "git_commit": "a805d4ab3629deff39b9c7b46f914e599d837291",
     "git_dirty": true,
     "cpu_count": 10
   },
@@ -422,6 +427,12 @@
       "yaw_center_if_corrected_deg": 0.5,
       "yaw_center_policy": "always",
       "rotation_budget_fraction": 0.8,
+      "click_drop_fraction": 0.4,
+      "click_window_after_snap_mm": 0.2,
+      "pull_test_fraction": 0.5,
+      "pull_test_margin_mm": 0.3,
+      "pull_test_max_s": 3.0,
+      "reseat_tolerance_mm": 0.05,
       "verify_probe_margin_mm": 0.35,
       "seat_conform_min_s": 0.08,
       "seat_conform_max_s": 0.8,

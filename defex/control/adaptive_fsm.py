@@ -46,6 +46,7 @@ from defex.control.base import (
     Command,
     ControllerContext,
     InsertionController,
+    budgeted,
     contact_speed_scale,
     max_rotation_speed,
 )
@@ -94,8 +95,14 @@ class AdaptiveInsertionController(InsertionController):
     # ------------------------------------------------------------------ lifecycle
     def reset(self, ctx: ControllerContext) -> None:
         super().reset(ctx)
+        # W3: force thresholds from the connector's budget when it has one.
+        self.cfg = budgeted(self, ctx, insert_force_n="insert_target_n", max_force_n="abort_n")
         c = self.cfg
+        self.monitor = InsertionMonitor(c)
+        self.diagnoser = ContactDiagnoser(c)
         spec = ctx.connector
+        self.latching = spec.mating is not None and spec.mating.latch_retention_force_n > 0.0
+        self._trace: list[tuple[float, float]] = []  # (depth, axial force) during INSERT, for the click
         # W5: bound contact speeds and yaw probing by the fixture actually pushing (no-ops on the gantry).
         s = contact_speed_scale(ctx)
         self._v_insert = c.max_insert_speed_mm_s * MM * s
@@ -297,6 +304,7 @@ class AdaptiveInsertionController(InsertionController):
             self.monitor.reset(obs.t)
             self._contact = False
             self._bottom_since = None
+            self._trace = []
             self._enter(obs.t, INSERT)
         return self._cmd(c.reposition_speed_mm_s)
 
@@ -328,6 +336,8 @@ class AdaptiveInsertionController(InsertionController):
         else:
             v = self._v_free
         self.z -= v * dt
+        if self.latching:
+            self._trace.append((depth, f_ax))
         # Bottoming: deep enough and pushing at the target force -> diagnose quickly.
         if depth >= self._seat_threshold() and f_ax > c.bottom_force_fraction * c.insert_force_n:
             if self._bottom_since is None:
@@ -606,6 +616,8 @@ class AdaptiveInsertionController(InsertionController):
 
     # ------------------------------------------------------------------ VERIFY
     def _begin_verify(self, obs: Observation) -> Command:
+        if self.latching:
+            return self._begin_latch_verify(obs)
         # Seat conformity first: zero-spring tilt compliance lets the plug face settle
         # flat on the cavity floor, aligning the connector axis with the true socket axis.
         self.adm_conf.reset()
@@ -613,7 +625,70 @@ class AdaptiveInsertionController(InsertionController):
         self._enter(obs.t, VERIFY, "seat_conform")
         return self._verify_step(obs)
 
+    # ------------------------------------------------------------------ VERIFY, latching parts (W3)
+    def _click_in_trace(self, bottom: float) -> tuple[bool, float]:
+        """Latch signature: the force drops while the plug advances, where the snap should be.
+
+        The snap sits ``post_snap_stroke`` above the floor the plug just bottomed on, so the
+        window is relative to the encoder depth and does not depend on the camera.
+        """
+        m = self.ctx.connector.mating
+        snap = bottom - m.latch_post_snap_stroke_mm * MM
+        lo = snap - (m.latch_snap_depth_mm - m.latch_onset_depth_mm) * MM
+        hi = snap + self.cfg.click_window_after_snap_mm * MM
+        pts = [(d, f) for d, f in self._trace if lo <= d <= hi]
+        best = 0.0
+        run_max = -np.inf
+        for d, f in pts:
+            run_max = max(run_max, f)
+            best = max(best, run_max - f)
+        return best >= self.cfg.click_drop_fraction * m.latch_peak_force_n, best
+
+    def _begin_latch_verify(self, obs: Observation) -> Command:
+        m = self.ctx.connector.mating
+        bottom = self._corrected_depth(obs)
+        clicked, drop = self._click_in_trace(bottom)
+        self.log(obs.t, "latch", f"click {'seen' if clicked else 'not seen'}: drop {drop:.1f} N near the snap")
+        self._pull_target = self.cfg.pull_test_fraction * m.latch_retention_force_n
+        self._pull_limit = (m.latch_post_snap_stroke_mm + self.cfg.pull_test_margin_mm) * MM
+        self._pull_start = bottom
+        self._clicked = clicked
+        self._enter(obs.t, VERIFY, "pull")
+        return self._verify_step(obs)
+
+    def _latch_verify_step(self, obs: Observation) -> Command:
+        c = self.cfg
+        dt = self.ctx.control_period_s
+        F, _ = self._wrench(obs)
+        f_ax = float(F[2])
+        moved = self._pull_start - self._corrected_depth(obs)
+        if self.phase == "pull":
+            # Guarded pull: back the setpoint out until the latch pulls back with the test force
+            # (axial force negative: the environment holds the plug in), or the plug moves too far.
+            self.z -= self.force_axis.velocity(-self._pull_target, f_ax) * dt
+            held = f_ax <= -self._pull_target
+            if held or moved > self._pull_limit or obs.t - self.phase_t > c.pull_test_max_s:
+                ok = held and moved <= self._pull_limit and self._clicked
+                self.log(obs.t, "verify", f"pull {-f_ax:.1f} N at {moved / MM:.2f} mm, click "
+                                          f"{'seen' if self._clicked else 'not seen'} -> {'PASS' if ok else 'FAIL'}")
+                if not ok:
+                    self.diagnosis = ContactDiagnosis("verify_failed", self._corrected_depth(obs), 0.0, np.zeros(2),
+                                                      np.zeros(3), None, obs.lateral.copy(), "verify")
+                    self._enter(obs.t, RECOVER, "retract", "verify_failed")
+                    return self._recover_step(obs)
+                self.phase, self.phase_t = "release", obs.t
+            return self._cmd(c.force_phase_speed_cap_mm_s)
+        # re-seat: the pull leaves the plug on the latch hook; push it back to the floor
+        self.z -= self.force_axis.velocity(c.insert_force_n, f_ax) * dt
+        back = self._corrected_depth(obs) >= self._pull_start - c.reseat_tolerance_mm * MM
+        if (back and f_ax >= c.bottom_force_fraction * c.insert_force_n) or obs.t - self.phase_t > c.pull_test_max_s:
+            self.log(obs.t, "reseat", f"{'back on the floor' if back else 'not back on the floor'}")
+            return self._succeed(obs)
+        return self._cmd(c.force_phase_speed_cap_mm_s)
+
     def _verify_step(self, obs: Observation) -> Command:
+        if self.latching:
+            return self._latch_verify_step(obs)
         c = self.cfg
         dt = self.ctx.control_period_s
         F, T = self._wrench(obs)

@@ -192,14 +192,28 @@ class MuJoCoArmBackend(MuJoCoBackend):
         return q
 
     def _solve_home(self) -> np.ndarray:
-        q = np.array(self.arm.home_q, dtype=float)
+        """Home joint angles: IK from a grid of seeds, keeping solutions inside every joint
+        limit and choosing the one with the most margin to its limits (a single seed can
+        converge to a branch with the elbow past its +/-pi range)."""
+        import itertools
+
         target = Pose(self._layout.home_tcp.copy(), np.eye(3))
-        for _ in range(40):
-            q = self._ik(target, q)
-        err = np.linalg.norm(self._fk_tool(q).p - target.p)
-        if err > 1e-6:
-            raise RuntimeError(f"UR5e home pose not reachable (IK error {err * 1e3:.3f} mm)")
-        return q
+        lo, hi = self._jrange[:, 0], self._jrange[:, 1]
+        best, best_margin = None, -np.inf
+        for pan, lift, elbow, w1 in itertools.product((0.0, np.pi / 2, np.pi, -np.pi / 2), (-1.2, -2.0),
+                                                      (1.6, -1.6), (-1.97, -1.2)):
+            q = np.array([pan, lift, elbow, w1, -np.pi / 2, 0.0])
+            for _ in range(40):
+                q = self._ik(target, q)
+            q = (q + np.pi) % (2.0 * np.pi) - np.pi  # same pose, angles in [-pi, pi)
+            if np.linalg.norm(self._fk_tool(q).p - target.p) > 1e-6:
+                continue
+            margin = float(np.min(np.minimum(q - lo, hi - q)))
+            if margin > best_margin:
+                best, best_margin = q, margin
+        if best is None or best_margin <= 0.0:
+            raise RuntimeError("UR5e home pose not reachable inside the joint limits")
+        return best
 
     def inverse_kinematics(self, pose: Pose) -> np.ndarray:
         return self._ik(pose, self._q_cmd if hasattr(self, "_q_cmd") else self._home_q)

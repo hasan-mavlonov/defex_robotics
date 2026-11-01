@@ -174,3 +174,32 @@ def heldout_conditions() -> list[Condition]:
 
 def heldout_conditions_by_name() -> dict[str, Condition]:
     return {c.name: c for c in heldout_conditions()}
+
+
+# --------------------------------------------------------------------------------------
+# W3 latching connector (Molex Micro-Fit 3.0, 4 circuits): good parts and deliberately
+# bad parts. Controllers are never told about a defect.
+# --------------------------------------------------------------------------------------
+
+LATCHING_CONNECTOR = "microfit3_4ckt"
+
+
+def latching_conditions() -> list[Condition]:
+    good = [
+        Condition("mf_nominal", "latching", DisturbanceSpec(), NOMINAL_NOISE, connector=LATCHING_CONNECTOR,
+                  description="Micro-Fit 3.0, aligned socket"),
+        Condition("mf_moderate", "latching", MODERATE, NOMINAL_NOISE, connector=LATCHING_CONNECTOR,
+                  description="Micro-Fit 3.0, socket up to 3 mm / 5 deg yaw / 3 deg tilt off, nominal vision"),
+        Condition("mf_noise_1mm", "latching", MODERATE, NOMINAL_NOISE.scaled_vision(1.0), connector=LATCHING_CONNECTOR,
+                  description="Micro-Fit 3.0, moderate disturbance, 1 mm vision sigma"),
+    ]
+    bad = [
+        Condition(f"mf_{d}", "bad_part", MODERATE, NOMINAL_NOISE, connector=LATCHING_CONNECTOR, defect=d,
+                  description=f"Micro-Fit 3.0 with a deliberately bad part: {d.replace('_', ' ')}")
+        for d in ("half_latched", "broken_latch", "stubbed_terminal", "wrong_polarization")
+    ]
+    return good + bad
+
+
+def latching_conditions_by_name() -> dict[str, Condition]:
+    return {c.name: c for c in latching_conditions()}

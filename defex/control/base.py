@@ -107,6 +107,25 @@ class InsertionController(ABC):
 REFERENCE_EFFECTIVE_MASS_KG = 1.0  # gantry: 0.88 kg along z
 
 
+def budgeted(controller, ctx: ControllerContext, **fields_from_budget: str):
+    """Controller config with force thresholds from the connector's force budget (W3).
+
+    Starts from whatever config the controller holds at reset (scripts may swap it),
+    never compounding an earlier override. ``fields_from_budget`` maps a config field
+    to a ForceBudget attribute, e.g. insert_force_n="insert_target_n".
+    """
+    from dataclasses import replace
+
+    if getattr(controller, "_budget_cfg", None) is not controller.cfg:
+        controller._user_cfg = controller.cfg
+    cfg = controller._user_cfg
+    budget = ctx.connector.force_budget
+    if budget is not None:
+        cfg = replace(cfg, **{f: getattr(budget, b) for f, b in fields_from_budget.items()})
+    controller._budget_cfg = cfg
+    return cfg
+
+
 def contact_speed_scale(ctx: ControllerContext) -> float:
     """Scale for speeds at which contact can occur: impact force ~ v sqrt(k m), so keep v sqrt(m)."""
     fd = ctx.fixture_dynamics

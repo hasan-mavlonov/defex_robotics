@@ -75,15 +75,22 @@ committed code):
 
 | Controller | unchanged controllers | with fixture dynamics |
 |---|---|---|
-| A fixed | 25% | 25% |
-| B vision | 63% | 63% |
+| A fixed | 25% | 24% |
+| B vision | 63% | 62% |
 | E vision + RCC | 76% | 76% |
-| D spiral | 4% | **84%** (7 bad units) |
-| F spiral + RCC | 2% | **85%** (9 bad units) |
-| C adaptive | 1% | **40%** (43 protective stops) |
+| D spiral | 4% | **83%** (6 bad units) |
+| F spiral + RCC | 2% | **84%** (10 bad units) |
+| C adaptive | 1% | **39%** (44 protective stops) |
 
 (The first version of this report gave C 13% with the 4 ms latency bug and
-unscaled wall probes, from an unsaved run.)
+unscaled wall probes, from an unsaved run. The table above was re-run after a
+second fix: the home-pose IK now searches several seeds and keeps the solution
+with the most joint-limit margin; the single-seed solution sat on an unusual
+branch, and for the lower Micro-Fit socket put the elbow past its +/-pi limit.)
+
+With W3's push-click-pull verification on latching parts, C works on the arm
+when vision is good (Micro-Fit: 19 and 18 of 20) and passes none of 80 bad parts;
+under 1 mm vision noise it still fails (3 of 20). See `results/w3_development`.
 
 C is still not usable on the arm. Two problems remain, both in VERIFY (seen in
 the first run; to be re-checked on the saved run):

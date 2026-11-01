@@ -33,7 +33,7 @@ from collections import deque
 import numpy as np
 
 from defex.config import DEG, MM, CompliantSpiralSearchConfig, SpiralSearchConfig
-from defex.control.base import Command, ControllerContext, InsertionController, contact_speed_scale
+from defex.control.base import Command, ControllerContext, InsertionController, budgeted, contact_speed_scale
 from defex.control.compliance import Admittance, ForceGuidedAxis
 from defex.perception.state_estimator import Observation
 from defex.utils.transforms import Pose, norm3
@@ -59,6 +59,8 @@ class SpiralSearchController(InsertionController):
 
     def reset(self, ctx: ControllerContext) -> None:
         super().reset(ctx)
+        # W3: same per-connector force budget as C (insertion force and abort threshold).
+        self.cfg = budgeted(self, ctx, insert_force_n="insert_target_n", max_force_n="abort_n")
         c = self.cfg
         self.S: Pose | None = None
         self.G: Pose | None = None
@@ -202,6 +204,13 @@ class SpiralSearchController(InsertionController):
             elif obs.t - self._settled_since > 0.05:
                 if obs.depth > 0.5 * self.depth:
                     self.face_depth = None
+                    if self.ctx.connector.mating is not None:
+                        # Terminals, not the floor: keep inserting under force control (vendor
+                        # linear insertion to a force or distance limit).
+                        self.log(obs.t, "contact", f"deep contact at {obs.depth / MM:.2f} mm: inserting")
+                        self.adm.reset()
+                        self._enter(obs.t, INSERT)
+                        return self._cmd(30.0)
                     self.log(obs.t, "contact", f"floor contact at depth {obs.depth / MM:.2f} mm: went straight in")
                     return self._check_seat(obs, obs.depth)
                 if self.face_depth is None:
@@ -255,8 +264,11 @@ class SpiralSearchController(InsertionController):
             v = self.insert_axis.velocity(c.insert_force_n, f_ax)
         self.z -= v * dt
         self.adm.update(F[:2], dt)
-        gain = obs.depth - self.face_depth
-        if gain >= self.depth - c.seat_margin_mm * MM and f_ax >= 0.8 * c.insert_force_n:
+        if self.face_depth is not None:
+            gain, need = obs.depth - self.face_depth, self.depth - c.seat_margin_mm * MM
+        else:  # went straight in: depth from the vision estimate, window widened by its accuracy
+            gain, need = obs.depth, self.depth - c.seat_margin_mm * MM - 3.0 * self.sigma_z
+        if gain >= need and f_ax >= 0.8 * c.insert_force_n:
             if self._settled_since is None:
                 self._settled_since = obs.t
             elif obs.t - self._settled_since > 0.08:

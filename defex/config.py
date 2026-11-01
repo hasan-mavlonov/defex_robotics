@@ -591,6 +591,13 @@ class AdaptiveConfig:
     # "gate_or_corrected": also if C changed the yaw itself; "always": every cycle.
     yaw_center_policy: str = "always"  # W4 default; V0.1 used "sigma_gate" (see results/w4_development)
     rotation_budget_fraction: float = 0.8  # of max_torque_nm, for torque overshoot while probing yaw (W5)
+    # W3 push-click-pull verification for latching connectors
+    click_drop_fraction: float = 0.4  # force drop at the snap, as a fraction of the latch peak force
+    click_window_after_snap_mm: float = 0.2  # search the trace this far past the expected snap
+    pull_test_fraction: float = 0.5  # guarded pull at this fraction of the rated retention force
+    pull_test_margin_mm: float = 0.3  # allowed movement beyond the post-snap stroke
+    pull_test_max_s: float = 3.0
+    reseat_tolerance_mm: float = 0.05  # after the pull, back within this of the depth it bottomed at
     # VERIFY
     verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance
     seat_conform_min_s: float = 0.08

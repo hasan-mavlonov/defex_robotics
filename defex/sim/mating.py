@@ -74,6 +74,9 @@ class MatingForce:
         scale = float(os.environ.get("DEFEX_REVIEW_LATCH_PEAK_SCALE", "1"))
         shift = float(os.environ.get("DEFEX_REVIEW_LATCH_SHIFT_MM", "0")) * MM
         self.latch_peak *= scale
+        tscale = float(os.environ.get("DEFEX_REVIEW_TERMINAL_SCALE", "1"))
+        self.peak_t *= tscale
+        self.slide_t *= tscale
         self.onset += shift
         self.lpeak += shift
         self.snap += shift

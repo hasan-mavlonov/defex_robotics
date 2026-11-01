@@ -478,7 +478,22 @@ class CompliantSpiralSearchConfig(SpiralSearchConfig):
 @dataclass(frozen=True)
 class SpiralSearchStiffFixtureConfig(SpiralSearchConfig):
     """Controller D on fixtures outside the gantry family (the UR5e): tuned on the arm with the W1
-    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep D's gantry values."""
+    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep D's gantry values.
+
+    Confirm-stage rank 1 (tuning/tuning_spiral_confirm.csv, 198/210, median cycle 4.76 s); ranks 1-3
+    tied on success and differ only in the two-speed values.
+    """
+
+    search_force_n: float = 5.0  # arm coarse/fine (gantry 2 N); Flexiv SearchHole default 5 N
+    spiral_speed_mm_s: float = 10.0  # arm coarse (gantry 2.5); 4 mm/s on the UR5e after the W5 rule
+    # Arm coarse: the top 14 settings all search with lateral compliance (Flexiv searchStiffRatio); mean
+    # successes over the 27 settings per stiffness: stiff 18.4, 0.5 N/mm 20.1, 2 N/mm 20.1 of 24.
+    search_lateral_stiffness_n_per_mm: float = 0.5
+    insert_force_n: float = 5.0  # arm fine (gantry 8 N); Flexiv InsertComp default 5 N
+    # Arm fine (gantry 0.5 mm): a chamfer contact taken for the face made full seats look 0.5-1.5 mm short.
+    seat_margin_mm: float = 1.0
+    free_speed_mm_s: float = 25.0  # arm speed2 (amendment 1): 10 mm/s in the free cavity on the UR5e
+    near_floor_margin_mm: float = 2.0  # arm speed2, C's near_bottom_margin_mm
 
 
 @dataclass(frozen=True)

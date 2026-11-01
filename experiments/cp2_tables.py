@@ -141,13 +141,15 @@ def snapshot_tables(run: Path) -> str:
         cell[k][2] += is_escape(r)
         cell[k][3] += r.protective_stop
     conds = list(dict.fromkeys(r.condition for r in res))
-    out += ["", "Successes per condition (escapes in brackets when nonzero):", "",
+    out += ["", "Successes per condition; in brackets when nonzero: e = escapes (failed units passed as good), "
+                "s = protective stops:", "",
             "| Condition | " + " | ".join(LETTER[c] for c in ctrls) + " |", "|---|" + "---|" * len(ctrls)]
     for cond in conds:
         cells = []
         for c in ctrls:
-            s, n, e, _ = cell[(cond, c)]
-            cells.append(f"{s}/{n}" + (f" [{e}]" if e else ""))
+            s, n, e, st = cell[(cond, c)]
+            tag = " ".join(t for t in (f"e{e}" if e else "", f"s{st}" if st else "") if t)
+            cells.append(f"{s}/{n}" + (f" [{tag}]" if tag else ""))
         out.append(f"| {cond} | " + " | ".join(cells) + " |")
     pv = summary.get("paired_vs_adaptive", {}).get("adaptive_learned")
     if pv:
@@ -159,6 +161,23 @@ def snapshot_tables(run: Path) -> str:
                 f"{str(env.get('git_commit', 'unknown'))[:7]}, dirty: {env.get('git_dirty')}, backend: "
                 f"{cfg.get('backend')}, seed {cfg.get('base_seed')}, {cfg.get('n_trials_per_condition')} trials per cell)."]
     return "\n".join(out)
+
+
+def overlap_check(a: Path, b: Path, ignore=("wall_time_s",)) -> str:
+    """Rows present in both trials.csv files (same controller, condition, trial index, seed) compared field by field."""
+    import csv
+
+    def load(p):
+        with p.open() as fh:
+            return {(r["controller"], r["condition"], r["trial_index"], r["seed"]): r for r in csv.DictReader(fh)}
+
+    ra, rb = load(a), load(b)
+    keys = sorted(ra.keys() & rb.keys())
+    diff_rows = [k for k in keys if any(ra[k][f] != rb[k].get(f) for f in ra[k] if f not in ignore)]
+    ctrls = sorted({k[0] for k in keys})
+    by = {c: sum(k[0] == c for k in diff_rows) for c in ctrls}
+    return (f"| `{rel(a)}` | `{rel(b)}` | {len(keys)} | {', '.join(ctrls)} | {len(diff_rows)} | "
+            + ", ".join(f"{c} {n}" for c, n in by.items() if n) + " |")
 
 
 def median_cycle(rs) -> float | None:
@@ -185,7 +204,12 @@ def main() -> None:
     if (vw / "paired.json").exists():
         parts += ["## Arm validation sweep (seed 4001)", "", paired_overall_table(vw / "paired.json", vw / "trials.csv"),
                   "", selection_ranking(vw / "paired.json"), "", "Per condition:", "", paired_md(vw / "paired.md"), ""]
-    for name, title in (("pooled", "pooled"), ("standard", "standard noise families"), ("latching", "latching suite")):
+    vl = ap / "validation" / "latching_suite" / "paired.md"
+    if vl.exists():
+        parts += ["## Arm G vs C on validation seed 4001, whole latching suite (after the choice)", "",
+                  paired_md(vl), ""]
+    for name, title in (("pooled", "pooled"), ("standard", "standard noise families and friction_1"),
+                        ("latching", "latching suite")):
         p = ap / "dev2026" / name / "paired.md"
         if p.exists():
             parts += [f"## Arm G vs C on dev seed 2026 ({title})", "", paired_md(p), ""]
@@ -194,6 +218,22 @@ def main() -> None:
                         ("arm_standard5", "UR5e arm, five-condition set"), ("arm_latching", "UR5e arm, latching suite")):
         if (snap / name / "summary.json").exists():
             parts += [f"## Snapshot, dev seed 2026: {title}", "", snapshot_tables(snap / name), ""]
+    pairs = [
+        (snap / "gantry_standard" / "trials.csv", ROOT / "equivalence" / "after_standard" / "trials.csv"),
+        (snap / "gantry_latching" / "trials.csv", ROOT / "equivalence" / "after_latching" / "trials.csv"),
+        (snap / "gantry_standard" / "trials.csv", gr / "standard" / "trials.csv"),
+        (snap / "gantry_latching" / "trials.csv", gr / "latching" / "trials.csv"),
+        (snap / "arm_standard5" / "trials.csv", REPO_ROOT / "results" / "w5b_development" / "after" / "arm_standard_seed2026" / "trials.csv"),
+        (snap / "arm_latching" / "trials.csv", REPO_ROOT / "results" / "w5b_development" / "after" / "arm_latching_seed2026" / "trials.csv"),
+        (snap / "arm_standard5" / "trials.csv", ap / "dev2026" / "standard" / "trials.csv"),
+        (snap / "arm_latching" / "trials.csv", ap / "dev2026" / "latching" / "trials.csv"),
+    ]
+    rows = [overlap_check(a, b) for a, b in pairs if a.exists() and b.exists()]
+    if rows:
+        parts += ["## Overlap checks: the same trials in different runs", "",
+                  "Every field except wall_time_s, for rows with the same controller, condition, trial index and seed.",
+                  "", "| Run | Earlier run | Shared trials | Controllers | Rows that differ | Differing rows by controller |",
+                  "|---|---|---|---|---|---|", *rows, ""]
     print("\n".join(parts).rstrip() + "\n")
 
 

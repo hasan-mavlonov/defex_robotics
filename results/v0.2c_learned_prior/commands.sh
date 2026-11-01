@@ -20,10 +20,10 @@ $R/collect_dagger.sh
 #    gantry_residual_k2_conly (C data only, L2 grid 1e-4/1e-3) was the first run:
 python -m experiments.train_contact_likelihood fit --backend gantry --mode residual --components 2 \
     --sources "results/w9_development/data:train_main,train_noise05" --name gantry_residual_k2_conly
-B=gantry $R/train_models.sh          # residual K=2, K=1, posterior K=3 (+ ratio); the tempered run crashed (Adam bug, fixed in 2c4b3a1..)
+B=gantry $R/train_models.sh          # residual K=2, K=1, posterior K=3 (+ ratio); the tempered run crashed (Adam bug, fixed in 1ede44c)
 Q=1 $R/train_models_arm.sh &         # arm residual K=2 (K=3 killed, re-run below)
 Q=2 $R/train_models_arm.sh; wait     # arm posterior K=3 (+ ratio) (tempered killed, re-run below)
-bash <scratch>/gantry_rest.sh        # gantry tempered K=2 (K=3 killed, re-run below) -- same commands as train_rest.sh
+bash $R/gantry_rest.sh               # gantry tempered K=2 (its K=3 run was killed, re-run below)
 Q=gantry $R/train_rest.sh & Q=arm $R/train_rest.sh; wait
 
 # 3. Offline evaluation (stopping split = OFFLINE_RULE score; dev 2026 reported).

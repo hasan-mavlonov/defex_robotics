@@ -166,6 +166,11 @@ def defect_table(rows: list[dict], good: list[dict] | None = None) -> list[str]:
             sc.append(f"{sum(stop(r) for r in rs)}/{len(rs)}")
         out.append(f"| {d} | " + " | ".join(cells) + " |")
         stops.append(f"| {d} | " + " | ".join(sc) + " |")
+    cells = []
+    for c in ctrls:
+        cyc = [float(r["cycle_time_s"]) for r in rows if r["controller"] == c]
+        cells.append(f"{float(np.median(cyc)):.1f}" if cyc else "")
+    out.append("| median cycle per bad part (s) | " + " | ".join(cells) + " |")
     if good:
         cells = []
         for c in ctrls:
@@ -195,7 +200,7 @@ def decisions(name: str, rows: list[dict]) -> list[str]:
             verdict = "a fair baseline matches C: goes in the README headline; Hasan decides the pitch"
         else:
             verdict = "C ahead of every fair baseline"
-        out.append(f"| {name} | C vs best of D/E/F ({LETTER[best]}) | {100 * rate['adaptive']:.1f}% vs "
+        out.append(f"| {name} | C vs best of {"/".join(LETTER[c] for c in fair)} ({LETTER[best]}) | {100 * rate['adaptive']:.1f}% vs "
                    f"{100 * rate[best]:.1f}% ({gap:+.1f} pts) | {co} / {bo} | {fmt_p(p)} | {verdict} |")
     if "adaptive_learned" in present:
         co, go, _ = paired(rows, "adaptive", "adaptive_learned")
@@ -221,7 +226,7 @@ def defect_decision(name: str, rows: list[dict]) -> list[str]:
     hi = 100 * wilson(esc["adaptive"], n["adaptive"])[1]
     verdict = ("C passes fewer bad parts, p < 0.05" if esc["adaptive"] < esc[best] and p < 0.05
                else "no significant difference in bad parts passed")
-    out = [f"| {name} | bad parts passed, C vs fewest of D/E/F ({LETTER[best]}) | {esc['adaptive']}/{n['adaptive']} "
+    out = [f"| {name} | bad parts passed, C vs fewest of {"/".join(LETTER[c] for c in fair)} ({LETTER[best]}) | {esc['adaptive']}/{n['adaptive']} "
            f"(<= {hi:.1f}%) vs {esc[best]}/{n[best]} | {co} / {bo} | {fmt_p(p)} | {verdict} |"]
     if "adaptive_learned" in present:
         out.append(f"| {name} | bad parts passed, G | {esc['adaptive_learned']}/{n['adaptive_learned']} (<= "

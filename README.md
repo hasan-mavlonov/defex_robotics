@@ -70,7 +70,9 @@ paired trials on a fresh seed, 20261031.
   probes would catch a bad insertion. Deliberately bad parts (half-latched,
   broken latch, stubbed terminal) are W3 of the V0.2 plan.
 
-A, B and C agree with V0.1 within their intervals (V0.1: 23.5%, 85.9%, 99.25%).
+A, B and C are consistent with V0.1: their 95% intervals overlap (V0.1: 23.5%,
+85.9%, 99.25%), though C's V0.1 rate lies just outside this run's interval
+(99.4 to 99.9%).
 These are simulation results with assumed physical parameters.
 
 <!-- RESULTS:START -->

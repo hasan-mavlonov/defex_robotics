@@ -2,8 +2,9 @@
 
 Not pre-registered and not a reported benchmark: an evaluation run made after
 benchmark_v0.2a to see whether its result depends on the seed. Same code as the
-reported run (commit `5865e58` differs from the frozen `56707fa` only in the CI
-workflow file and results), seed 20261107, 12,000 paired trials.
+reported run (commit `5865e58` differs from the frozen `56707fa` in the CI
+workflow file, results, README.md and the dashboard title in
+`experiments/evaluate.py`; no simulation or controller code), seed 20261107, 12,000 paired trials.
 
 | Controller | benchmark_v0.2a (seed 20261031) | This run (seed 20261107) |
 |---|---|---|

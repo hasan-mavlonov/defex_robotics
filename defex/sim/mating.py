@@ -27,6 +27,8 @@ latch cannot engage while it rests on the face).
 
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -80,6 +82,16 @@ class MatingForce:
             self.latch_peak *= variation.latch_peak_scale
             self.peak_t *= variation.terminal_scale
             self.slide_t *= variation.terminal_scale
+        # Review-only spread through environment variables (results/v0.2b_latch_spread/run.sh); default no-op.
+        scale = float(os.environ.get("DEFEX_REVIEW_LATCH_PEAK_SCALE", "1"))
+        shift = float(os.environ.get("DEFEX_REVIEW_LATCH_SHIFT_MM", "0")) * MM
+        self.latch_peak *= scale
+        tscale = float(os.environ.get("DEFEX_REVIEW_TERMINAL_SCALE", "1"))
+        self.peak_t *= tscale
+        self.slide_t *= tscale
+        self.onset += shift
+        self.lpeak += shift
+        self.snap += shift
         self.retention = 0.0 if defect == "broken_latch" else m.latch_retention_force_n
         self.stop = {
             "half_latched": self.snap - 0.3 * MM,

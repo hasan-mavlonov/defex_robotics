@@ -54,9 +54,23 @@ seed and D, E and F got no arm tuning
 
 C passed **0 of 1,600** bad parts as good (Wilson 95% upper bound 0.24%). F passed
 1,062, D 442. ([`TABLES.md`](../results/benchmark_v0.2b/TABLES.md), latching
-sections.) C does this with a push-click-pull check: it looks for the latch snap
-in the force-depth trace, then pulls at half the rated retention force
-([`results/w3_development/REPORT.md`](../results/w3_development/REPORT.md)).
+sections.) C does this with a guarded pull at half the rated retention force
+after insertion. Its "click" check turned out not to see the latch (it fires on
+the terminal-friction drop), so the pull does the work.
+
+**Caveats found after the run** (development seeds,
+[`REPORT.md`](../results/benchmark_v0.2b/REPORT.md#after-the-run-review-findings-not-pre-registered)):
+
+- Only C and G run a pull test; D, E and F check depth only. Given the same
+  pull in development (dev seed 2026), D and F also pass 0 of 80 bad parts. The
+  gap measures having a pull test. C's remaining edge in that run: good parts
+  whose latch and terminal forces vary within the datasheet range, C 120 of 120
+  per machine against F's 91-93 (`results/v0.2c_integration/review_fixes/REVIEW_TABLES.md`
+  on branch `v0.2c/integration`; not pre-registered).
+- C's pull limit comes from the simulator's assumed latch geometry. If the
+  simulated latch engages 0.15 mm earlier, C seats 4 of 60 good parts on the
+  gantry instead of 54; F is unaffected
+  ([`results/v0.2b_latch_spread`](../results/v0.2b_latch_spread/REPORT.md)).
 
 On good-part conditions C is not free of escapes: 6 bad units in 6,200 trials
 (G: 9). Five come from one identified bug in the arm's yaw check at 0.2 mm
@@ -79,14 +93,19 @@ median 26 s per bad part.
 
 ## What this supports
 
-- In simulation, C passes far fewer bad connectors than any conventional cell
-  tested: none of 1,600 deliberately bad parts against hundreds.
-- On a gantry with correctly characterized vision, C also seats more units.
+- In simulation, C's retention pull test rejected every one of 1,600 deliberately
+  bad parts; depth-only conventional cells passed hundreds.
+- On a gantry with correctly characterized vision, C seats more housing-only
+  connectors than the conventional cells tested.
 
 ## What this does not support yet
 
 - That C seats more connectors than a well-built conventional cell in general:
-  on the arm it does not.
+  on the arm it does not, and on latching parts a re-tuned F seats more on a dev
+  seed (60 against 54 of 60, `results/v0.2c_gantry_baselines` on branch
+  `v0.2c/gantry-baselines`).
+- That C's bad-part advantage would survive a conventional cell with a pull test,
+  or real latch-to-latch variation.
 - Any hardware number. There is no rig yet; the latch model's snap force is
   assumed, and the arm is one simulated model whose servos may lag more than a
   real UR5e. Rig options and a test protocol are in

@@ -17,7 +17,8 @@ from pathlib import Path
 import numpy as np
 
 from defex.config import REPO_ROOT
-from experiments.checkpoint_report import DEFECTS, LETTER, escape, fmt_p, load, mcnemar, ok, stop, wilson
+from defex.logging.metrics import STOP_RESET_S
+from experiments.checkpoint_report import DEFECTS, LETTER, escape, fmt_p, load, mcnemar, ok, stop, uph, wilson
 
 ROOT = REPO_ROOT / "results" / "v0.2c_arm_baselines"
 ALL = ["fixed", "correction", "correction_rcc", "spiral", "spiral_rcc", "adaptive", "adaptive_learned"]
@@ -28,6 +29,8 @@ SETS = [  # (folder, title)
     ("arm_dev2027_standard5", "Arm, dev seed 2027, standard 5-condition set, 20 trials"),
     ("arm_dev2027_latching", "Arm, dev seed 2027, latching suite, 20 trials"),
     ("arm_dev2027_standard20", "Arm, dev seed 2027, all 20 standard conditions, 5 trials"),
+    ("gantry_rule3_standard", "Gantry, dev seed 2026, rule-3 set (noise_1mm, noise_2mm, friction_1), 20 trials"),
+    ("gantry_rule3_latching", "Gantry, dev seed 2026, latching suite, 10 trials"),
 ]
 
 
@@ -121,7 +124,7 @@ def tuning() -> list[str]:
     if not tdir.exists():
         return out + ["(not run yet)", ""]
     for ctl in DEF:
-        for stage in ("coarse", "fine", "speed", "confirm"):
+        for stage in ("coarse", "fine", "speed", "speed2", "confirm"):
             path = tdir / f"tuning_{ctl}_{stage}.csv"
             if not path.exists():
                 continue
@@ -158,8 +161,8 @@ def before_after(name: str, title: str) -> list[str]:
     head = "good-part conditions only; " if latching else ""
     out += [f"Success ({head}Wilson 95%), escapes, stops and cycle of successes, before -> after:", "",
             "| Controller | Success before | Success after | After vs before: after-only / before-only (McNemar p) | "
-            "Escapes | Stops | Time limits | Cycle p50 (s) | Cycle p95 (s) |",
-            "|---|---|---|---|---|---|---|---|---|"]
+            "Escapes | Stops | Time limits | Cycle p50 (s) | Cycle p95 (s) | Good units/h, 0 s / 60 s per stop |",
+            "|---|---|---|---|---|---|---|---|---|---|"]
     for c in ALL:
         if c not in bb or c not in ab:
             continue
@@ -172,7 +175,8 @@ def before_after(name: str, title: str) -> list[str]:
         out.append(f"| {LETTER[c]} {c} | {kb}/{len(rb)} ({100 * lb:.0f}-{100 * hb:.0f}%) | {ka}/{n} ({100 * la:.0f}-{100 * ha:.0f}%) | "
                    f"{ao} / {bo} ({fmt_p(mcnemar(ao, bo))}) | {sum(map(escape, rb))} -> {sum(map(escape, ra))} | "
                    f"{sum(map(stop, rb))} -> {sum(map(stop, ra))} | {tl(rb)} -> {tl(ra)} | {cyc(rb, 50)} -> {cyc(ra, 50)} | "
-                   f"{cyc(rb, 95)} -> {cyc(ra, 95)} |")
+                   f"{cyc(rb, 95)} -> {cyc(ra, 95)} | {uph(rb, 0.0):.0f} / {uph(rb, STOP_RESET_S):.0f} -> "
+                   f"{uph(ra, 0.0):.0f} / {uph(ra, STOP_RESET_S):.0f} |")
     if latching:
         bbad, abad = by_ctrl(bad(b_rows)), by_ctrl(bad(a_rows))
         out += ["", "Deliberately bad parts passed as good (escapes / trials, Wilson 95% upper bound), before -> after:", "",
@@ -210,6 +214,32 @@ def before_after(name: str, title: str) -> list[str]:
     return out + [""]
 
 
+def pooled_2027() -> list[str]:
+    """Seed 2027 (not used for tuning), standard 5-condition set and latching good parts together."""
+    names = ("arm_dev2027_standard5", "arm_dev2027_latching")
+    if not all((ROOT / t / n / "trials.csv").exists() for t in ("before", "after") for n in names):
+        return []
+    rows = {t: [r for n in names for r in good(load(ROOT / t / n))] for t in ("before", "after")}
+    bb, ab = by_ctrl(rows["before"]), by_ctrl(rows["after"])
+    out = ["### Arm, dev seed 2027, standard 5-condition set and latching good parts pooled (160 trials per controller)", "",
+           "| Controller | Success before -> after | After vs before (p) | After: C-only / other-only (p) | "
+           "After: G-only / other-only (p) | Cycle p50 before -> after (s) | Good units/h after, 0 s / 60 s per stop |",
+           "|---|---|---|---|---|---|---|"]
+    for c in ALL:
+        rb, ra = bb[c], ab[c]
+        ao, bo, _ = pair_counts(ra, rb)
+        cells = []
+        for ref in ("adaptive", "adaptive_learned"):
+            if c == ref:
+                cells.append("-")
+                continue
+            r_only, o_only, _ = pair_counts(ab[ref], ra)
+            cells.append(f"{r_only} / {o_only} ({fmt_p(mcnemar(r_only, o_only))})")
+        out.append(f"| {LETTER[c]} {c} | {sum(map(ok, rb))} -> {sum(map(ok, ra))} | {ao} / {bo} ({fmt_p(mcnemar(ao, bo))}) | "
+                   f"{cells[0]} | {cells[1]} | {cyc(rb, 50)} -> {cyc(ra, 50)} | {uph(ra, 0.0):.0f} / {uph(ra, STOP_RESET_S):.0f} |")
+    return out + [""]
+
+
 def equivalence() -> list[str]:
     out = ["## Field identity (scripts/compare_trials.py, wall_time_s ignored)", ""]
     for path in sorted((ROOT / "equivalence").glob("*.txt")) if (ROOT / "equivalence").exists() else []:
@@ -225,6 +255,7 @@ def main() -> None:
     lines += ["## Before and after", ""]
     for name, title in SETS:
         lines += before_after(name, title)
+    lines += pooled_2027()
     lines += equivalence()
     print("\n".join(lines))
 

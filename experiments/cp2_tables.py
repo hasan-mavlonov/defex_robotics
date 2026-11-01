@@ -17,6 +17,13 @@ from defex.config import REPO_ROOT
 from defex.logging.metrics import is_escape, read_trials_csv
 
 ROOT = REPO_ROOT / "results" / "checkpoint2_prep"
+SPLIT_NAMES = {"dev_seed2026": "dev 2026 (held out)", "validation": "validation 4001 (selection split)",
+               "train": "train 3001-3030"}
+ARM_CAVEAT = ("No arm-specific tuning for A, B, D, E or F. C's arm rules (W5b) were developed on this seed "
+              "(and 2027), so C's and G's arm rows are in-sample for them; G adds a prior trained on 5,100 arm "
+              "trials (seeds 3001-3030) and chosen on 500 (seed 4001). Cross-controller numbers on a seed none "
+              "of this saw: "
+              "`results/checkpoint2_prep/review_fixes/tables.md` (seed 3031).")
 ORDER = ("fixed", "correction", "adaptive", "spiral", "correction_rcc", "spiral_rcc", "adaptive_learned")
 LETTER = {"fixed": "A", "correction": "B", "adaptive": "C", "spiral": "D", "correction_rcc": "E", "spiral_rcc": "F",
           "adaptive_learned": "G"}
@@ -41,7 +48,7 @@ def model_table(metrics_paths: list[Path]) -> str:
            "|---|---|---|---|---|---|---|---|"]
     for p in metrics_paths:
         m = json.loads(p.read_text())
-        for split in ("train", "validation", "dev_seed2026"):
+        for split in ("dev_seed2026", "validation", "train"):
             s = m.get(split) or {}
             if not s.get("n"):
                 continue
@@ -52,7 +59,7 @@ def model_table(metrics_paths: list[Path]) -> str:
                                   ("learned", "analytic_posterior_mean", "vision_estimate"))
 
             c = s["calibration_xy"]["learned"]
-            out.append(f"| {m['feature_set']} | {split} | {s['n']} | {s['nll_nats']:.2f} | {lav(a)} | {lav(f)} | "
+            out.append(f"| {m['feature_set']} | {SPLIT_NAMES[split]} | {s['n']} | {s['nll_nats']:.2f} | {lav(a)} | {lav(f)} | "
                        f"{c['inside_1sigma']:.2f} / {c['inside_2sigma']:.2f} | "
                        f"{s['yaw_mae_deg']['learned']:.2f} / {s['yaw_mae_deg']['vision_estimate']:.2f} |")
     sel = []
@@ -67,7 +74,10 @@ def model_table(metrics_paths: list[Path]) -> str:
                    + f" mm (replay matches the recorded posterior to {_f(rep.get('replay_matches_recorded_mm'), '{:.1e}')} mm)")
     src = ", ".join(f"`{rel(p)}`" for p in metrics_paths)
     return "\n".join(out + [""] + sel + ["", f"L = learned mean, A = C's analytic posterior mean after the same "
-                                             f"contact, V = vision estimate. Files: {src}."])
+                                             f"contact, V = vision estimate. The validation split (4001) chose early "
+                                             f"stopping, the grid point, the input set and the weight, so its numbers "
+                                             f"are in-sample for those choices; dev 2026 was used for none of them and "
+                                             f"is the split to quote for offline quality. Files: {src}."])
 
 
 # ------------------------------------------------------------------ paired G vs C
@@ -217,7 +227,8 @@ def main() -> None:
     for name, title in (("gantry_standard", "Gantry, standard suite"), ("gantry_latching", "Gantry, latching suite"),
                         ("arm_standard5", "UR5e arm, five-condition set"), ("arm_latching", "UR5e arm, latching suite")):
         if (snap / name / "summary.json").exists():
-            parts += [f"## Snapshot, dev seed 2026: {title}", "", snapshot_tables(snap / name), ""]
+            caveat = [ARM_CAVEAT, ""] if name.startswith("arm") else []
+            parts += [f"## Snapshot, dev seed 2026: {title}", "", *caveat, snapshot_tables(snap / name), ""]
     pairs = [
         (snap / "gantry_standard" / "trials.csv", ROOT / "equivalence" / "after_standard" / "trials.csv"),
         (snap / "gantry_latching" / "trials.csv", ROOT / "equivalence" / "after_latching" / "trials.csv"),

@@ -36,17 +36,17 @@ File: `results/checkpoint2_prep/gantry_g_recheck/pooled/paired.md`.
 
 | Model | Split | n | NLL (nats) | Radial error L / A / V, all contacts (mm) | L / A / V, first contacts (mm) | Inside 1 / 2 sigma (expected 0.39 / 0.86) | Yaw error L / V (deg) |
 |---|---|---|---|---|---|---|---|
-| contact | train | 7135 | 4.51 | 1.83 / 1.80 / 2.11 | 1.14 / 1.48 / 2.00 | 0.49 / 0.91 | 1.93 / 2.45 |
-| contact | validation | 657 | 5.34 | 2.08 / 2.02 / 2.28 | 1.21 / 1.54 / 2.09 | 0.44 / 0.83 | 2.04 / 2.41 |
-| contact | dev_seed2026 | 345 | 4.69 | 1.69 / 1.83 / 2.08 | 1.07 / 1.38 / 1.94 | 0.49 / 0.86 | 1.90 / 2.46 |
-| all | train | 7135 | 3.97 | 1.24 / 1.80 / 2.11 | 1.07 / 1.48 / 2.00 | 0.44 / 0.91 | 1.85 / 2.45 |
-| all | validation | 657 | 4.65 | 1.51 / 2.02 / 2.28 | 1.17 / 1.54 / 2.09 | 0.36 / 0.82 | 1.96 / 2.41 |
-| all | dev_seed2026 | 345 | 4.36 | 1.23 / 1.83 / 2.08 | 1.10 / 1.38 / 1.94 | 0.39 / 0.81 | 1.77 / 2.46 |
+| contact | dev 2026 (held out) | 345 | 4.69 | 1.69 / 1.83 / 2.08 | 1.07 / 1.38 / 1.94 | 0.49 / 0.86 | 1.90 / 2.46 |
+| contact | validation 4001 (selection split) | 657 | 5.34 | 2.08 / 2.02 / 2.28 | 1.21 / 1.54 / 2.09 | 0.44 / 0.83 | 2.04 / 2.41 |
+| contact | train 3001-3030 | 7135 | 4.51 | 1.83 / 1.80 / 2.11 | 1.14 / 1.48 / 2.00 | 0.49 / 0.91 | 1.93 / 2.45 |
+| all | dev 2026 (held out) | 345 | 4.36 | 1.23 / 1.83 / 2.08 | 1.10 / 1.38 / 1.94 | 0.39 / 0.81 | 1.77 / 2.46 |
+| all | validation 4001 (selection split) | 657 | 4.65 | 1.51 / 2.02 / 2.28 | 1.17 / 1.54 / 2.09 | 0.36 / 0.82 | 1.96 / 2.41 |
+| all | train 3001-3030 | 7135 | 3.97 | 1.24 / 1.80 / 2.11 | 1.07 / 1.48 / 2.00 | 0.44 / 0.91 | 1.85 / 2.45 |
 
 - `contact`: selected [32, 32] lr 0.003 wd 0.0001, best epoch 91; validation first-contact replay, posterior-mean radial error at w = 0 / 0.25 / 0.5 / 1: 1.54 / 1.40 / 1.31 / 1.22 mm (replay matches the recorded posterior to 0.0e+00 mm)
 - `all`: selected [64, 64] lr 0.003 wd 0.001, best epoch 24; validation first-contact replay, posterior-mean radial error at w = 0 / 0.25 / 0.5 / 1: 1.54 / 1.38 / 1.27 / 1.19 mm (replay matches the recorded posterior to 0.0e+00 mm)
 
-L = learned mean, A = C's analytic posterior mean after the same contact, V = vision estimate. Files: `results/checkpoint2_prep/arm_prior/models/arm_contact_metrics.json`, `results/checkpoint2_prep/arm_prior/models/arm_all_metrics.json`.
+L = learned mean, A = C's analytic posterior mean after the same contact, V = vision estimate. The validation split (4001) chose early stopping, the grid point, the input set and the weight, so its numbers are in-sample for those choices; dev 2026 was used for none of them and is the split to quote for offline quality. Files: `results/checkpoint2_prep/arm_prior/models/arm_contact_metrics.json`, `results/checkpoint2_prep/arm_prior/models/arm_all_metrics.json`.
 
 ## Arm validation sweep (seed 4001)
 
@@ -274,6 +274,8 @@ Files: `results/checkpoint2_prep/snapshot/gantry_latching/summary.json`, `result
 
 ## Snapshot, dev seed 2026: UR5e arm, five-condition set
 
+No arm-specific tuning for A, B, D, E or F. C's arm rules (W5b) were developed on this seed (and 2027), so C's and G's arm rows are in-sample for them; G adds a prior trained on 5,100 arm trials (seeds 3001-3030) and chosen on 500 (seed 4001). Cross-controller numbers on a seed none of this saw: `results/checkpoint2_prep/review_fixes/tables.md` (seed 3031).
+
 | Controller | Success | 95% CI | Escapes (failed units passed as good) | Protective stops | Median / p95 cycle of successes (s) | Mean retries |
 |---|---|---|---|---|---|---|
 | A fixed | 24/100 (24%) | 17%-33% | 0 | 76 | 4.32 / 4.32 | 0.00 |
@@ -299,6 +301,8 @@ G vs C paired over this run: 100 pairs, C-only 0, G-only 5, McNemar p = 0.062.
 Files: `results/checkpoint2_prep/snapshot/arm_standard5/summary.json`, `results/checkpoint2_prep/snapshot/arm_standard5/trials.csv` (commit 570f494, dirty: False, backend: arm, seed 2026, 20 trials per cell).
 
 ## Snapshot, dev seed 2026: UR5e arm, latching suite
+
+No arm-specific tuning for A, B, D, E or F. C's arm rules (W5b) were developed on this seed (and 2027), so C's and G's arm rows are in-sample for them; G adds a prior trained on 5,100 arm trials (seeds 3001-3030) and chosen on 500 (seed 4001). Cross-controller numbers on a seed none of this saw: `results/checkpoint2_prep/review_fixes/tables.md` (seed 3031).
 
 | Controller | Success | 95% CI | Escapes (failed units passed as good) | Protective stops | Median / p95 cycle of successes (s) | Mean retries |
 |---|---|---|---|---|---|---|

@@ -6,21 +6,24 @@ unless marked. Simulation only.
 
 ## 1. "How does it compare with spiral search?"
 
-On a gantry with honest vision C seats more (99.1% against 97.0% for spiral
-search on a compliance device, F; p < 1e-6). On the UR5e arm F matches or beats
-C: 96.3% against 96.7% on standard conditions, 95.2% against 90.8% on latching
-parts. Where C clearly wins is bad parts: it passed 0 of 1,600 deliberately bad
-parts, F passed 1,062. Spiral search checks depth only; it cannot tell a
-half-latched or broken-latch part from a good one.
-`results/benchmark_v0.2b/REPORT.md`, `TABLES.md`.
+On a gantry with honest vision C seats more housing-only connectors (99.1%
+against 97.0% for spiral search on a compliance device, F; p < 1e-6). On the UR5e
+arm F matches or beats C: 96.3% against 96.7% on standard conditions, 95.2%
+against 90.8% on latching parts. C passed 0 of 1,600 deliberately bad parts, F
+1,062. Be careful with that number: spiral search here checks depth only and C
+ends with a pull test, so the fair answer is "a spiral cell with a pull test has
+not been run yet". On latching parts, F re-tuned for that connector seats 60 of
+60 on a dev seed against C's 54 (`results/v0.2c_gantry_baselines`, branch
+`v0.2c/gantry-baselines`). `results/benchmark_v0.2b/REPORT.md`, `TABLES.md`.
 
 ## 2. "So why not just use spiral search?"
 
-If a passed bad connector costs nothing, spiral search on a compliance device
-is the faster cell: 10-37% more good units per hour than C. C's case is the cost
-of a bad connector that leaves the cell. We have not priced that; the pilot
-customer's escape cost decides it. `results/benchmark_v0.2b/REPORT.md`
-(Headline).
+Today, in simulation, a well-tuned spiral search on a compliance device is the
+faster cell, with 10-37% more good units per hour than C, and it seats as many
+parts on the arm. C's measured edge is bad parts not passed, and that comes from a
+pull test a spiral cell could add. The honest answer: C's case is not proven yet.
+The next run should put a pull test on F and vary the latch geometry
+(`results/benchmark_v0.2b/REPORT.md`, "After the run").
 
 ## 3. "Why should I trust MuJoCo contact?"
 
@@ -37,10 +40,12 @@ intervals (`hardware/TEST_PROTOCOL.md`).
 
 In simulation C passed 0 of 400 stubbed-terminal parts; F passed 345, D 51. In the
 model a bent pin butts the header 0.2 mm after the terminals start, so the plug
-never reaches the latch: no snap appears in the force-depth trace and C does not
-declare success (`defex/sim/mating.py`).
-It is slow: C rejects the part by running out of time, about 26 s.
-`results/benchmark_v0.2b/TABLES.md` (latching), `results/w3_development/REPORT.md`.
+stops short and C's pull test moves it; C does not declare success
+(`defex/sim/mating.py`). A depth check with a tighter seat margin also catches
+many: tuned F's stubbed-terminal escapes fell when its margin went from 1.0 to
+0.5 mm (`results/v0.2c_arm_baselines/REPORT.md`). C is slow about it: about 26 s
+per rejected part in Checkpoint 2 (about 8-12 s with the v0.2c defect verdict,
+development). `results/benchmark_v0.2b/TABLES.md` (latching).
 
 ## 5. "Why not learning?"
 
@@ -83,9 +88,15 @@ worse than its stated accuracy, C does worse: F matches or beats it
 
 Yes: 6 in 6,200 good-part trials. Five are one bug: on the arm, in a 0.2 mm
 clearance cavity, the yaw check that replaces the yaw sweep has no effect, and a
-plug wedged short of full depth passes. One plug was seated just over the 3
-degree tilt limit. Both are being fixed and will be tested on a new seed.
-`results/benchmark_v0.2b/AUDIT_TABLES.md`.
+plug wedged short of full depth passes (fixed on `v0.2c/verify-fixes`; dev seeds:
+10 escapes to 0). One plug was seated just over the 3 degree tilt limit; tilt is
+not checked on either machine. `results/benchmark_v0.2b/AUDIT_TABLES.md`.
+
+The harder version: "does your latch check overfit your own simulator?" Partly,
+yes. The pull limit uses the model's assumed 0.5 mm post-snap stroke, and a
+simulated latch that engages 0.15 mm earlier makes C reject most good parts
+(`results/v0.2b_latch_spread/REPORT.md`). Fixing it needs the real force-depth
+curve from the rig and a tolerance band from the datasheet.
 
 ## 10. "What would you need to prove it on hardware, and what does it cost?"
 

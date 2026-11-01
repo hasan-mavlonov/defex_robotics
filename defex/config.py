@@ -50,12 +50,48 @@ class SocketGeometry:
 
 
 @dataclass(frozen=True)
+class MatingSpec:
+    """Terminal and latch behaviour along the insertion axis (W3).
+
+    Depths are measured from the socket mouth (0) to the seat (socket depth). Values
+    come from the connector's JSON ("mating" -> "model"); its "basis" field says which
+    are datasheet values and which are assumptions.
+    """
+
+    circuits: int
+    terminal_wipe_mm: float
+    terminal_peak_per_circuit_n: float
+    terminal_slide_per_circuit_n: float
+    terminal_lead_mm: float
+    latch_onset_depth_mm: float
+    latch_peak_depth_mm: float
+    latch_peak_force_n: float
+    latch_snap_depth_mm: float
+    latch_post_snap_stroke_mm: float
+    latch_retention_force_n: float
+    mating_force_max_n: float  # datasheet maximum, total (per circuit x circuits)
+    unmating_force_min_n: float  # datasheet minimum without the latch, total
+
+
+@dataclass(frozen=True)
+class ForceBudget:
+    """Per-connector force thresholds, replacing the fixed 6/20/30/45 N of V0.1 (W3)."""
+
+    insert_target_n: float
+    abort_n: float
+    protective_stop_n: float
+    damage_n: float
+
+
+@dataclass(frozen=True)
 class ConnectorSpec:
     name: str = "rect_12x8"
     description: str = "Generic rectangular wire-to-board connector, 12 x 8 mm"
     plug: PlugGeometry = field(default_factory=PlugGeometry)
     socket: SocketGeometry = field(default_factory=SocketGeometry)
     friction: float = 0.3  # PBT-GF on PBT, dry (typ. 0.25-0.35)
+    mating: MatingSpec | None = None  # None: housing only (V0.1 behaviour)
+    force_budget: ForceBudget | None = None  # None: the V0.1 thresholds
 
     # Derived quantities (SI) -------------------------------------------------------
     @property
@@ -88,12 +124,34 @@ class ConnectorSpec:
         if not path.suffix:
             path = CONNECTOR_ASSET_DIR / f"{name_or_path}.json"
         raw = json.loads(path.read_text())
+        mating = None
+        m = raw.get("mating", {})
+        if "model" in m:
+            mod = m["model"]
+            mating = MatingSpec(
+                circuits=int(m["circuits"]),
+                terminal_wipe_mm=float(m["terminal_wipe_mm"]),
+                terminal_peak_per_circuit_n=float(mod["terminal_peak_per_circuit_n"]),
+                terminal_slide_per_circuit_n=float(mod["terminal_slide_per_circuit_n"]),
+                terminal_lead_mm=float(mod["terminal_lead_mm"]),
+                latch_onset_depth_mm=float(mod["latch_onset_depth_mm"]),
+                latch_peak_depth_mm=float(mod["latch_peak_depth_mm"]),
+                latch_peak_force_n=float(mod["latch_peak_force_n"]),
+                latch_snap_depth_mm=float(mod["latch_snap_depth_mm"]),
+                latch_post_snap_stroke_mm=float(mod["latch_post_snap_stroke_mm"]),
+                latch_retention_force_n=float(m["latch_retention_force_min_n"]),
+                mating_force_max_n=float(m["terminal_mating_force_max_per_circuit_n"]) * int(m["circuits"]),
+                unmating_force_min_n=float(m["terminal_unmating_force_min_per_circuit_n"]) * int(m["circuits"]),
+            )
+        budget = ForceBudget(**raw["force_budget"]) if "force_budget" in raw else None
         return ConnectorSpec(
             name=raw["name"],
             description=raw.get("description", ""),
             plug=PlugGeometry(**raw["plug"]),
             socket=SocketGeometry(**raw["socket"]),
             friction=float(raw.get("friction", 0.3)),
+            mating=mating,
+            force_budget=budget,
         )
 
     def with_overrides(self, clearance_mm: float | None = None, chamfer_mm: float | None = None) -> "ConnectorSpec":
@@ -291,6 +349,7 @@ class Condition:
     clearance_mm: float | None = None
     chamfer_mm: float | None = None
     description: str = ""
+    defect: str | None = None  # deliberately bad part (W3), see defex.sim.mating.DEFECTS
     # What the cell integrator believes the vision accuracy is (handed to controllers).
     # None: the true noise above (correctly characterized, as in V0.1).
     characterized_noise: SensorNoiseConfig | None = None

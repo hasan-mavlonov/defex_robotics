@@ -133,6 +133,7 @@ class MuJoCoArmBackend(MuJoCoBackend):
         m.pair_friction[:, 1] = params.friction
         m.body_pos[self._connector_body] = params.grasp_offset.p
         m.body_quat[self._connector_body] = params.grasp_offset.quat()
+        self._setup_mating(params)
         self.reset()
 
     def _index_model(self) -> None:
@@ -221,6 +222,8 @@ class MuJoCoArmBackend(MuJoCoBackend):
         self._delay: deque[np.ndarray] = deque([self._home_q.copy()] * (n + 1), maxlen=n + 1)
         self._ctrl_clipped = False
         self._socket_pose_true = Pose(sp.p.copy(), sp.R.copy())
+        if getattr(self, "_mating", None) is not None:
+            self._mating.reset()
         mujoco.mj_forward(m, d)
 
     @property

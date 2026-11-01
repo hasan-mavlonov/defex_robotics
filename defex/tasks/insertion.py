@@ -117,6 +117,8 @@ def evaluate_final_state(gt: GroundTruth, scenario: Scenario, crit: SuccessCrite
         "yaw": abs(yaw) <= crit.max_yaw_deg * DEG,
         "settled": gt.tcp_speed <= crit.max_final_speed_mm_s * MM,
     }
+    if gt.latched is not None:  # latching connector: seated means latched, latch intact
+        checks["latched"] = bool(gt.latched and not gt.latch_broken)
     return {
         "depth_mm": depth / MM,
         "lateral_mm": lateral / MM,
@@ -171,9 +173,14 @@ class InsertionTask:
         dt = self.sim.control_period_s
         be = self.backend
         compliance = CompliantStageConfig() if controller.compliant_wrist else None
+        # W3: per-connector thresholds when the connector defines a force budget.
+        budget = scenario.connector.force_budget
+        stop_force = budget.protective_stop_n if budget else self.safety.protective_stop_force_n
+        damage_force = budget.damage_n if budget else self.safety.damage_contact_force_n
         payload = self.payload_fit(scenario, compliance).payload
         be.load(
-            SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset, compliance)
+            SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset, compliance,
+                        scenario.defect)
         )
 
         sensors = SensorSuite(scenario.noise, scenario.seed)
@@ -244,7 +251,7 @@ class InsertionTask:
             f_meas = obs.force_norm
             peak_measured = max(peak_measured, f_meas)
             peak_torque = max(peak_torque, obs.torque_norm)
-            if f_meas > self.safety.protective_stop_force_n or obs.torque_norm > self.safety.protective_stop_torque_nm:
+            if f_meas > stop_force or obs.torque_norm > self.safety.protective_stop_torque_nm:
                 protective_stop = True
                 controller.log(obs.t, "protective_stop", f"|F|={f_meas:.1f} N |T|={obs.torque_norm:.2f} N m")
                 break
@@ -282,7 +289,7 @@ class InsertionTask:
         # Damage is judged on the 10 ms average: single-sample transients from MuJoCo's
         # velocity-proportional contact damping (impacts, stick-slip) are reported in
         # peak_contact_force_n but are not a meaningful damage criterion on their own.
-        damage = peak_sustained > self.safety.damage_contact_force_n
+        damage = peak_sustained > damage_force
         declared = controller.declared_success
         success = bool(
             final["seated"]

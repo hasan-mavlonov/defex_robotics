@@ -9,6 +9,7 @@ import numpy as np
 
 from defex.config import MM, ConnectorSpec, FixtureConfig, SimConfig
 from defex.sim.backend import FixtureDynamics, GroundTruth, PayloadModel, RawSensorData, SceneParams
+from defex.sim.mating import MatingForce
 from defex.sim.scene_builder import (
     FIXTURE_JOINTS,
     FT_SITE_Z,
@@ -74,7 +75,15 @@ class MuJoCoBackend:
         # In-hand grasp offset of the connector relative to the fixture TCP.
         m.body_pos[self._connector_body] = params.grasp_offset.p
         m.body_quat[self._connector_body] = params.grasp_offset.quat()
+        self._setup_mating(params)
         self.reset()
+
+    def _setup_mating(self, params: SceneParams) -> None:
+        """Terminal and latch forces for connectors that model them (W3); None keeps V0.1 physics."""
+        spec = params.connector
+        self._mating = MatingForce(spec, params.defect) if spec.mating is not None else None
+        if self._mating is None and params.defect is not None:
+            raise ValueError(f"defect {params.defect!r} needs a connector with a mating model")
 
     def _index_model(self) -> None:
         m = self.model
@@ -135,6 +144,8 @@ class MuJoCoBackend:
         d.ctrl[:] = 0.0
         self._ctrl_clipped = False
         self._socket_pose_true = Pose(sp.p.copy(), sp.R.copy())
+        if getattr(self, "_mating", None) is not None:
+            self._mating.reset()
         mujoco.mj_forward(m, d)
 
     # ------------------------------------------------------------------ properties
@@ -207,7 +218,25 @@ class MuJoCoBackend:
 
     def step(self, duration: float) -> None:
         n = max(1, int(round(duration / self.model.opt.timestep)))
-        mujoco.mj_step(self.model, self.data, nstep=n)
+        if getattr(self, "_mating", None) is None:
+            mujoco.mj_step(self.model, self.data, nstep=n)  # V0.1 path, unchanged
+            return
+        m, d = self.model, self.data
+        S = self._socket_pose_true
+        vel = np.zeros(6)
+        for _ in range(n):
+            tip = d.site_xpos[self._tcp_site]
+            rel = S.R.T @ (tip - S.p)
+            mujoco.mj_objectVelocity(m, d, mujoco.mjtObj.mjOBJ_SITE, self._tcp_site, vel, 0)
+            v_in = -float((S.R.T @ vel[3:])[2])
+            f_out = self._mating.axial_force(-float(rel[2]), v_in, rel[:2])
+            # Cartesian force at the plug tip, applied on the connector body (at its centre of
+            # mass, plus the moment of the tip offset). Unlike a generalized joint force this
+            # passes through the body chain, so the wrist F/T sensor measures it.
+            force = S.R[:, 2] * f_out
+            d.xfrc_applied[self._connector_body, :3] = force
+            d.xfrc_applied[self._connector_body, 3:] = np.cross(tip - d.xipos[self._connector_body], force)
+            mujoco.mj_step(m, d)
 
     # ------------------------------------------------------------------ sensing
     def read_sensors(self) -> RawSensorData:
@@ -272,6 +301,8 @@ class MuJoCoBackend:
             tcp_speed=norm3(d.qvel[self._vadr[:3]]),
             joint_limit_hit=near_limit or self._ctrl_clipped,
             actuator_saturated=saturated,
+            latched=None if getattr(self, "_mating", None) is None else self._mating.state.latched,
+            latch_broken=False if getattr(self, "_mating", None) is None else self._mating.state.broken,
         )
 
     # ------------------------------------------------------------------ visualization helpers

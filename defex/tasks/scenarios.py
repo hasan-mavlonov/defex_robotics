@@ -30,6 +30,7 @@ class Scenario:
     grasp_offset: Pose  # true connector tip pose relative to the fixture TCP
     noise: SensorNoiseConfig
     characterized_noise: SensorNoiseConfig | None = None  # what controllers are told; None = noise
+    defect: str | None = None  # deliberately bad part; never told to controllers
     disturbance: dict[str, float] = field(default_factory=dict)
 
 
@@ -93,6 +94,7 @@ def sample_scenario(condition: Condition, trial_index: int, base_seed: int, nomi
         grasp_offset=grasp,
         noise=condition.noise,
         characterized_noise=condition.characterized_noise,
+        defect=condition.defect,
         disturbance={
             "dx_mm": float(dx),
             "dy_mm": float(dy),

@@ -31,6 +31,7 @@ class SceneParams:
     socket_pose: Pose  # true world pose of the socket mouth frame
     grasp_offset: Pose = field(default_factory=Pose.identity)  # connector tip relative to the fixture TCP
     compliance: CompliantStageConfig | None = None  # passive RCC stage (baselines E, F); None = rigid
+    defect: str | None = None  # deliberately bad part (defex.sim.mating.DEFECTS); None = good part
 
 
 @dataclass(frozen=True)
@@ -83,6 +84,8 @@ class GroundTruth:
     # "simulator": exact. "measured": a hardware run, where pose comes from encoders and
     # force from the wrist sensor; seating is confirmed by the post-trial inspection.
     source: str = "simulator"
+    latched: bool | None = None  # latching connectors: is the latch engaged (None: no latch modelled)
+    latch_broken: bool = False
 
 
 class SimBackend(Protocol):

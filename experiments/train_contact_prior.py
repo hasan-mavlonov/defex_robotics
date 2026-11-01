@@ -34,6 +34,7 @@ import itertools
 import json
 import subprocess
 import time
+from dataclasses import asdict, fields
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -54,6 +55,7 @@ from defex.recovery.learned_prior import (
     probe_pose,
 )
 from defex.recovery.search_policy import HoleLocalizer
+from defex.sim.backend import FixtureDynamics
 from defex.tasks.scenarios import resolve_connector
 from experiments.collect_contacts import RESERVED_SEEDS, TRAIN_SEEDS, VALIDATION_SEED, all_conditions
 
@@ -293,19 +295,73 @@ def git_info() -> dict:
             "dirty": bool(run("status", "--porcelain", "--untracked-files=no", "--", ".", ":(exclude)results"))}
 
 
+def _same(a, b, rel_tol: float) -> bool:
+    if a is None or b is None:
+        return a is None and b is None
+    return abs(a - b) <= rel_tol * max(abs(a), abs(b))
+
+
 def consistent_fixture_dynamics(fds: list[dict], rel_tol: float) -> dict:
     """The first dataset's fixture dynamics, after checking every dataset agrees within ``rel_tol``."""
     first = fds[0]
-
-    def same(a, b):
-        if a is None or b is None:
-            return a is None and b is None
-        return abs(a - b) <= rel_tol * max(abs(a), abs(b))
-
     for fd in fds[1:]:
-        if set(fd) != set(first) or not all(same(v, fd[k]) for k, v in first.items()):
+        if set(fd) != set(first) or not all(_same(v, fd[k], rel_tol) for k, v in first.items()):
             raise SystemExit(f"datasets disagree on the fixture dynamics: {fds}")
     return first
+
+
+def characterized_fixture_dynamics(fd: dict | None) -> dict:
+    """``fd`` if it states every FixtureDynamics field with a value; else refuse to write the model.
+
+    G applies a model only to a fixture that matches it on every field (ContactPrior.matches), so a
+    model with a field missing or None (not characterized) would never be used on a characterized
+    fixture. Identify the value, or add it with --complete-fixture-dynamics.
+    """
+    names = [f.name for f in fields(FixtureDynamics)]
+    missing = [k for k in names if fd is None or fd.get(k) is None]
+    extra = sorted(set(fd or {}) - set(names))
+    if missing or extra:
+        raise SystemExit(f"fixture dynamics incomplete: missing or None {missing}, unknown {extra}")
+    return fd
+
+
+def backend_fixture_dynamics(backend: str, condition_names: list[str]) -> tuple[list[dict], list[str]]:
+    """Fixture dynamics the simulator backend reports for each connector of these conditions."""
+    from defex.sim.backend import SceneParams
+    from defex.utils.transforms import Pose
+
+    if backend == "arm":
+        from defex.sim.arm_backend import MuJoCoArmBackend as Backend
+    else:
+        from defex.sim.mujoco_backend import MuJoCoBackend as Backend
+    conds = all_conditions()
+    specs = {}
+    for c in condition_names:
+        spec = resolve_connector(conds[c])
+        specs.setdefault(spec.name, spec)
+    out = []
+    for name, spec in sorted(specs.items()):
+        be = Backend()
+        be.load(SceneParams(spec, spec.friction, Pose.identity()))
+        out.append(asdict(be.fixture_dynamics))
+    return out, sorted(specs)
+
+
+def complete_fixture_dynamics(stored: dict, measured: list[dict], rel_tol: float) -> tuple[dict, list[str]]:
+    """Add the fields ``stored`` lacks from ``measured`` (the backend the data came from), after checking
+    that the measured values agree with each other and with every field ``stored`` has.
+
+    For models trained before a FixtureDynamics field existed (W9's gantry model predates W5b): the
+    fixture is the same, only its description grew.
+    """
+    ref = consistent_fixture_dynamics(measured, rel_tol)
+    unknown = sorted(set(stored) - set(ref))
+    wrong = [k for k in stored if k in ref and not _same(stored[k], ref[k], rel_tol)]
+    if unknown or wrong:
+        raise SystemExit(f"stored fixture dynamics disagree with the backend: unknown {unknown}, "
+                         f"different {[(k, stored[k], ref[k]) for k in wrong]}")
+    added = [k for k in ref if k not in stored]
+    return {**stored, **{k: ref[k] for k in added}}, added
 
 
 def _rel(path: Path) -> str:
@@ -342,12 +398,23 @@ def main() -> None:
     ap.add_argument("--install-existing", action="store_true",
                     help="install the already trained <root>/models/<backend>_<set>.json (no retraining)")
     ap.add_argument("--root", default="results/w9_development", help="data and model root, relative to the repository")
+    ap.add_argument("--complete-fixture-dynamics", action="store_true",
+                    help="add FixtureDynamics fields the data or model lacks from the simulator backend it came from")
     args = ap.parse_args()
     data_root, models = REPO_ROOT / args.root / "data", REPO_ROOT / args.root / "models"
     if args.install_existing:
         return install(json.loads((models / f"{args.backend}_{args.feature_set}.json").read_text()), args)
     t0 = time.time()
     tr_rows = load_rows(args.backend, args.train.split(","), set(TRAIN_BASE_SEEDS), data_root)
+    # Checked before training: a model that cannot state its fixture is never written.
+    fixture = consistent_fixture_dynamics(
+        [json.loads((data_root / args.backend / n / "summary.json").read_text())["fixture_dynamics"]
+         for n in [*args.train.split(","), args.val]], LearnedPriorConfig().fixture_match_rel_tol)
+    holder = {"fixture_dynamics": fixture, "metadata": {}}
+    if args.complete_fixture_dynamics:
+        _complete(holder, args.backend, sorted({r["condition"] for r in tr_rows}))
+    fixture = characterized_fixture_dynamics(holder["fixture_dynamics"])
+    completed = holder["metadata"].get("fixture_dynamics_completed")
     va_rows = load_rows(args.backend, [args.val], {VALIDATION_SEED}, data_root)
     dev_dir = data_root / args.backend / args.dev
     dev_rows = load_rows(args.backend, [args.dev], {2026}, data_root) if (dev_dir / "contacts.jsonl.gz").exists() else []
@@ -396,9 +463,9 @@ def main() -> None:
     # Fixture dynamics the data was collected on (a model applies only to a matching fixture):
     # the first training set's, after checking that every dataset agrees within the tolerance
     # G matches with (the tool's mass differs by a fraction of a percent between connectors).
-    meta["fixture_dynamics"] = consistent_fixture_dynamics(
-        [json.loads((data_root / args.backend / n / "summary.json").read_text())["fixture_dynamics"]
-         for n in [*args.train.split(","), args.val]], LearnedPriorConfig().fixture_match_rel_tol)
+    meta["fixture_dynamics"] = fixture
+    if completed:
+        meta["metadata"]["fixture_dynamics_completed"] = completed
     data = model_json(args.backend, args.feature_set, names, x_mean, x_std, y_mean, y_std, res["layers"], meta)
     model = ContactPrior(data)
     metrics = {
@@ -428,9 +495,23 @@ def main() -> None:
         install(data, args)
 
 
+def _complete(data: dict, backend: str, condition_names: list[str]) -> None:
+    measured, connectors = backend_fixture_dynamics(backend, condition_names)
+    data["fixture_dynamics"], added = complete_fixture_dynamics(
+        data["fixture_dynamics"], measured, LearnedPriorConfig().fixture_match_rel_tol)
+    if added:
+        data["metadata"]["fixture_dynamics_completed"] = {
+            "fields": added, "source": f"{backend} backend, connectors {connectors} (stored fields checked against it)",
+            "utc": datetime.now(timezone.utc).isoformat()}
+        print(f"fixture dynamics completed from the {backend} backend: {added}")
+
+
 def install(data: dict, args) -> None:
     if args.weight is None:
         raise SystemExit("installing needs --weight (chosen on the validation seed)")
+    if args.complete_fixture_dynamics:
+        _complete(data, args.backend, data["metadata"]["conditions_train"])
+    characterized_fixture_dynamics(data["fixture_dynamics"])
     data["integration_weight"] = args.weight
     data["metadata"]["integration_weight_source"] = args.weight_source
     dest = REPO_ROOT / "assets" / "models" / f"contact_prior_{args.backend}.json"

@@ -16,13 +16,15 @@ definite) and a yaw sigma. The mouth offset relative to the vision estimate is t
 statistics stored in the model file.
 
 Only numpy and JSON: no simulator, no ground truth. A model file states the fixture
-dynamics it was trained on; :func:`find_model` returns a model only for a matching
-fixture, so G falls back to C on any machine without its own model.
+dynamics it was trained on, every field of FixtureDynamics; :func:`find_model` returns a
+model only for a fixture that matches on all of them, so G falls back to C on any machine
+without its own model.
 """
 
 from __future__ import annotations
 
 import json
+from dataclasses import fields
 from functools import lru_cache
 from pathlib import Path
 
@@ -174,12 +176,21 @@ class ContactPrior:
         return cls(json.loads(Path(path).read_text()), str(path))
 
     def matches(self, fixture_dynamics, rel_tol: float) -> bool:
-        """True when every fixture-dynamics value stored with the model matches the running fixture."""
+        """True when the model states every field of the running fixture's dynamics, and no other,
+        and each value agrees within ``rel_tol``. A value stored as None (not characterized) matches
+        only None on the running fixture, and the other way round."""
         if fixture_dynamics is None or not self.fixture_dynamics:
             return False
-        for k, v in self.fixture_dynamics.items():
-            have = getattr(fixture_dynamics, k, None)
-            if have is None or abs(float(have) - float(v)) > rel_tol * max(abs(float(v)), abs(float(have)), _ABS_TOL_FLOOR):
+        names = [f.name for f in fields(fixture_dynamics)]
+        if set(names) != set(self.fixture_dynamics):
+            return False
+        for k in names:
+            v, have = self.fixture_dynamics[k], getattr(fixture_dynamics, k)
+            if v is None or have is None:
+                if v is not None or have is not None:
+                    return False
+                continue
+            if abs(float(have) - float(v)) > rel_tol * max(abs(float(v)), abs(float(have)), _ABS_TOL_FLOOR):
                 return False
         return True
 

@@ -14,15 +14,19 @@ differs on hardware:
   (:func:`hardware_noise`): the real sensors already have theirs.
 * Any exception inside the control loop stops the motion system before it
   propagates (sensor fault, timeout, driver error).
-* ``fixture_dynamics`` must be given (measured or from the robot's data): without
-  it the controllers' contact-speed and yaw-rate limits would switch off.
+* ``fixture_dynamics`` must be given in full (measured or from the robot's data):
+  stiffnesses, mass and latency (W5), and the tilt stiffness and the translational
+  and rotational servo following lags (W5b; identify the lags from a logged ramp).
+  Without the W5 values the controllers' contact-speed and yaw-rate limits would
+  switch off; without the W5b values C would run a mix (stiff-wrist rules from the
+  yaw stiffness, no lag compensation). The backend refuses a value left at None.
 * The measured "ground truth" force is not tared and the connector pose uses the
   nominal grasp; only the post-trial inspection decides seating on hardware.
 """
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import fields, replace
 
 import numpy as np
 
@@ -48,6 +52,9 @@ def hardware_noise(condition_noise: SensorNoiseConfig) -> SensorNoiseConfig:
 class HardwareBackend:
     def __init__(self, motion: MotionDriver, ft: FTSensorDriver, sensor_in_tcp: Pose, nominal_socket_pose: Pose,
                  fixture_dynamics: FixtureDynamics) -> None:
+        missing = [f.name for f in fields(fixture_dynamics) if getattr(fixture_dynamics, f.name) is None]
+        if missing:
+            raise ValueError(f"fixture_dynamics must state every value for hardware; not identified: {missing}")
         self.motion = motion
         self._dynamics = fixture_dynamics
         self._last_sample = None

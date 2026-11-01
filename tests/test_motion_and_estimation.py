@@ -104,7 +104,7 @@ def test_learned_prior_is_numpy_and_json_only():
             mods |= {a.name for a in node.names}
         elif isinstance(node, ast.ImportFrom):
             mods.add(node.module or "")
-    assert mods <= {"__future__", "json", "functools", "pathlib", "numpy", "defex.config"}, mods
+    assert mods <= {"__future__", "json", "dataclasses", "functools", "pathlib", "numpy", "defex.config"}, mods
 
 
 def test_harness_identifies_the_payload_instead_of_reading_the_simulator():

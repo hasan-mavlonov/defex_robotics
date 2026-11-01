@@ -10,7 +10,12 @@ from defex.recovery.learned_prior import DEFAULT_MODEL_DIR, ContactPrior, find_m
 from defex.sim.arm_backend import menagerie_available
 from defex.tasks.conditions import conditions_by_name, latching_conditions_by_name
 from defex.tasks.scenarios import sample_scenario
-from experiments.train_contact_prior import consistent_fixture_dynamics
+from defex.sim.backend import FixtureDynamics
+from experiments.train_contact_prior import (
+    characterized_fixture_dynamics,
+    complete_fixture_dynamics,
+    consistent_fixture_dynamics,
+)
 
 ARM_MODEL = DEFAULT_MODEL_DIR / "contact_prior_arm.json"
 GANTRY_MODEL = DEFAULT_MODEL_DIR / "contact_prior_gantry.json"
@@ -52,12 +57,36 @@ def test_fixture_dynamics_agree_within_the_match_tolerance():
         consistent_fixture_dynamics([a, {k: v for k, v in a.items() if k != "following_lag_s"}], tol)
 
 
+def test_models_are_only_written_with_characterized_fixture_dynamics():
+    """Checkpoint 2 review: the pipeline accepted None (not characterized), giving a model G never uses."""
+    full = asdict(FixtureDynamics(8.0, 400.0, 6.3, 0.006, 822.0, 0.2, 0.2))
+    assert characterized_fixture_dynamics(full) == full
+    for bad in ({**full, "tilt_stiffness_nm_per_rad": None},
+                {k: v for k, v in full.items() if k != "rotational_following_lag_s"},
+                {**full, "unknown_field_s": 1.0}, None):
+        with pytest.raises(SystemExit):
+            characterized_fixture_dynamics(bad)
+
+
+def test_completing_a_model_adds_missing_fields_and_checks_the_stored_ones():
+    tol = LearnedPriorConfig().fixture_match_rel_tol
+    measured = [asdict(FixtureDynamics(10.0, 15.0, 0.884, 0.0, 15.0, 0.0367, 0.0244)),
+                asdict(FixtureDynamics(10.0, 15.0, 0.881, 0.0, 15.0, 0.0367, 0.0244))]
+    w9 = {"translational_stiffness_n_per_mm": 10.0, "yaw_stiffness_nm_per_rad": 15.0, "effective_mass_kg": 0.884,
+          "command_latency_s": 0.0}  # stored before W5b added the servo terms
+    done, added = complete_fixture_dynamics(w9, measured, tol)
+    assert added == ["tilt_stiffness_nm_per_rad", "following_lag_s", "rotational_following_lag_s"]
+    assert {k: done[k] for k in w9} == w9 and characterized_fixture_dynamics(done) == done
+    with pytest.raises(SystemExit):  # a stored value the backend contradicts is never overwritten
+        complete_fixture_dynamics({**w9, "yaw_stiffness_nm_per_rad": 400.0}, measured, tol)
+
+
 @needs_arm
 @pytest.mark.slow
 def test_arm_model_matches_the_arm_for_both_connectors_and_not_the_gantry(arm_task, task):
     model = ContactPrior.from_json(ARM_MODEL)
     assert model.backend == "arm" and model.integration_weight is not None
-    assert {"tilt_stiffness_nm_per_rad", "following_lag_s"} <= set(model.fixture_dynamics)
+    assert {"tilt_stiffness_nm_per_rad", "following_lag_s", "rotational_following_lag_s"} <= set(model.fixture_dynamics)
     meta = model.data["metadata"]
     assert meta["train_base_seeds"] == [3001, 3030] and meta["validation_base_seed"] == 4001
     for cond in (conditions_by_name()["noise_1mm"], latching_conditions_by_name()["mf_noise_1mm"]):
@@ -72,6 +101,7 @@ def test_arm_model_matches_the_arm_for_both_connectors_and_not_the_gantry(arm_ta
         assert not ContactPrior.from_json(GANTRY_MODEL).matches(fd, LearnedPriorConfig().fixture_match_rel_tol)
     # A different servo lag alone is enough to refuse the arm model.
     assert not model.matches(replace(fd, following_lag_s=fd.following_lag_s * 0.5), 0.01)
+    assert not model.matches(replace(fd, rotational_following_lag_s=fd.rotational_following_lag_s * 0.5), 0.01)
 
 
 @needs_arm

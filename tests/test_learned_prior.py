@@ -26,7 +26,7 @@ from experiments.runner import nominal_socket_pose
 from experiments.train_contact_prior import init_layers, loss_and_grads, model_json, standardize
 
 BLOCKING_TRIAL = ("noise_2mm", 4, 2026)  # development seed; C blocks twice on this trial
-ARM_LIKE = FixtureDynamics(8.0, 400.0, 6.3, 0.006, 822.0, 0.2)  # UR5e values after W5b (tilt stiffness, servo lag)
+ARM_LIKE = FixtureDynamics(8.0, 400.0, 6.3, 0.006, 822.0, 0.2, 0.2)  # UR5e values after W5b (tilt stiffness, servo lags)
 
 
 @pytest.fixture(scope="module")
@@ -99,6 +99,33 @@ def test_installed_models_load_and_match_only_their_fixture(task):
         assert arm is None
     # Without the W5b servo terms the arm model does not apply (they are stored with it).
     assert find_model(FixtureDynamics(8.0, 400.0, 6.3, 0.006)) is None
+
+
+def _bare_model(fixture_dynamics: dict) -> ContactPrior:
+    return ContactPrior({"format": "defex-contact-prior-v1", "feature_names": [], "x_mean": [], "x_std": [],
+                         "y_mean": [0, 0, 0], "y_std": [1, 1, 1], "layers": [], "fixture_dynamics": fixture_dynamics})
+
+
+def test_matching_handles_uncharacterized_values_both_ways():
+    """Checkpoint 2 review: a stored None never matched its own fixture, and raised on any other."""
+    tol = LearnedPriorConfig().fixture_match_rel_tol
+    hw = FixtureDynamics(8.0, 400.0, 6.3, 0.006)  # tilt and lags not characterized (None)
+    model = _bare_model(asdict(hw))
+    assert model.matches(hw, tol)  # None matches None
+    assert not model.matches(ARM_LIKE, tol)  # stored None vs a value: no match, and no exception
+    characterized = _bare_model(asdict(ARM_LIKE))
+    assert characterized.matches(ARM_LIKE, tol)
+    assert not characterized.matches(hw, tol)  # a value vs a running None: no match
+    assert not characterized.matches(replace(ARM_LIKE, rotational_following_lag_s=None), tol)
+
+
+def test_a_model_must_state_every_fixture_field():
+    tol = LearnedPriorConfig().fixture_match_rel_tol
+    full = asdict(ARM_LIKE)
+    assert _bare_model(full).matches(ARM_LIKE, tol)
+    for k in full:  # one field missing: refused (it could differ on that field)
+        assert not _bare_model({j: v for j, v in full.items() if j != k}).matches(ARM_LIKE, tol), k
+    assert not _bare_model({**full, "unknown_field_s": 1.0}).matches(ARM_LIKE, tol)
 
 
 def test_find_model_needs_a_matching_fixture(tmp_path, c_run, task):

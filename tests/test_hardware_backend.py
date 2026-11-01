@@ -20,13 +20,16 @@ from defex.utils.transforms import Pose
 SENSOR = Pose(np.array([0.0, 0.0, 0.037]), np.eye(3))
 MOUTH = Pose(np.array([0.0, 0.0, 0.04]), np.eye(3))
 HOME = Pose(MOUTH.p + np.array([0.0, 0.0, 0.06]), np.eye(3))
+# The mock stage stands in for the gantry: every value stated, as the backend requires.
+MOCK_DYNAMICS = FixtureDynamics(10.0, 15.0, 0.9, 0.0, tilt_stiffness_nm_per_rad=15.0, following_lag_s=0.037,
+                                rotational_following_lag_s=0.024)
 
 
 def _mock_task(floor_depth_mm: float) -> tuple[InsertionTask, HardwareBackend]:
     stage = MockMotionStage(HOME, floor_z=MOUTH.p[2] - floor_depth_mm * MM)
     ft = MockFTSensor(stage, payload_mass_kg=0.034, payload_com_in_sensor=np.array([0.0, 0.0, -0.009]),
                       sensor_in_tcp=SENSOR)
-    be = HardwareBackend(stage, ft, SENSOR, MOUTH, FixtureDynamics(10.0, 15.0, 0.9, 0.0))
+    be = HardwareBackend(stage, ft, SENSOR, MOUTH, MOCK_DYNAMICS)
     task = InsertionTask(backend=be)
     task.identification_noise = hardware_noise(SensorNoiseConfig())
     return task, be
@@ -102,7 +105,18 @@ def test_hardware_backend_stops_motion_on_a_sensor_fault():
             raise FTSensorFault("saturated")
 
     stage = MockMotionStage(HOME, floor_z=0.0)
-    be = HardwareBackend(stage, Faulty(), SENSOR, MOUTH, FixtureDynamics(10.0, 15.0, 0.9, 0.0))
+    be = HardwareBackend(stage, Faulty(), SENSOR, MOUTH, MOCK_DYNAMICS)
     with pytest.raises(FTSensorFault):
         be.read_sensors()
     assert getattr(stage, "stopped", False)
+
+
+def test_hardware_backend_refuses_uncharacterized_fixture_dynamics():
+    """Checkpoint 2 review: a fixture without its W5b values ran C in a mixed configuration."""
+    stage = MockMotionStage(HOME, floor_z=0.0)
+    ft = MockFTSensor(stage, payload_mass_kg=0.034, payload_com_in_sensor=np.zeros(3), sensor_in_tcp=SENSOR)
+    for field in ("tilt_stiffness_nm_per_rad", "following_lag_s", "rotational_following_lag_s"):
+        with pytest.raises(ValueError, match=field):
+            HardwareBackend(stage, ft, SENSOR, MOUTH, replace(MOCK_DYNAMICS, **{field: None}))
+    with pytest.raises(ValueError):
+        HardwareBackend(stage, ft, SENSOR, MOUTH, FixtureDynamics(8.0, 400.0, 6.3, 0.006))

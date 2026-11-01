@@ -18,3 +18,5 @@ $PY -m experiments.train_contact_likelihood to-ratio --model results/v0.2c_learn
 if [ "${TEMPER:-1}" = 1 ]; then
   $T --mode residual --components 2 --temper --sources "$CDATA;$DAG" --name ${B}_residual_k2_tempered
 fi
+# Added after K=1 scored well below K=2 on the gantry stopping split: K=3.
+$T --mode residual --components 3 --sources "$CDATA;$DAG" --name ${B}_residual_k3

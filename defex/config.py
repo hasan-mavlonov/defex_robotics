@@ -841,8 +841,9 @@ class AdaptiveConfig:
 class LearnedPriorConfig:
     """W9 controller G: C plus a learned contact prior in the hole localizer."""
 
-    # Weight of the learned log-likelihood term. None: the weight stored with the model,
-    # chosen on validation seed 4001 (results/w9_development); 0 switches the term off.
+    # Weight of the learned log-likelihood term. None: the weight stored with the model
+    # (v1: chosen on validation seed 4001, results/w9_development; v2 models installed in v0.2c:
+    # 1, the weight they were trained for, results/v0.2c_learned_prior); 0 switches the term off.
     weight: float | None = None
     # A model applies only when each stored fixture-dynamics value matches the running
     # fixture within this relative tolerance (gantry and UR5e differ by 2x to 30x).

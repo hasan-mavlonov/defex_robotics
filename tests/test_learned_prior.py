@@ -83,11 +83,18 @@ def test_installed_models_load_and_match_only_their_fixture(task):
     if not paths:
         pytest.skip("no installed contact prior")
     for path in paths:
-        model = ContactPrior.from_json(path)
+        model = load_model(path)
         assert set(model.feature_names) <= set(FEATURE_SETS["all"])
         assert len(model.x_mean) == len(model.feature_names) == model.layers[0][0].shape[0]
-        assert model.layers[-1][0].shape[1] == 7 and model.integration_weight is not None
-        for k in ("train_base_seeds", "validation_base_seed", "n_train", "n_val", "git"):
+        assert model.integration_weight is not None
+        if isinstance(model, ContactPrior):
+            assert model.layers[-1][0].shape[1] == 7
+            keys = ("train_base_seeds", "validation_base_seed", "n_train", "n_val", "git")
+        else:  # v0.2c v2 model
+            assert model.layers[-1][0].shape[1] == 6 * model.components
+            keys = ("fit_base_seeds", "stop_base_seeds", "n_fit", "n_stop", "git", "selection_rule")
+            assert not set(model.data["metadata"]["fit_base_seeds"]) & {4001, 3031, 3032, 20261102, 20261116}
+        for k in keys:
             assert k in model.data["metadata"], k
     gantry = find_model(task.backend.fixture_dynamics)
     if (DEFAULT_MODEL_DIR / "contact_prior_gantry.json").exists():

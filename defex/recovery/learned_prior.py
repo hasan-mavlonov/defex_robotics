@@ -152,6 +152,26 @@ def gaussian_nll(raw: np.ndarray, t: np.ndarray) -> np.ndarray:
     return 0.5 * (z1**2 + z2**2 + z3**2) - d.sum(axis=1) + 1.5 * np.log(2.0 * np.pi)
 
 
+def fixture_matches(stored: dict, fixture_dynamics, rel_tol: float) -> bool:
+    """True when ``stored`` states every field of the running fixture's dynamics, and no other,
+    and each value agrees within ``rel_tol``. A value stored as None (not characterized) matches
+    only None on the running fixture, and the other way round."""
+    if fixture_dynamics is None or not stored:
+        return False
+    names = [f.name for f in fields(fixture_dynamics)]
+    if set(names) != set(stored):
+        return False
+    for k in names:
+        v, have = stored[k], getattr(fixture_dynamics, k)
+        if v is None or have is None:
+            if v is not None or have is not None:
+                return False
+            continue
+        if abs(float(have) - float(v)) > rel_tol * max(abs(float(v)), abs(float(have)), _ABS_TOL_FLOOR):
+            return False
+    return True
+
+
 class ContactPrior:
     """A trained model file (see ``experiments/train_contact_prior.py`` for its fields)."""
 
@@ -176,23 +196,8 @@ class ContactPrior:
         return cls(json.loads(Path(path).read_text()), str(path))
 
     def matches(self, fixture_dynamics, rel_tol: float) -> bool:
-        """True when the model states every field of the running fixture's dynamics, and no other,
-        and each value agrees within ``rel_tol``. A value stored as None (not characterized) matches
-        only None on the running fixture, and the other way round."""
-        if fixture_dynamics is None or not self.fixture_dynamics:
-            return False
-        names = [f.name for f in fields(fixture_dynamics)]
-        if set(names) != set(self.fixture_dynamics):
-            return False
-        for k in names:
-            v, have = self.fixture_dynamics[k], getattr(fixture_dynamics, k)
-            if v is None or have is None:
-                if v is not None or have is not None:
-                    return False
-                continue
-            if abs(float(have) - float(v)) > rel_tol * max(abs(float(v)), abs(float(have)), _ABS_TOL_FLOOR):
-                return False
-        return True
+        """True when the model states every field of the running fixture's dynamics (see fixture_matches)."""
+        return fixture_matches(self.fixture_dynamics, fixture_dynamics, rel_tol)
 
     def raw(self, records: list[dict]) -> np.ndarray:
         x = (feature_matrix(records, self.feature_names) - self.x_mean) / self.x_std
@@ -231,23 +236,37 @@ class ContactPrior:
         return float(p["mean"][0, 2] * DEG), float(p["sigma_yaw_deg"][0] * DEG)
 
 
+def model_from_data(data: dict, path: str | None = None):
+    """A v1 :class:`ContactPrior` or a v2 :class:`~defex.recovery.contact_likelihood.ContactLikelihood`."""
+    if data.get("format") == FORMAT:
+        return ContactPrior(data, path)
+    from defex.recovery.contact_likelihood import FORMAT_V2, ContactLikelihood
+
+    if data.get("format") == FORMAT_V2:
+        return ContactLikelihood(data, path)
+    raise ValueError(f"unknown contact prior format {data.get('format')!r}: {path}")
+
+
 @lru_cache(maxsize=16)
-def _load(path: str, mtime_ns: int) -> ContactPrior:
-    return ContactPrior.from_json(path)
+def _load(path: str, mtime_ns: int):
+    return model_from_data(json.loads(Path(path).read_text()), path)
 
 
-def load_model(path: str | Path) -> ContactPrior:
+def load_model(path: str | Path):
     p = Path(path)
     return _load(str(p), p.stat().st_mtime_ns)
 
 
-def find_model(fixture_dynamics, model_dir: str | Path | None = None, rel_tol: float = 0.01) -> ContactPrior | None:
-    """The model in ``model_dir`` trained on this fixture (``contact_prior_*.json``), or None."""
+def find_model(fixture_dynamics, model_dir: str | Path | None = None, rel_tol: float = 0.01):
+    """The one model in ``model_dir`` trained on this fixture (``contact_prior_*.json``), or None.
+
+    v0.2c: more than one matching file is an error, so which model G runs is never decided by
+    file-name order."""
     d = Path(DEFAULT_MODEL_DIR if model_dir is None else model_dir)
     if fixture_dynamics is None or not d.is_dir():
         return None
-    for path in sorted(d.glob("contact_prior_*.json")):
-        model = load_model(path)
-        if model.matches(fixture_dynamics, rel_tol):
-            return model
-    return None
+    found = [m for m in (load_model(p) for p in sorted(d.glob("contact_prior_*.json")))
+             if m.matches(fixture_dynamics, rel_tol)]
+    if len(found) > 1:
+        raise ValueError(f"several contact priors match this fixture: {[Path(m.path).name for m in found]}")
+    return found[0] if found else None

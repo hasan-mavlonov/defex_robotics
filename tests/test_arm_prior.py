@@ -6,7 +6,7 @@ import pytest
 
 from defex.config import LearnedPriorConfig
 from defex.control.adaptive_learned import AdaptiveLearnedController
-from defex.recovery.learned_prior import DEFAULT_MODEL_DIR, ContactPrior, find_model
+from defex.recovery.learned_prior import DEFAULT_MODEL_DIR, ContactPrior, find_model, load_model
 from defex.sim.arm_backend import menagerie_available
 from defex.tasks.conditions import conditions_by_name, latching_conditions_by_name
 from defex.tasks.scenarios import sample_scenario
@@ -84,11 +84,14 @@ def test_completing_a_model_adds_missing_fields_and_checks_the_stored_ones():
 @needs_arm
 @pytest.mark.slow
 def test_arm_model_matches_the_arm_for_both_connectors_and_not_the_gantry(arm_task, task):
-    model = ContactPrior.from_json(ARM_MODEL)
+    model = load_model(ARM_MODEL)
     assert model.backend == "arm" and model.integration_weight is not None
     assert {"tilt_stiffness_nm_per_rad", "following_lag_s", "rotational_following_lag_s"} <= set(model.fixture_dynamics)
     meta = model.data["metadata"]
-    assert meta["train_base_seeds"] == [3001, 3030] and meta["validation_base_seed"] == 4001
+    if isinstance(model, ContactPrior):
+        assert meta["train_base_seeds"] == [3001, 3030] and meta["validation_base_seed"] == 4001
+    else:  # v0.2c v2 model, selected on seed 4002
+        assert "selection_rule" in meta
     for cond in (conditions_by_name()["noise_1mm"], latching_conditions_by_name()["mf_noise_1mm"]):
         fd = _fixture_after_trial(arm_task, cond)
         assert model.matches(fd, LearnedPriorConfig().fixture_match_rel_tol), (cond.name, asdict(fd))
@@ -98,7 +101,7 @@ def test_arm_model_matches_the_arm_for_both_connectors_and_not_the_gantry(arm_ta
     assert not model.matches(gantry_fd, LearnedPriorConfig().fixture_match_rel_tol)
     if GANTRY_MODEL.exists():
         assert find_model(gantry_fd).backend == "gantry"
-        assert not ContactPrior.from_json(GANTRY_MODEL).matches(fd, LearnedPriorConfig().fixture_match_rel_tol)
+        assert not load_model(GANTRY_MODEL).matches(fd, LearnedPriorConfig().fixture_match_rel_tol)
     # A different servo lag alone is enough to refuse the arm model.
     assert not model.matches(replace(fd, following_lag_s=fd.following_lag_s * 0.5), 0.01)
     assert not model.matches(replace(fd, rotational_following_lag_s=fd.rotational_following_lag_s * 0.5), 0.01)
@@ -112,7 +115,7 @@ def test_g_uses_the_arm_model_on_the_arm(arm_task):
     g = AdaptiveLearnedController()
     res = arm_task.run(g, sc)
     assert g.prior is not None and g.prior.backend == "arm"
-    assert g.prior_weight == ContactPrior.from_json(ARM_MODEL).integration_weight > 0
+    assert g.prior_weight == load_model(ARM_MODEL).integration_weight > 0
     used = [r for r in g.contact_records if "learned_mean_mm" in r]
     assert used and all(r["kind"] == "surface_block" for r in used)
     assert any(e[1] == "learned_prior" and "contact_prior_arm.json" in e[2] for e in res.events)

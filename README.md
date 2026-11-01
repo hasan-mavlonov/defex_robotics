@@ -29,6 +29,13 @@ RCC device. The run was pre-registered
 ([`PREREGISTRATION.md`](results/benchmark_v0.2a/PREREGISTRATION.md)): 12,000
 paired trials on a fresh seed, 20261031.
 
+**Headline, including the pre-registered held-out result.** Against the
+strongest conventional cell C wins when the camera's accuracy is what the cell
+believes (99.75% against 96.15%), and it passes no bad units on that seed. When
+the camera is worse than believed, the lead disappears: on the pre-registered
+held-out families F seated 82.6% and C 79.8%, F beat C clearly in the combined
+worst case, and C passed 29 bad units (details below).
+
 **What holds.**
 
 * **Success.** C seated the connector in 1,995 of 2,000 trials (99.75%, 95% CI
@@ -74,22 +81,25 @@ paired trials on a fresh seed, 20261031.
 
 * **When the camera is worse than the cell believes, C loses its lead.** On
   five pre-registered held-out families
-  ([`results/heldout_v0.2`](results/heldout_v0.2/REPORT.md)), F seated 82.6%
-  and C 79.8% (C-only 27, F-only 41, McNemar p = 0.1). F beat C outright with
-  an unknown 1.5 mm hand-eye bias (100 against 97) and in the combined worst
-  case (85 against 56, all of C's failures retry-limit aborts: its search prior
-  trusts the stated camera accuracy). C was still ahead when the true error was
-  2 mm against a claimed 0.5 mm (54 against 36). **C passed 29 bad units** there,
-  every one a plug seated more than 3 degrees off in yaw: VERIFY re-centred yaw
-  only when the camera claimed poor yaw accuracy. The W4 branch re-centres yaw
-  every cycle, which removed this escape in development at about 1.4 s per cycle.
+  ([`results/heldout_v0.2`](results/heldout_v0.2/FINDINGS.md)), F seated 82.6%
+  and C 79.8% (C-only 27, F-only 41, McNemar p = 0.1). In the combined worst
+  case F beat C, 85 against 56 (p = 1e-6); all of C's failures there were
+  retry-limit aborts, because its search prior trusts the stated camera
+  accuracy. With an unknown 1.5 mm hand-eye bias F was ahead, 100 against 97, but
+  not significantly (p = 0.25). C was still ahead when the true error was 2 mm
+  against a claimed 0.5 mm (54 against 36, p = 0.0005). **C passed 29 bad units**
+  across the two mis-characterized families (7 and 22), every one a plug seated
+  more than 3 degrees off in yaw: VERIFY re-centred yaw only when the camera
+  claimed poor yaw accuracy. The W4 branch re-centres yaw every cycle, which
+  removed this escape in development at about 1.4 s per cycle.
 * **The comparison does not hinge on one MuJoCo tuning.** On 12 randomized
   simulators plus the nominal one (contact stiffness and damping, solver
   softness, elliptic or pyramidal friction cone, servo stiffness 7-19 N/mm),
   C led the best of D, E, F in all 13, by 8.3 to 12.5 points
   ([`results/sim_randomization_v0.2`](results/sim_randomization_v0.2/REPORT.md)).
-* **No cliffs in C's own constants.** Every one of 113 constants, scaled by
-  +/-20% one at a time, cost at most 10 points; the worst +/-50% change cost 8.3
+* **No cliffs in C's own constants.** Every one of 113 configured constants,
+  scaled by +/-20% one at a time, cost at most 10 points; the worst +/-50% change
+  cost 8.3 (two hard-coded thresholds were not in the sweep; see the report)
   ([`results/sensitivity_v0.2`](results/sensitivity_v0.2/REPORT.md),
   development measurement).
 

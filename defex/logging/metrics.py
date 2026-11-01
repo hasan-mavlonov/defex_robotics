@@ -94,6 +94,8 @@ def is_escape(r: "TrialResult") -> bool:
     The cell did not stop and the controller did not declare failure, so nothing
     flags the part: a false accept for self-checking controllers, and every
     non-stop failure for controllers that never check their work (A, B, E).
+    Edge cases: a self-checking controller cut off by the harness timeout (it never
+    declared) also counts, as does a seated part judged damaged or over-penetrated.
     """
     return (not r.success) and (not r.protective_stop) and r.declared_success is not False
 

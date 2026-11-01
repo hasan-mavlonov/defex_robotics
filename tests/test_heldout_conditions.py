@@ -18,11 +18,25 @@ def test_heldout_families_are_not_reachable_from_the_development_conditions():
 
 
 def test_outlier_option_leaves_existing_vision_streams_unchanged():
+    """The vision draw must equal V0.1's algorithm exactly (reimplemented here) when outliers are off."""
+    from defex.config import DEG
+    from defex.utils.transforms import rotvec_to_matrix
+
+    noise = SensorNoiseConfig()
     S = Pose(np.array([0.0, 0.0, 0.03]), np.eye(3))
     for seed in range(20):
-        a = SensorSuite(SensorNoiseConfig(), seed).vision_measurement(S)
-        b = SensorSuite(replace(SensorNoiseConfig(), vision_outlier_probability=0.0), seed).vision_measurement(S)
-        assert np.array_equal(a.p, b.p) and np.array_equal(a.R, b.R)
+        got = SensorSuite(noise, seed).vision_measurement(S)
+        ss = np.random.SeedSequence(seed)
+        vision_ss, _, ft_ss, _ = ss.spawn(4)
+        r = np.random.default_rng(vision_ss)
+        bias_dir = r.uniform(0.0, 2.0 * np.pi)  # drawn in the constructor (V0.1)
+        dp = np.array([r.normal(0.0, noise.vision_xy_sigma_mm), r.normal(0.0, noise.vision_xy_sigma_mm),
+                       r.normal(0.0, noise.vision_z_sigma_mm)]) * MM
+        tilt = np.array([r.normal(0.0, noise.vision_tilt_sigma_deg), r.normal(0.0, noise.vision_tilt_sigma_deg), 0.0]) * DEG
+        yaw = r.normal(0.0, noise.vision_yaw_sigma_deg) * DEG
+        R = rotvec_to_matrix(tilt) @ rotvec_to_matrix(np.array([0.0, 0.0, yaw]))
+        bias = noise.vision_bias_mm * MM * np.array([np.cos(bias_dir), np.sin(bias_dir), 0.0])
+        assert np.array_equal(got.p, S.p + dp + bias) and np.array_equal(got.R, S.R @ R)
 
 
 def test_outliers_occur_at_the_configured_rate_and_size():

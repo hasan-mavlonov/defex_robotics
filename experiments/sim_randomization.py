@@ -13,7 +13,6 @@ Output: results/<name>/variants.json, trials.csv, summary.json, sim_randomizatio
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import time
 from concurrent.futures import ProcessPoolExecutor

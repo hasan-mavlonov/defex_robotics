@@ -16,6 +16,7 @@ commit) and, with ``--record N``, replayable trajectories. Plots are produced by
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from defex.config import REPO_ROOT
@@ -39,6 +40,8 @@ def main() -> None:
                     help="heldout: the W2 held-out families (pre-registered runs only)")
     args = ap.parse_args()
 
+    if args.suite == "heldout" and "--seed" not in sys.argv:
+        raise SystemExit("--suite heldout needs an explicit --seed (the default 2026 is the tuning seed)")
     conds = standard_conditions() if args.suite == "standard" else heldout_conditions()
     if args.list:
         for c in conds:

@@ -29,10 +29,12 @@ D runs on the stiff wrist; F is the same routine on the passive RCC stage.
 from __future__ import annotations
 
 from collections import deque
+from dataclasses import replace
 
 import numpy as np
 
 from defex.config import (
+    AdaptiveConfig,
     DEG,
     MM,
     CompliantSpiralSearchConfig,
@@ -399,3 +401,34 @@ class CompliantSpiralSearchController(SpiralSearchController):
         self, cfg: CompliantSpiralSearchConfig | None = None, stiff_fixture_cfg: CompliantSpiralSearchConfig | None = None
     ) -> None:
         super().__init__(cfg or CompliantSpiralSearchConfig(), stiff_fixture_cfg or CompliantSpiralSearchStiffFixtureConfig())
+
+
+def _with_retention_pull(cfg: SpiralSearchConfig) -> SpiralSearchConfig:
+    """C's installed latch check on a spiral cell: the same pull force and movement limit (datasheet-based)."""
+    a = AdaptiveConfig()
+    return replace(cfg, retention_pull=True, pull_test_mating_factor=a.pull_test_mating_factor,
+                   pull_limit_wipe_fraction=a.pull_limit_wipe_fraction)
+
+
+class SpiralSearchPullController(SpiralSearchController):
+    """Controller H (v0.2c): D plus a retention pull after a latching insertion, as C does."""
+
+    name = "spiral_pull"
+    label = "H: Spiral search + retention pull"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.cfg = _with_retention_pull(self.cfg)
+        self.stiff_fixture_cfg = _with_retention_pull(self.stiff_fixture_cfg)
+
+
+class CompliantSpiralSearchPullController(CompliantSpiralSearchController):
+    """Controller I (v0.2c): F plus a retention pull after a latching insertion, as C does."""
+
+    name = "spiral_rcc_pull"
+    label = "I: Spiral search + passive compliance + retention pull"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.cfg = _with_retention_pull(self.cfg)
+        self.stiff_fixture_cfg = _with_retention_pull(self.stiff_fixture_cfg)

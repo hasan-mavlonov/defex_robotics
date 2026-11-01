@@ -101,3 +101,20 @@ def test_optional_retention_pull_on_the_spiral_baseline(task):
     assert out["mf_nominal"].success
     assert not out["mf_broken_latch"].declared_success
     assert out["mf_broken_latch"].failure_reason == "aborted:retention_failed"
+
+
+def test_h_and_i_are_d_and_f_with_cs_retention_pull():
+    from dataclasses import asdict
+
+    from defex.config import AdaptiveConfig
+    from defex.control.registry import make_controller
+
+    a = AdaptiveConfig()
+    for base, pulled in (("spiral", "spiral_pull"), ("spiral_rcc", "spiral_rcc_pull")):
+        b, p = make_controller(base), make_controller(pulled)
+        for cb, cp in ((b.cfg, p.cfg), (b.stiff_fixture_cfg, p.stiff_fixture_cfg)):
+            diff = {k for k, v in asdict(cp).items() if asdict(cb)[k] != v}
+            assert diff <= {"retention_pull", "pull_test_mating_factor", "pull_limit_wipe_fraction"}
+            assert cp.retention_pull
+            assert cp.pull_test_mating_factor == a.pull_test_mating_factor
+            assert cp.pull_limit_wipe_fraction == a.pull_limit_wipe_fraction

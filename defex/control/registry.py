@@ -12,7 +12,12 @@ from defex.control.adaptive_fsm import AdaptiveInsertionController
 from defex.control.adaptive_learned import AdaptiveLearnedController
 from defex.control.base import InsertionController
 from defex.control.baselines import FixedTrajectoryController, PassiveComplianceController, PositionCorrectionController
-from defex.control.spiral_search import CompliantSpiralSearchController, SpiralSearchController
+from defex.control.spiral_search import (
+    CompliantSpiralSearchController,
+    CompliantSpiralSearchPullController,
+    SpiralSearchController,
+    SpiralSearchPullController,
+)
 
 CONTROLLERS: dict[str, Callable[[], InsertionController]] = {
     "fixed": FixedTrajectoryController,
@@ -22,6 +27,8 @@ CONTROLLERS: dict[str, Callable[[], InsertionController]] = {
     "correction_rcc": PassiveComplianceController,
     "spiral_rcc": CompliantSpiralSearchController,
     "adaptive_learned": AdaptiveLearnedController,  # W9: C + learned contact prior (opt-in)
+    "spiral_pull": SpiralSearchPullController,  # v0.2c: H = D + C's retention pull
+    "spiral_rcc_pull": CompliantSpiralSearchPullController,  # v0.2c: I = F + C's retention pull
 }
 
 # The benchmark cells A-F. Scripts that run "every controller" by default use this, so
@@ -36,6 +43,8 @@ LABELS = {
     "correction_rcc": "E: Vision correction + passive compliance",
     "spiral_rcc": "F: Spiral search + passive compliance",
     "adaptive_learned": "G: Defex adaptive + learned contact prior",
+    "spiral_pull": "H: Spiral search + retention pull",
+    "spiral_rcc_pull": "I: Spiral search + passive compliance + retention pull",
 }
 
 COLORS = {
@@ -46,6 +55,8 @@ COLORS = {
     "correction_rcc": "#8a63c9",
     "spiral_rcc": "#c94f6d",
     "adaptive_learned": "#705010",
+    "spiral_pull": "#1f6b48",
+    "spiral_rcc_pull": "#8c2f47",
 }
 
 

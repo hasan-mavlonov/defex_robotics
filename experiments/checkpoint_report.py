@@ -19,10 +19,11 @@ import numpy as np
 
 from defex.logging.metrics import STOP_RESET_S
 
-ORDER = ["fixed", "correction", "correction_rcc", "spiral", "spiral_rcc", "adaptive", "adaptive_learned"]
+ORDER = ["fixed", "correction", "correction_rcc", "spiral", "spiral_rcc", "spiral_pull", "spiral_rcc_pull", "adaptive",
+         "adaptive_learned"]
 LETTER = {"fixed": "A", "correction": "B", "correction_rcc": "E", "spiral": "D", "spiral_rcc": "F",
-          "adaptive": "C", "adaptive_learned": "G"}
-FAIR = ("spiral", "correction_rcc", "spiral_rcc")  # D, E, F
+          "adaptive": "C", "adaptive_learned": "G", "spiral_pull": "H", "spiral_rcc_pull": "I"}
+FAIR = ("spiral", "correction_rcc", "spiral_rcc", "spiral_pull", "spiral_rcc_pull")  # D, E, F, H, I
 DEFECTS = ("mf_half_latched", "mf_broken_latch", "mf_stubbed_terminal", "mf_wrong_polarization")
 
 

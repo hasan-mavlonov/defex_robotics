@@ -192,6 +192,10 @@ class AdaptiveInsertionController(InsertionController):
         self._blocked_poses: list[tuple[np.ndarray, float]] = []
         # Both walls: the plug crosses the clearance twice.
         self.verify_probe = max(c.verify_probe_mm, 2 * spec.socket.clearance_mm + c.verify_probe_margin_mm) * MM
+        # W9: one observation-only feature dict per DETECT diagnosis (training data for a
+        # learned contact prior; labels are attached offline, never here).
+        self.contact_records: list[dict] = []
+        self._record_diag: ContactDiagnosis | None = None
 
     # ------------------------------------------------------------------ helpers
     def _wrench(self, obs: Observation) -> tuple[np.ndarray, np.ndarray]:
@@ -242,6 +246,51 @@ class AdaptiveInsertionController(InsertionController):
         self.set_state(t, state, detail)
         self.phase = phase
         self.phase_t = t
+
+    def _record_contact(self, obs: Observation, diag: ContactDiagnosis, conf: np.ndarray, conform_ran: bool) -> None:
+        """W9: observation-only features of one DETECT diagnosis (no ground truth, no labels).
+
+        Pure bookkeeping: nothing here feeds back into C's decisions.
+        """
+        spec = self.ctx.connector
+        va = self.ctx.vision_accuracy
+        self.contact_records.append({
+            "t_s": float(obs.t - self.t_start),
+            "attempt": int(self.attempts),
+            "kind": diag.kind,
+            "trigger": diag.trigger,
+            "probe_xy_mm": (diag.probe_xy / MM).tolist(),
+            "probe_yaw_deg": float(diag.probe_yaw / DEG),
+            "commanded_xy_mm": (self.xy / MM).tolist(),
+            "cop_mm": None if diag.cop is None else (diag.cop / MM).tolist(),
+            "axial_force_n": float(diag.axial_force),
+            "lateral_force_n": np.asarray(diag.lateral_force, dtype=float).tolist(),
+            "torque_nm": np.asarray(diag.torque, dtype=float).tolist(),
+            "depth_mm": float(diag.depth / MM),
+            "touch_calibrated": bool(self.touch_calibrated),
+            "depth_offset_mm": float(self.depth_offset / MM),
+            "conform_ran": bool(conform_ran),
+            "conform_saturated": bool(conform_ran and self._conf_saturated),
+            "conform_rot_deg": (np.asarray(conf, dtype=float) / DEG).tolist(),
+            "lateral_compliance_mm": (self.adm_lat.x / MM).tolist(),
+            "rot_compliance_deg": (self.adm_rot.x / DEG).tolist(),
+            "orientation_correction_deg": (matrix_to_rotvec(self.R_corr) / DEG).tolist(),
+            "vision_xy_sigma_mm": float(va.vision_xy_sigma_mm),
+            "vision_z_sigma_mm": float(va.vision_z_sigma_mm),
+            "vision_yaw_sigma_deg": float(va.vision_yaw_sigma_deg),
+            "vision_bias_mm": float(va.vision_bias_mm),
+            "plug_half_mm": [float(spec.plug_half[0] / MM), float(spec.plug_half[1] / MM)],
+            "cavity_half_mm": [float(spec.cavity_half[0] / MM), float(spec.cavity_half[1] / MM)],
+            "chamfer_mm": float(spec.chamfer / MM),
+            "latching": bool(self.latching),
+        })
+        self._record_diag = diag
+
+    def _record_for(self, diag: ContactDiagnosis) -> dict | None:
+        return self.contact_records[-1] if self._record_diag is diag and self.contact_records else None
+
+    def _contact_prior_update(self, diag: ContactDiagnosis, record: dict | None) -> None:
+        """Hook after the analytic localizer update of a blocked attempt; C adds nothing (G: W9)."""
 
     def _fail(self, obs: Observation, reason: str) -> Command:
         self.log(obs.t, "abort", reason)
@@ -359,6 +408,7 @@ class AdaptiveInsertionController(InsertionController):
         if trigger.startswith("excess"):
             # Do not keep pressing: diagnose from the most recent samples and back off.
             self.diagnosis = self._diagnose(list(self._recent)[-self.cfg.excess_diagnosis_samples :], trigger)
+            self._record_contact(obs, self.diagnosis, self.adm_conf.x.copy(), conform_ran=False)
             self.log(obs.t, "detect", self.diagnosis.describe())
             return self._begin_recover(obs)
         return self._cmd(self.cfg.force_phase_speed_cap_mm_s)
@@ -479,6 +529,8 @@ class AdaptiveInsertionController(InsertionController):
     def _conclude_detect(self, obs: Observation, window: list[Observation]) -> Command:
         diag = self._diagnose(window, self._trigger)
         self.diagnosis = diag
+        conform_ran = self.phase in ("conform", "measure")
+        conf_at_detect = self.adm_conf.x.copy()
         if self.phase in ("conform", "measure"):
             conf = self.adm_conf.x.copy()
             state = "tipped" if self._conf_saturated else "flat"
@@ -495,6 +547,7 @@ class AdaptiveInsertionController(InsertionController):
                     self.R_corr = rotvec_to_matrix(conf) @ self.R_corr
                     self.adm_conf.reset()
                     self.log(obs.t, "surface_alignment", f"tilt corrected ({conf[0] / DEG:+.2f},{conf[1] / DEG:+.2f}) deg")
+        self._record_contact(obs, diag, conf_at_detect, conform_ran)
         self.log(obs.t, "detect", diag.describe())
         if diag.kind == "seated_candidate":
             lat = float(np.hypot(*diag.lateral_force))
@@ -547,8 +600,16 @@ class AdaptiveInsertionController(InsertionController):
             if self.ylocalizer is not None:
                 return self._plan_xyyaw(obs, diag, cop, sigma, lim_xy)
             self.localizer.update_blocked(diag.probe_xy, cop, cop_sigma=sigma)
+            record = self._record_for(diag)
+            if record is not None:
+                record["cop_clean"] = bool(clean)
+                record["analytic_mean_mm"] = (self.localizer.mean() / MM).tolist()
+                record["analytic_cov_mm2"] = (self.localizer.covariance() / MM**2).tolist()
+            self._contact_prior_update(diag, record)
             self._blocked_probes.append(diag.probe_xy.copy())
             new_xy, p_cap = self.localizer.best_probe(lim_xy, exclude=self._blocked_probes)
+            if record is not None:
+                record["next_probe_mm"] = (new_xy / MM).tolist()
             if self.blocks_at_best >= 2 and self.yaw_search_idx < len(self.yaw_sequence):
                 self.yaw_offset = self.yaw_sequence[self.yaw_search_idx] * DEG
                 self.yaw_search_idx += 1

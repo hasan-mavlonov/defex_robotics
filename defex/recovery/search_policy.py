@@ -283,9 +283,28 @@ class HoleLocalizer:
         p = self.posterior
         return np.array([(p * self.hx).sum(), (p * self.hy).sum()])
 
+    def covariance(self) -> np.ndarray:
+        """Posterior covariance (2, 2) in m^2 (W9: recorded for comparison with the learned prior)."""
+        p = self.posterior
+        dx = self.hx - (p * self.hx).sum()
+        dy = self.hy - (p * self.hy).sum()
+        cxy = (p * dx * dy).sum()
+        return np.array([[(p * dx * dx).sum(), cxy], [cxy, (p * dy * dy).sum()]])
+
     def map(self) -> np.ndarray:
         i, j = np.unravel_index(int(np.argmax(self.log_post)), self.log_post.shape)
         return np.array([self.grid[i], self.grid[j]])
+
+    def update_gaussian(self, mean: np.ndarray, precision: np.ndarray, weight: float) -> None:
+        """Add ``weight`` x log N(h; mean, precision^-1) to the posterior (W9 learned contact prior).
+
+        ``weight`` < 1 tempers the term (equivalent to inflating its covariance by 1 / weight).
+        """
+        d = np.stack([self.hx - mean[0], self.hy - mean[1]], axis=-1)
+        maha = np.einsum("...i,ij,...j->...", d, np.asarray(precision, dtype=float), d)
+        self.log_post += -0.5 * weight * maha
+        self.log_post -= self.log_post.max()
+        self.n_updates += 1
 
     def _predict(self, probe: np.ndarray):
         o = np.stack([probe[0] - self.hx, probe[1] - self.hy], axis=-1)

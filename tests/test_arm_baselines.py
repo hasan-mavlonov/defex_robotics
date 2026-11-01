@@ -81,7 +81,6 @@ def test_every_gantry_runs_the_gantry_config(connector):
             c.reset(ctx)
             expect = budgeted(cls(), ctx, insert_force_n="insert_target_n", max_force_n="abort_n")
             assert c.cfg == expect and c._user_cfg is gantry_cfg
-            assert not c.cfg.hole_at_measured_position
         e = PassiveComplianceController()
         gantry_cfg, dwell = e.cfg, e.dwell_s
         e.reset(ctx)
@@ -203,9 +202,9 @@ def test_arm_tuning_protocol_stages(tmp_path):
 
 def test_two_speed_guarded_moves_off_by_default_and_banded_when_on():
     spec = ConnectorSpec()
-    for cfg in (SpiralSearchConfig(), CompliantSpiralSearchConfig()):
-        assert cfg.free_speed_mm_s == 0.0
-    c = SpiralSearchController()
+    # v0.2c gantry re-tune: D's gantry setting uses two speeds, F's does not; 0 switches the option off.
+    assert SpiralSearchConfig().free_speed_mm_s == 25.0 and CompliantSpiralSearchConfig().free_speed_mm_s == 0.0
+    c = SpiralSearchController(cfg=replace(SpiralSearchConfig(), free_speed_mm_s=0.0))
     c.reset(_ctx(spec, _gantries(spec)[0]))
     assert c._v_free == 0.0 and c._free_or(0.01, 5e-3, 0.0, 1.0) == 0.01
     c = SpiralSearchController(stiff_fixture_cfg=replace(SpiralSearchStiffFixtureConfig(), free_speed_mm_s=25.0))

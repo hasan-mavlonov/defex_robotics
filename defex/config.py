@@ -383,7 +383,7 @@ class PassiveComplianceConfig(PositionCorrectionConfig):
     """Controller E: B's program on the passive RCC stage (tuned separately, see BASELINE_TUNING.md)."""
 
     approach_height_mm: float = 2.0
-    insert_speed_mm_s: float = 4.0
+    insert_speed_mm_s: float = 2.0  # v0.2c gantry re-tune (results/v0.2c_gantry_baselines; 371/420 against 370 at 4 mm/s, which is 4.5 s faster); was 4.0
     overtravel_mm: float = 1.0
     # v0.2c: fixtures outside the gantry family run PassiveComplianceStiffFixtureConfig instead. Same
     # thresholds and basis as AdaptiveConfig.stiff_wrist_min_ratio / lagging_servo_min_ratio: every
@@ -427,14 +427,14 @@ class SpiralSearchConfig:
     descent_speed_mm_s: float = 10.0  # Flexiv insertVel default
     force_gain_mm_s_per_n: float = 1.0
     contact_force_n: float = 1.0
-    search_force_n: float = 2.0  # tuned (edge stage); Flexiv SearchHole contactForce default 5 N, range 2-20
-    spiral_pitch_mm: float = 1.0  # tuned; radius increment per turn (Robotiq term)
-    spiral_speed_mm_s: float = 2.5  # tuned (edge stage); tangential speed along the spiral
+    search_force_n: float = 3.0  # v0.2c gantry re-tune (results/v0.2c_gantry_baselines); was 2.0 (W1 edge stage)
+    spiral_pitch_mm: float = 0.5  # v0.2c gantry re-tune (results/v0.2c_gantry_baselines); was 1.0
+    spiral_speed_mm_s: float = 5.0  # v0.2c gantry re-tune (results/v0.2c_gantry_baselines); was 2.5 (W1 edge stage)
     spiral_max_radius_mm: float = 6.5  # same lateral bound as C's recovery
     hole_push_mm: float = 0.5  # tuned; depth gained below the face that counts as "hole found"
     # Lateral stiffness during the spiral (software spring on the stiff servo); 0 = stiff.
     # Flexiv SearchHole exposes the same choice as searchStiffRatio (0.1-1, default 1).
-    search_lateral_stiffness_n_per_mm: float = 0.0
+    search_lateral_stiffness_n_per_mm: float = 2.0  # v0.2c gantry re-tune (results/v0.2c_gantry_baselines); was 0.0 (stiff); Flexiv searchStiffRatio
     insert_force_n: float = 8.0  # tuned; Flexiv InsertComp maxContactForce default 5 N
     insert_speed_mm_s: float = 10.0  # Flexiv InsertComp insertVel default
     lateral_compliance_damping_n_s_per_mm: float = 1.0  # force-mode compliant x/y during insertion
@@ -466,7 +466,7 @@ class SpiralSearchConfig:
     # the mouth band (3 sigma of vision z plus the chamfer) and more than near_floor_margin_mm above the
     # floor (plus 3 sigma when the face was not touched), move at this speed, scaled by the W5 contact-speed
     # rule like the others. C does the same (AdaptiveConfig.free_insert_speed_mm_s, near_bottom_*).
-    free_speed_mm_s: float = 0.0
+    free_speed_mm_s: float = 25.0  # v0.2c gantry re-tune (results/v0.2c_gantry_baselines) speed2; was 0.0 (off)
     near_floor_margin_mm: float = 2.0  # as AdaptiveConfig.near_bottom_margin_mm
 
 
@@ -474,11 +474,23 @@ class SpiralSearchConfig:
 class CompliantSpiralSearchConfig(SpiralSearchConfig):
     """Controller F: D's routine on the RCC stage, tuned separately (BASELINE_TUNING.md)."""
 
-    search_force_n: float = 3.0
-    spiral_speed_mm_s: float = 5.0
+    # v0.2c gantry re-tune on the W1 families plus Micro-Fit good parts (results/v0.2c_gantry_baselines,
+    # confirm rank 1: 403/420, median cycle 2.43 s). Every field is pinned so D's gantry values do not
+    # leak in. W1 values: search 3 N, pitch 1.0 mm, spiral 5 mm/s, insert 3 N, 3 attempts, push 0.5 mm,
+    # guarded speeds 10 mm/s, hole at the commanded position.
+    search_force_n: float = 2.0
+    spiral_pitch_mm: float = 0.5
+    spiral_speed_mm_s: float = 2.5
+    search_lateral_stiffness_n_per_mm: float = 0.0
     seat_margin_mm: float = 1.0
-    insert_force_n: float = 3.0
-    max_attempts: int = 3
+    insert_force_n: float = 8.0
+    max_attempts: int = 2
+    hole_push_mm: float = 0.3
+    insert_speed_mm_s: float = 25.0
+    descent_speed_mm_s: float = 25.0
+    hole_at_measured_position: bool = True
+    free_speed_mm_s: float = 0.0
+    near_floor_margin_mm: float = 2.0
 
 
 @dataclass(frozen=True)
@@ -491,6 +503,7 @@ class SpiralSearchStiffFixtureConfig(SpiralSearchConfig):
     """
 
     search_force_n: float = 5.0  # arm coarse/fine (gantry 2 N); Flexiv SearchHole default 5 N
+    spiral_pitch_mm: float = 1.0  # arm: the gantry value when it was tuned (pinned when the gantry was re-tuned)
     spiral_speed_mm_s: float = 10.0  # arm coarse (gantry 2.5); 4 mm/s on the UR5e after the W5 rule
     # Arm coarse: the top 14 settings all search with lateral compliance (Flexiv searchStiffRatio); mean
     # successes over the 27 settings per stiffness: stiff 18.4, 0.5 N/mm 20.1, 2 N/mm 20.1 of 24.
@@ -513,6 +526,11 @@ class CompliantSpiralSearchStiffFixtureConfig(CompliantSpiralSearchConfig):
     """
 
     search_force_n: float = 2.0  # arm coarse (gantry 3 N); Flexiv SearchHole minimum 2 N
+    # Pinned to F's W1 gantry values, which the arm tuning kept, when the gantry was re-tuned in v0.2c.
+    spiral_speed_mm_s: float = 5.0
+    insert_speed_mm_s: float = 10.0
+    descent_speed_mm_s: float = 10.0
+    hole_at_measured_position: bool = False
     spiral_pitch_mm: float = 1.5  # arm coarse (gantry 1.0)
     search_lateral_stiffness_n_per_mm: float = 0.5  # arm coarse (gantry stiff); Flexiv searchStiffRatio
     insert_force_n: float = 8.0  # arm fine (gantry 3 N)

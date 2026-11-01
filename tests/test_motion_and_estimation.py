@@ -78,6 +78,8 @@ def test_controller_code_cannot_reach_the_simulator():
     # W9: the learned prior and controller G are controller-side code too.
     names = {p.relative_to(ROOT).as_posix() for p in paths}
     assert {"defex/recovery/learned_prior.py", "defex/control/adaptive_learned.py"} <= names
+    # v0.2c: the v2 learned contact term.
+    assert "defex/recovery/contact_likelihood.py" in names
     for path in paths:
         tree = ast.parse(path.read_text())
         for node in ast.walk(tree):
@@ -95,16 +97,25 @@ def test_controller_code_cannot_reach_the_simulator():
                 assert "mujoco_backend" not in mod and "arm_backend" not in mod, (path, mod)
 
 
-def test_learned_prior_is_numpy_and_json_only():
-    """W9: the learned contact prior runs on observations and its model file, nothing else."""
-    tree = ast.parse((ROOT / "defex" / "recovery" / "learned_prior.py").read_text())
+def _imports(path):
     mods = set()
-    for node in ast.walk(tree):
+    for node in ast.walk(ast.parse(path.read_text())):
         if isinstance(node, ast.Import):
             mods |= {a.name for a in node.names}
         elif isinstance(node, ast.ImportFrom):
             mods.add(node.module or "")
-    assert mods <= {"__future__", "json", "dataclasses", "functools", "pathlib", "numpy", "defex.config"}, mods
+    return mods
+
+
+def test_learned_prior_is_numpy_and_json_only():
+    """W9: the learned contact prior runs on observations and its model file, nothing else.
+    v0.2c: the same for the v2 contact term, which may use only the v1 module besides numpy."""
+    rec = ROOT / "defex" / "recovery"
+    mods = _imports(rec / "learned_prior.py")
+    allowed = {"__future__", "json", "dataclasses", "functools", "pathlib", "numpy", "defex.config"}
+    assert mods <= allowed | {"defex.recovery.contact_likelihood"}, mods
+    mods = _imports(rec / "contact_likelihood.py")
+    assert mods <= allowed | {"defex.recovery.learned_prior"}, mods
 
 
 def test_harness_identifies_the_payload_instead_of_reading_the_simulator():

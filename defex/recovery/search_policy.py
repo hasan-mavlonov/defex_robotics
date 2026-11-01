@@ -316,6 +316,17 @@ class HoleLocalizer:
         self.log_post -= self.log_post.max()
         self.n_updates += 1
 
+    @property
+    def area(self) -> float:
+        """Area of the hypothesis grid (m^2), the support of the uniform outlier floors."""
+        return (self.grid.size * self.res) ** 2
+
+    def update_log_term(self, term: np.ndarray) -> None:
+        """Add a log-likelihood term evaluated on the hypothesis grid (v0.2c learned contact term)."""
+        self.log_post += np.asarray(term, dtype=float)
+        self.log_post -= self.log_post.max()
+        self.n_updates += 1
+
     def _predict(self, probe: np.ndarray):
         o = np.stack([probe[0] - self.hx, probe[1] - self.hy], axis=-1)
         ii, jj, valid = self.table.index(o)

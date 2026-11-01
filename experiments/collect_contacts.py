@@ -39,13 +39,16 @@ from defex.tasks.scenarios import Scenario, sample_scenario
 from defex.utils.transforms import axis_angle_between, twist_about_axis
 from experiments.runner import environment_info, make_backend, nominal_socket_pose
 
-# Seeds this work may touch (development, training, validation). Everything else is
+# Seeds this work may run (development, training, validation). Everything else is
 # refused, in particular the reported runs and the pre-registered Checkpoint 2 seeds.
-TRAIN_SEEDS = tuple(range(3001, 3041))
-VALIDATION_SEED = 4001
+TRAIN_SEEDS = tuple(range(3001, 3041))  # the training block; data files may carry any of these
+VALIDATION_SEED = 4001  # W9 / Checkpoint 2 validation seed: spent (it selected the installed v1 models), read only
+NEW_VALIDATION_SEED = 4002  # v0.2c selection seed
 DEV_SEEDS = (2026, 2027)
-ALLOWED_SEEDS = frozenset((*DEV_SEEDS, *TRAIN_SEEDS, VALIDATION_SEED))
-RESERVED_SEEDS = frozenset((20261024, 20261025, 20261031, 20261102, 20261107, 20261108, 20261109))
+# v0.2c: 3031 (spent out-of-sample check), 3032 (the integrator's one out-of-sample check) and 4001
+# are no longer run by these scripts.
+ALLOWED_SEEDS = frozenset((*DEV_SEEDS, *range(3001, 3031), *range(3033, 3041), NEW_VALIDATION_SEED))
+RESERVED_SEEDS = frozenset((20261024, 20261025, 20261031, 20261102, 20261107, 20261108, 20261109, 20261116))
 
 # Families where C blocks often enough to produce contacts (W9 development choice).
 BLOCKING_FAMILIES = ("noise_0.5mm", "noise_1mm", "noise_2mm", "friction_0.6", "friction_1", "lateral_3mm",

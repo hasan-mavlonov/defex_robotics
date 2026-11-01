@@ -395,7 +395,13 @@ class PassiveComplianceConfig(PositionCorrectionConfig):
 @dataclass(frozen=True)
 class PassiveComplianceStiffFixtureConfig(PassiveComplianceConfig):
     """Controller E on fixtures outside the gantry family (the UR5e): tuned on the arm with the W1
-    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep E's gantry values."""
+    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep E's gantry values.
+
+    Confirm-stage rank 1 (tuning/tuning_correction_rcc_confirm.csv, 189/210, 21 protective stops, cycle
+    4.08 s). Overtravel 1.0 mm and approach 2 mm are the gantry values.
+    """
+
+    insert_speed_mm_s: float = 8.0  # arm coarse/confirm (gantry 4 mm/s); E has no W5 speed scaling
 
 
 @dataclass(frozen=True)

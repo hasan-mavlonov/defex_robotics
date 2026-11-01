@@ -1,0 +1,27 @@
+{
+  "name": "samtec_erm8_60",
+  "description": "Samtec Edge Rate board-to-board, ERM8-030-03.0-L-DV-L terminal strip into ERF8-030-05.0-L-DV-L socket, 60 positions, 0.80 mm pitch, latching (W3 candidate 2).",
+  "plug": {"size_x_mm": 39.0, "size_y_mm": 5.6, "length_mm": 6.97, "mass_g": 2.0, "grip_length_mm": 4.0},
+  "socket": {"clearance_mm": 0.05, "depth_mm": 1.5, "chamfer_mm": 0.3, "wall_mm": 0.8, "floor_mm": 1.0, "pcb_thickness_mm": 1.6},
+  "friction": 0.25,
+  "mating": {
+    "circuits": 60,
+    "terminal_wipe_mm": 1.5,
+    "mating_force_total_n": [18.6, 23.7],
+    "unmating_force_total_latched_n": [22.5, 28.5],
+    "unmating_force_total_unlatched_n": [6.7, 8.9],
+    "initial_misalignment_mm": [1.65, 1.76],
+    "final_misalignment_mm": 0.05,
+    "polarization": "guiding features on each end",
+    "durability_cycles": 1000
+  },
+  "basis": {
+    "datasheet": "forces (EIA-364-13, total, converted from lbf), wipe, misalignment, length = 30 x 0.8 + 6 + 9 mm (latch) = 39 mm, width 5.6 mm, height 6.97 mm",
+    "assumed": "clearance from the 0.05 mm final misalignment, depth = wipe, lead-in, mass. Latch model not yet parameterized."
+  },
+  "sources": {
+    "test_report_2146122": "https://suddendocs.samtec.com/testreports/2146122_report_rev_2_qua.pdf",
+    "catalog_F-226": "https://suddendocs.samtec.com/catalog_english/erm8.pdf",
+    "product_spec": "https://suddendocs.samtec.com/productspecs/erm8-erf8.pdf"
+  }
+}

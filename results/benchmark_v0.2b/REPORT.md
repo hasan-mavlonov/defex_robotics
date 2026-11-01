@@ -42,6 +42,13 @@ So the measured difference between C and the conventional cells is mostly
 worth C's lower throughput depends on what a passed bad connector costs, which
 this benchmark does not price.
 
+**Read the bad-part and latching results with the post-run review below.** After
+this run, an independent review found that only C and G run a retention pull
+test (the baselines check depth only), that C's pull test is set from the
+simulator's own assumed latch geometry, and that the gantry baselines were never
+tuned with the latching connector. The numbers above are what was measured; the
+section "After the run" says what they do and do not show.
+
 ## Success, bad units passed, throughput (all conditions per suite)
 
 | Machine, suite | C success | Best fair baseline | p (C vs it) | Bad units passed, C / F | Good units/h, C / F | Rule outcome |
@@ -163,6 +170,46 @@ all of G's are in the two failure modes above.
 - The mis-characterized-vision families were first run on seed 20261109, and C's
   yaw re-centring (W4) was developed after that run. They are reported as
   robustness conditions, not as held out.
+
+## After the run: review findings (not pre-registered)
+
+Found by the v0.2c reviews and checked on dev seeds; none of this changes a
+pre-registered number, it changes what they can be taken to mean.
+
+1. **The bad-part gap measures having a pull test.** C and G finish a latching
+   insertion with a guarded pull at half the rated retention force. D, E and F
+   check depth only (`defex/control/spiral_search.py`, `baselines.py`); none was
+   given a pull test, which a conventional integrator could add. So "C 0 of 1,600,
+   F 1,062" compares a cell with a retention test against cells without one. A
+   baseline with a pull test has not been measured.
+2. **C's pull test depends on the assumed latch geometry.** It passes only if the
+   plug moves at most the model's 0.5 mm post-snap stroke plus 0.3 mm. That 0.5 mm
+   is listed as assumed in `assets/connectors/microfit3_4ckt.json` and is the value
+   the simulator builds every part with. With the simulated latch engaging 0.15 mm
+   earlier (controller unchanged), C seats 4 of 60 good parts on the gantry
+   (54 as modelled) and 30 of 60 on the arm (52); F is unaffected (53, 57). A snap
+   0.1 mm early, 0.2 mm late, or a latch peak force x0.5 or x1.5 changes nothing
+   ([`results/v0.2b_latch_spread`](../v0.2b_latch_spread/REPORT.md), dev seed 2027,
+   confirming the review's seed-2026 result).
+3. **C's "click" check does not detect the latch.** Its window contains the 8 N
+   terminal-friction drop on every part, so it passes on broken-latch parts too;
+   bad parts are rejected by the pull test alone.
+4. **The latching results hold only for the modelled terminal friction.** At the
+   datasheet's maximum (8 N per circuit, 32 N for four), no controller seats a
+   good part: every insert budget is 30 N.
+5. **The gantry baselines were never tuned with the latching connector.** W1
+   predates it. Re-tuned with the same protocol the arm got, F seats 60 of 60
+   latching good parts on dev seed 2027 against C's 54 (p = 0.031), and D 51
+   against 29 before (`v0.2c/gantry-baselines`,
+   `results/v0.2c_gantry_baselines/REPORT.md`). So C's gantry latching lead above
+   (95.7% against 89.0%) reflects untuned baselines more than C.
+6. **Seat tilt is not checked on either machine.** The tilt escapes above are not
+   arm-specific; the gantry training data has one more (v0.2c integration review).
+
+What still holds: C seats more units than F on the gantry under the standard
+conditions with honest vision (99.1% against 97.0%; against the re-tuned F on dev
+seed 2027, 198 against 193 of 200, p = 0.062), and in no tested spread did C or G
+pass a bad part.
 
 ## Known limits
 

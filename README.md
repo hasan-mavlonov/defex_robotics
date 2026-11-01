@@ -47,11 +47,13 @@ families (the camera is worse than the cell is told).
   against 87.4% (p = 0.13); in the combined worst case F seats 83 of 100, C 56.
 * **C passed none of the 1,600 deliberately bad parts** (half-latched, broken
   latch, stubbed terminal, wrong polarization; Wilson 95% upper bound 0.24%).
-  F passed 1,062 of them as good, D 442.
+  F passed 1,062 of them as good, D 442. But only C and G run a retention pull
+  test; the conventional cells check depth only, and none was given a pull test.
+  This gap measures having a pull test, not the adaptive method (see below).
 
 C leads every conventional cell on the gantry under the standard conditions
 (99.1% against F's 97.0%, p < 1e-6) and on latching good parts (95.7% against
-89.0%, p = 2.4e-6).
+89.0%, p = 2.4e-6; but see "Found after the run" below).
 
 **C is slower on every suite.** Good units per hour of cell time, C against F:
 gantry 608 against 862 (standard) and 476 against 527 (latching); arm 371
@@ -60,8 +62,17 @@ against 474 and 289 against 458. Median successful cycle: gantry 5.30 s against
 time or retries, about 26 s per bad part.
 
 So what C buys, measured here, is mostly **fewer bad units leaving the cell**,
-not more units seated. Whether that pays for the lower throughput depends on what
-a passed bad connector costs, which this benchmark does not price.
+not more units seated, and that comes from a pull test a conventional cell could
+also run. Whether it pays for the lower throughput depends on what a passed bad
+connector costs, which this benchmark does not price.
+
+**Found after the run** (review, development seeds; [details](results/benchmark_v0.2b/REPORT.md#after-the-run-review-findings-not-pre-registered)):
+C's pull test is set from the simulator's assumed latch geometry. If the
+simulated latch engages 0.15 mm earlier, C seats 4 of 60 good latching parts on
+the gantry instead of 54, while F is unaffected
+([`results/v0.2b_latch_spread`](results/v0.2b_latch_spread/REPORT.md)). And the
+gantry baselines were never tuned with the latching connector: re-tuned, F seats
+60 of 60 latching good parts on a dev seed against C's 54.
 
 | Machine, suite | C | Best of D, E, F | p | Bad units passed, C / F | Good units/h, C / F |
 |---|---|---|---|---|---|
@@ -96,10 +107,13 @@ a passed bad connector costs, which this benchmark does not price.
 **Can claim (simulation, benchmark_v0.2b):**
 
 * C passed none of 1,600 deliberately bad latching parts as good (Wilson 95%
-  upper bound 0.24%); the conventional cells passed between 442 (D) and 1,062 (F).
-* On the gantry with correctly characterized vision, C seats more units than
-  every conventional cell tested (99.1% against 97.0%, p < 1e-6; latching good
-  parts 95.7% against 89.0%).
+  upper bound 0.24%); the conventional cells, which check depth only, passed
+  between 442 (D) and 1,062 (F).
+* On the gantry with correctly characterized vision, C seats more housing-only
+  connectors than every conventional cell tested (99.1% against 97.0%,
+  p < 1e-6). Its latching good-part lead (95.7% against 89.0%) was against
+  baselines not tuned for that connector and does not survive their re-tuning on
+  a dev seed.
 * The comparison is paired, pre-registered and regenerable from committed
   per-trial files.
 
@@ -112,6 +126,11 @@ a passed bad connector costs, which this benchmark does not price.
   hour than F, and the cost of a passed bad unit is not priced.
 * That C never passes a bad unit: 6 in 6,200 good-part trials, 5 from one known
   bug.
+* That C's way of checking a latch beats a conventional cell with a pull test:
+  no such baseline has been run.
+* That C's latching results survive real part-to-part variation: its pull test
+  uses the assumed latch geometry, and a 0.15 mm earlier latch makes it reject
+  most good parts in simulation.
 * Anything on hardware. The latch snap force is assumed, there is one latching
   connector and one simulated arm, and no rig yet.
 

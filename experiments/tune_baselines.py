@@ -231,15 +231,22 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=default_workers())
     ap.add_argument("--backend", choices=["gantry", "arm"], default="gantry",
                     help="arm: the v0.2c protocol on the UR5e (ARM_* grids and conditions)")
+    ap.add_argument("--protocol", choices=["w1", "v02c"], default=None,
+                    help="v02c: the ARM_* grids, conditions and stages on either backend (default: w1 on the "
+                         "gantry, v02c on the arm); see results/v0.2c_gantry_baselines/SELECTION_RULE.md")
     args = ap.parse_args()
+    if args.protocol is None:
+        args.protocol = "v02c" if args.backend == "arm" else "w1"
+    if args.backend == "arm" and args.protocol != "v02c":
+        raise SystemExit("the arm runs the v02c protocol only")
     os.environ["DEFEX_BACKEND"] = args.backend
     out = REPO_ROOT / "results" / args.out
     out.mkdir(parents=True, exist_ok=True)
 
     spiral = args.controller.startswith("spiral")
-    if args.backend == "arm":
+    if args.protocol == "v02c":
         if args.stage == "edge":
-            raise SystemExit("the arm protocol has no edge stage (its coarse grid includes the edge values)")
+            raise SystemExit("the v02c protocol has no edge stage (its coarse grid includes the edge values)")
         settings, conditions = _arm_stage(args, out)
     elif args.stage in ("speed", "speed2"):
         raise SystemExit("the speed stages are part of the arm protocol only")
@@ -273,6 +280,7 @@ def main() -> None:
         w.writerows(rows)
     (out / f"tuning_{args.controller}_{args.stage}.json").write_text(
         json.dumps({"seed": DEV_SEED, "conditions": conditions, "trials": args.trials, "backend": args.backend,
+                    "protocol": args.protocol,
                     "top": args.top, "git_commit": git_revision(), "git_dirty": git_dirty(),
                     "wall_time_s": time.time() - t0}, indent=2)
     )

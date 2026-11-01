@@ -984,7 +984,7 @@ class AdaptiveInsertionController(InsertionController):
                 self._rc_done[k] = True  # tipped onto an edge: stop turning
             else:
                 self.adm_conf.x[k] = float(np.clip(self.adm_conf.x[k] + self._rc_dir[k] * rate * dt, -limit, limit))
-        return bool(self._rc_done.all() and norm3(np.append(lag[:2], 0.0)) < c.conform_rate_deg * DEG)
+        return bool(self._rc_done.all() and norm3(np.append(lag[:2], 0.0)) < c.rate_conform_settle_deg * DEG)
 
     def _cavity_tilt_step(self, T: np.ndarray, f_ax: float, dt: float) -> None:
         """v0.2c: turn the tilt at the seat-conform rate towards a wall torque on the engaged plug."""

@@ -668,6 +668,11 @@ class AdaptiveConfig:
     # inconsistent with a rigid yawed plug (lever arms of opposite sign): one probe was stopped by
     # floor friction (seen at mu = 1), not by a wall.
     wall_yaw_reprobes: int = 1
+    # Rate-mode conform counts as settled once the servo lag (measured minus commanded tilt) is below this.
+    # W5b used conform_rate_deg (0.03 deg), which on the 0.2 s servo takes ~0.7 s per conform to reach;
+    # 0.1 deg x 6 mm half-length is 0.01 mm, 1/20 of the 0.2 mm contact width (the face stays in contact).
+    # Kept at the W5b value unless the selection rule picks otherwise.
+    rate_conform_settle_deg: float = 0.03
     # W3 push-click-pull verification for latching connectors
     click_drop_fraction: float = 0.4  # force drop at the snap, as a fraction of the latch peak force
     click_window_after_snap_mm: float = 0.2  # search the trace this far past the expected snap

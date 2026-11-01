@@ -50,3 +50,17 @@ done
 
 # 5. Dev-2026 check of each chosen variant.
 B=gantry W=1 CHOSEN=gantry_residual_k2 $R/dev_check.sh
+B=arm W=2 CHOSEN=arm_residual_k3 $R/dev_check.sh
+python $R/compare_dev_vs_cp2.py gantry > $R/equivalence/dev2026_vs_cp2_gantry.txt
+python $R/compare_dev_vs_cp2.py arm > $R/equivalence/dev2026_vs_cp2_arm.txt
+
+# 6. Install the models the rule picked, then the rule-5 equivalence set after install.
+python -m experiments.train_contact_likelihood install --model $R/models/gantry_residual_k2.json --result $R/validation/gantry/tables.md
+python -m experiments.train_contact_likelihood install --model $R/models/arm_residual_k3.json --result $R/validation/arm/tables.md
+TAG=install W=1 $R/equiv_after.sh
+
+# 7. Reproducibility: retrain the installed gantry model from scratch and compare the weights.
+python -m experiments.train_contact_likelihood fit --backend gantry --weight-decay 1e-3 --mode residual --components 2 \
+    --sources "results/w9_development/data:train_main,train_noise05;$R/data:dagger_g_main,dagger_g_noise05" --name repro_gantry_residual_k2
+
+# Integrator recipe (re-collect and retrain on the integrated C without new choices): see REPORT.md, "Recipe".

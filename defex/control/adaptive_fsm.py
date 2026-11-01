@@ -42,7 +42,13 @@ from collections import deque
 import numpy as np
 
 from defex.config import DEG, MM, AdaptiveConfig
-from defex.control.base import Command, ControllerContext, InsertionController
+from defex.control.base import (
+    Command,
+    ControllerContext,
+    InsertionController,
+    contact_speed_scale,
+    max_rotation_speed,
+)
 from defex.control.compliance import Admittance, ForceGuidedAxis
 from defex.perception.state_estimator import Observation
 from defex.recovery.failure_detector import ContactDiagnoser, ContactDiagnosis, InsertionMonitor
@@ -90,6 +96,15 @@ class AdaptiveInsertionController(InsertionController):
         super().reset(ctx)
         c = self.cfg
         spec = ctx.connector
+        # W5: bound contact speeds and yaw probing by the fixture actually pushing (no-ops on the gantry).
+        s = contact_speed_scale(ctx)
+        self._v_insert = c.max_insert_speed_mm_s * MM * s
+        self._v_free = c.free_insert_speed_mm_s * MM * s
+        self._v_near_bottom = c.near_bottom_speed_mm_s * MM * s
+        self.force_axis = ForceGuidedAxis(c.force_gain_mm_s_per_n * MM, self._v_insert, c.max_back_off_speed_mm_s * MM)
+        self._yaw_probe_rate = min(
+            c.yaw_probe_speed_deg_s * DEG, max_rotation_speed(ctx, c.rotation_budget_fraction * c.max_torque_nm)
+        )
         self.S: Pose | None = None
         self.G: Pose | None = None
         self.xy = np.zeros(2)
@@ -304,11 +319,11 @@ class AdaptiveInsertionController(InsertionController):
             self.adm_lat.update(F[:2], dt)
             self.adm_rot.update(T, dt, active=np.array([engaged, engaged, True], dtype=float))
         elif not engaged and depth < self._engage_threshold():
-            v = c.max_insert_speed_mm_s * MM
+            v = self._v_insert
         elif near_bottom:
-            v = c.near_bottom_speed_mm_s * MM
+            v = self._v_near_bottom
         else:
-            v = c.free_insert_speed_mm_s * MM
+            v = self._v_free
         self.z -= v * dt
         # Bottoming: deep enough and pushing at the target force -> diagnose quickly.
         if depth >= self._seat_threshold() and f_ax > c.bottom_force_fraction * c.insert_force_n:
@@ -673,7 +688,7 @@ class AdaptiveInsertionController(InsertionController):
                 self._yaw_results.append(self.yaw_adj - self._yaw_base)
                 self.phase, self.phase_t = "yaw_back", obs.t
             else:
-                self.yaw_adj += sgn * c.yaw_probe_speed_deg_s * DEG * dt
+                self.yaw_adj += sgn * self._yaw_probe_rate * dt
             return self._cmd(c.slow_phase_speed_cap_mm_s)
         if self.phase == "yaw_back":
             if len(self._yaw_results) == 2:

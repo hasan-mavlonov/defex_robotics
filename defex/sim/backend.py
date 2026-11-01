@@ -34,6 +34,19 @@ class SceneParams:
 
 
 @dataclass(frozen=True)
+class FixtureDynamics:
+    """What a controller needs to know about the machine it pushes with (W5).
+
+    Without this, controllers were told the gantry's servo values even on the arm.
+    """
+
+    translational_stiffness_n_per_mm: float  # weakest Cartesian direction at the tool
+    yaw_stiffness_nm_per_rad: float  # about the insertion axis
+    effective_mass_kg: float  # apparent mass at the tool along the insertion axis
+    command_latency_s: float  # setpoint to actuator
+
+
+@dataclass(frozen=True)
 class PayloadModel:
     """Mass properties below the F/T sensor (identified, or the simulator's truth)."""
 
@@ -83,6 +96,9 @@ class SimBackend(Protocol):
 
     @property
     def nominal_socket_pose(self) -> Pose: ...
+
+    @property
+    def fixture_dynamics(self) -> FixtureDynamics: ...
 
     @property
     def ft_sensor_in_tcp(self) -> Pose:

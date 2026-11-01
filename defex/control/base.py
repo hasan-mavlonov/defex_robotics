@@ -9,6 +9,7 @@ import numpy as np
 
 from defex.config import ConnectorSpec, FixtureConfig, SensorNoiseConfig
 from defex.perception.state_estimator import Observation
+from defex.sim.backend import FixtureDynamics
 from defex.utils.transforms import Pose
 
 
@@ -31,6 +32,7 @@ class ControllerContext:
     control_period_s: float
     fixture: FixtureConfig
     vision_accuracy: SensorNoiseConfig  # characterized accuracy of the vision system
+    fixture_dynamics: "FixtureDynamics | None" = None  # the machine actually pushing (W5)
 
 
 @dataclass
@@ -98,3 +100,26 @@ class InsertionController(ABC):
         """World pose of a connector-tip target expressed in a socket frame."""
         R = socket_pose.R if R_local is None else socket_pose.R @ R_local
         return Pose(socket_pose.apply(np.asarray(xyz, dtype=float)), R)
+
+
+# Guarded-motion speed limits from the fixture's dynamics (W5). The reference values are
+# those of the gantry the controllers were tuned on, so both rules are inactive there.
+REFERENCE_EFFECTIVE_MASS_KG = 1.0  # gantry: 0.88 kg along z
+FT_FILTER_DELAY_S = 1.0 / (2.0 * 3.141592653589793 * 40.0)  # 40 Hz first-order filter
+
+
+def contact_speed_scale(ctx: ControllerContext) -> float:
+    """Scale for speeds at which contact can occur: impact force ~ v sqrt(k m), so keep v sqrt(m)."""
+    fd = ctx.fixture_dynamics
+    if fd is None:
+        return 1.0
+    return min(1.0, (REFERENCE_EFFECTIVE_MASS_KG / fd.effective_mass_kg) ** 0.5)
+
+
+def max_rotation_speed(ctx: ControllerContext, torque_budget_nm: float) -> float:
+    """rad/s such that stiffness x speed x reaction time stays within the torque budget."""
+    fd = ctx.fixture_dynamics
+    if fd is None:
+        return float("inf")
+    reaction = fd.command_latency_s + FT_FILTER_DELAY_S + ctx.control_period_s
+    return torque_budget_nm / (fd.yaw_stiffness_nm_per_rad * reaction)

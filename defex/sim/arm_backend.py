@@ -32,7 +32,7 @@ import mujoco
 import numpy as np
 
 from defex.config import ConnectorSpec, FixtureConfig, SimConfig
-from defex.sim.backend import RawSensorData, SceneParams
+from defex.sim.backend import FixtureDynamics, RawSensorData, SceneParams
 from defex.sim.mujoco_backend import MuJoCoBackend, _CompiledModel
 from defex.sim.scene_builder import WorkcellLayout, build_workcell_xml
 from defex.utils.transforms import Pose, matrix_to_rotvec
@@ -139,11 +139,35 @@ class MuJoCoArmBackend(MuJoCoBackend):
         m = self.model
         self._act = np.array([m.actuator("ur_" + a).id for a in
                               ("shoulder_pan", "shoulder_lift", "elbow", "wrist_1", "wrist_2", "wrist_3")])
-        super()._index_model()  # sensors, geoms, markers, payload; joints via joint_names
+        self._home_q = None
+        super()._index_model()  # sensors, geoms, markers, payload, dynamics; joints via joint_names
         self._tcp_site_id = m.site("tcp").id
         self._home_q = self._solve_home()
+        self._dynamics = self._fixture_dynamics()
 
     # ------------------------------------------------------------------ kinematics
+    def _fixture_dynamics(self) -> FixtureDynamics:
+        if self._home_q is None:  # called by the parent before the home pose exists
+            return None
+        m, d = self.model, self._kin
+        self._fk_tool(self._home_q)
+        jp = np.zeros((3, m.nv))
+        jr = np.zeros((3, m.nv))
+        mujoco.mj_jacBody(m, d, jp, jr, self._tool_body)
+        J = np.vstack([jp[:, self._vadr], jr[:, self._vadr]])
+        kq = np.array([m.actuator_gainprm[a, 0] for a in self._act])
+        C = J @ np.diag(1.0 / kq) @ J.T  # Cartesian compliance of the joint springs
+        saved = self.data.qpos[self._qadr].copy()
+        self.data.qpos[self._qadr] = self._home_q
+        meff = self._tool_effective_mass_z()
+        self.data.qpos[self._qadr] = saved
+        return FixtureDynamics(
+            translational_stiffness_n_per_mm=float(1.0 / C[:3, :3].diagonal().max()) * 1e-3,
+            yaw_stiffness_nm_per_rad=float(1.0 / C[5, 5]),
+            effective_mass_kg=meff,
+            command_latency_s=self.arm.latency_s,
+        )
+
     def _fk_tool(self, q: np.ndarray) -> Pose:
         d = self._kin
         d.qpos[self._qadr] = q

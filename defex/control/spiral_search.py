@@ -33,7 +33,7 @@ from collections import deque
 import numpy as np
 
 from defex.config import DEG, MM, CompliantSpiralSearchConfig, SpiralSearchConfig
-from defex.control.base import Command, ControllerContext, InsertionController
+from defex.control.base import Command, ControllerContext, InsertionController, contact_speed_scale
 from defex.control.compliance import Admittance, ForceGuidedAxis
 from defex.perception.state_estimator import Observation
 from defex.utils.transforms import Pose, norm3
@@ -77,8 +77,12 @@ class SpiralSearchController(InsertionController):
         self._settled_since: float | None = None
         self._hist: deque[tuple[float, float]] = deque()
         self._fail_reason = ""
-        self.force_axis = ForceGuidedAxis(c.force_gain_mm_s_per_n * MM, c.descent_speed_mm_s * MM, 4.0 * MM)
-        self.insert_axis = ForceGuidedAxis(c.force_gain_mm_s_per_n * MM, c.insert_speed_mm_s * MM, 4.0 * MM)
+        s = contact_speed_scale(ctx)  # W5: same fixture-aware limit as C
+        self._v_descent = c.descent_speed_mm_s * MM * s
+        self._v_insert = c.insert_speed_mm_s * MM * s
+        self._v_spiral = c.spiral_speed_mm_s * MM * s
+        self.force_axis = ForceGuidedAxis(c.force_gain_mm_s_per_n * MM, self._v_descent, 4.0 * MM)
+        self.insert_axis = ForceGuidedAxis(c.force_gain_mm_s_per_n * MM, self._v_insert, 4.0 * MM)
         self.adm = Admittance(0.0, c.lateral_compliance_damping_n_s_per_mm / MM, c.max_lateral_compliance_mm * MM, 2)
         self.adm_search = Admittance(
             c.search_lateral_stiffness_n_per_mm / MM, c.lateral_compliance_damping_n_s_per_mm / MM,
@@ -186,7 +190,7 @@ class SpiralSearchController(InsertionController):
             return self._fail(obs, reason)
         f_ax = float(F[2])
         if f_ax < c.contact_force_n:
-            v = c.descent_speed_mm_s * MM  # guarded move until contact
+            v = self._v_descent  # guarded move until contact
         else:
             v = self.force_axis.velocity(c.search_force_n, f_ax)
         self.z -= v * dt
@@ -232,7 +236,7 @@ class SpiralSearchController(InsertionController):
         r = b * self.theta
         if r > c.spiral_max_radius_mm * MM:
             return self._fail(obs, "search_exhausted")
-        self.theta += c.spiral_speed_mm_s * MM * dt / max(np.hypot(r, b), 1e-9)
+        self.theta += self._v_spiral * dt / max(np.hypot(r, b), 1e-9)
         r = b * self.theta
         self.xy = self.center + r * np.array([np.cos(self.theta), np.sin(self.theta)])
         return self._cmd(30.0)
@@ -246,7 +250,7 @@ class SpiralSearchController(InsertionController):
             return self._jam_or_fail(obs, reason)
         f_ax = float(F[2])
         if f_ax < c.contact_force_n:
-            v = c.insert_speed_mm_s * MM
+            v = self._v_insert
         else:
             v = self.insert_axis.velocity(c.insert_force_n, f_ax)
         self.z -= v * dt

@@ -8,7 +8,7 @@ import mujoco
 import numpy as np
 
 from defex.config import MM, ConnectorSpec, FixtureConfig, SimConfig
-from defex.sim.backend import GroundTruth, PayloadModel, RawSensorData, SceneParams
+from defex.sim.backend import FixtureDynamics, GroundTruth, PayloadModel, RawSensorData, SceneParams
 from defex.sim.scene_builder import (
     FIXTURE_JOINTS,
     FT_SITE_Z,
@@ -102,6 +102,7 @@ class MuJoCoBackend:
         self._socket_mask[list(socket)] = True
         self._elliptic = m.opt.cone == mujoco.mjtCone.mjCONE_ELLIPTIC
         self._payload = self._true_payload()
+        self._dynamics = self._fixture_dynamics()
 
     def _true_payload(self) -> PayloadModel:
         """Exact mass properties below the F/T sensor with a nominal grasp (reporting only)."""
@@ -148,6 +149,31 @@ class MuJoCoBackend:
     @property
     def nominal_socket_pose(self) -> Pose:
         return Pose(self._layout.socket_mouth.copy(), np.eye(3))
+
+    def _tool_effective_mass_z(self) -> float:
+        m = self.model
+        d = mujoco.MjData(m)
+        d.qpos[:] = self.data.qpos if self.data is not None else 0.0
+        mujoco.mj_forward(m, d)
+        M = np.zeros((m.nv, m.nv))
+        mujoco.mj_fullM(m, d, M)
+        jp = np.zeros((3, m.nv))
+        jr = np.zeros((3, m.nv))
+        mujoco.mj_jacBody(m, d, jp, jr, self._tool_body)
+        return float(1.0 / (jp @ np.linalg.solve(M, jp.T))[2, 2])
+
+    def _fixture_dynamics(self) -> FixtureDynamics:
+        f = self.fixture_cfg
+        return FixtureDynamics(
+            translational_stiffness_n_per_mm=f.linear_kp_n_per_m * MM,
+            yaw_stiffness_nm_per_rad=f.angular_kp_nm_per_rad,
+            effective_mass_kg=self._tool_effective_mass_z(),
+            command_latency_s=0.0,
+        )
+
+    @property
+    def fixture_dynamics(self) -> FixtureDynamics:
+        return self._dynamics
 
     @property
     def ft_sensor_in_tcp(self) -> Pose:

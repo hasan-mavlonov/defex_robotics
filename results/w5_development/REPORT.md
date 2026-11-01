@@ -47,3 +47,46 @@ latency through the protocol, and bound every guarded move by a force/torque
 budget (speed <= budget / (stiffness x reaction time)); a real UR cell would also
 run the insertion in force mode with reduced joint gains. Then re-run A-F on both
 backends for Checkpoint 2.
+
+## Fix through the protocol (done) and what is left
+
+Backends now report `fixture_dynamics` (effective mass at the tool along the
+insertion axis, weakest translational stiffness, yaw stiffness, command latency):
+
+| | Gantry | UR5e |
+|---|---|---|
+| effective mass, insertion axis | 0.88 kg | 6.32 kg |
+| translational stiffness | 10.0 N/mm | 8.0 N/mm |
+| yaw stiffness | 15 N m/rad | 400 N m/rad |
+| command latency | 0 | 6 ms |
+
+Controllers C, D and F scale contact speeds by sqrt(1 kg / effective mass) and
+C caps yaw probing so that stiffness x speed x reaction time stays within 80% of
+its torque limit. Both rules are inactive on the gantry: 120 development trials
+of C and F are identical to the W6 branch in every field.
+
+Re-run on the arm (same 100 development trials per controller):
+
+| Controller | before | after |
+|---|---|---|
+| A fixed | 25% | 25% |
+| B vision | 63% | 63% |
+| E vision + RCC | 76% | 76% |
+| D spiral | 4% | **84%** (7 bad units) |
+| F spiral + RCC | 2% | **85%** (9 bad units) |
+| C adaptive | 1% | **13%** |
+
+C is still not usable on the arm. Two problems remain, both in VERIFY:
+
+1. Yaw probing still trips the 0.6 N m stop in some trials even at the capped
+   rate (0.72 N m in nominal trial 0), so stiffness x speed x delay does not fully
+   explain the overshoot on the arm.
+2. The lateral wall probe does not find the far wall (e.g. reactions 2.0 and
+   0.3 N at 0.28 and 1.35 mm, repeated on every retry until the time limit):
+   pushed sideways at the tip, the arm tilts the plug about its floor contact
+   instead of translating it.
+
+On a serial arm, C's wall-probe verification needs a redesign; W3's
+push-click-pull verification (latch signature plus pull test) avoids lateral
+probing altogether and is the planned route. Checkpoint 2 (A-F on both
+backends, with latching physics) waits for W3.

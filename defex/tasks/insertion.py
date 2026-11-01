@@ -205,6 +205,7 @@ class InsertionTask:
             control_period_s=dt,
             fixture=self.fixture,
             vision_accuracy=scenario.characterized_noise or scenario.noise,
+            fixture_dynamics=getattr(be, "fixture_dynamics", None),
         )
         controller.reset(ctx)
 

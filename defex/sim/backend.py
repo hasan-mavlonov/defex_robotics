@@ -49,13 +49,21 @@ class FixtureDynamics:
     # contact). None: not characterized, taken equal to the yaw stiffness.
     tilt_stiffness_nm_per_rad: float | None = None
     # W5b. Following error per unit of commanded speed in steady motion (servo damping over
-    # stiffness, slowest axis). A guarded move that stops on a wall stores speed x lag of setpoint
-    # lead, which the servo then pushes into the wall. On hardware: identify from a logged ramp.
-    following_lag_s: float = 0.0
+    # stiffness), slowest translational axis. A guarded move that stops on a wall stores speed x lag
+    # of setpoint lead, which the servo then pushes into the wall. On hardware: identify from a
+    # logged ramp. None: not characterized (no lag correction).
+    following_lag_s: float | None = None
+    # The same for the rotational axes (slowest of yaw and tilt), for guarded rotations.
+    # None: taken equal to following_lag_s.
+    rotational_following_lag_s: float | None = None
 
     @property
     def tilt_stiffness(self) -> float:
         return self.yaw_stiffness_nm_per_rad if self.tilt_stiffness_nm_per_rad is None else self.tilt_stiffness_nm_per_rad
+
+    @property
+    def rotational_following_lag(self) -> float | None:
+        return self.following_lag_s if self.rotational_following_lag_s is None else self.rotational_following_lag_s
 
 
 @dataclass(frozen=True)

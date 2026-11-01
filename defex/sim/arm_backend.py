@@ -163,13 +163,15 @@ class MuJoCoArmBackend(MuJoCoBackend):
         self.data.qpos[self._qadr] = self._home_q
         meff = self._tool_effective_mass_z()
         self.data.qpos[self._qadr] = saved
+        lag = self._servo_following_lag(self._act)  # every joint moves both the tool's position and its orientation
         return FixtureDynamics(
             translational_stiffness_n_per_mm=float(1.0 / C[:3, :3].diagonal().max()) * 1e-3,
             yaw_stiffness_nm_per_rad=float(1.0 / C[5, 5]),
             effective_mass_kg=meff,
             command_latency_s=self.arm.latency_s,
             tilt_stiffness_nm_per_rad=float(max(K[3, 3], K[4, 4])),
-            following_lag_s=self._servo_following_lag(self._act),
+            following_lag_s=lag,
+            rotational_following_lag_s=lag,
         )
 
     def _fk_tool(self, q: np.ndarray) -> Pose:

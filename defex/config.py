@@ -591,6 +591,15 @@ class AdaptiveConfig:
     # "gate_or_corrected": also if C changed the yaw itself; "always": every cycle.
     yaw_center_policy: str = "always"  # W4 default; V0.1 used "sigma_gate" (see results/w4_development)
     rotation_budget_fraction: float = 0.8  # of max_torque_nm, for torque overshoot while probing yaw (W5)
+    # W5b rules (scaled dampings, rate-mode conform, lag terms; defex.control.base) switch on only for
+    # fixtures well outside the gantry family C was tuned and checked on. experiments/sim_randomization.py
+    # runs C on gantries with wrist servos of 10-25 N m/rad (up to 1.67 x the 15 N m/rad reference) and
+    # servo lags up to 0.052 s (1.3 x 0.04 s) with C's gantry values; the UR5e is 27 x (yaw) and 55 x
+    # (tilt) as stiff and lags 5 x. Nothing between was measured: both thresholds sit well clear of
+    # either side (development choice, Checkpoint 2 review). At 4 x the unscaled admittance loop gain
+    # (conform: 4 x 15 / 0.5 = 120 rad/s) is still below the stiffer servo's bandwidth (~84 rad/s x 2).
+    stiff_wrist_min_ratio: float = 4.0  # per axis: rotational stiffness over the reference wrist's
+    lagging_servo_min_ratio: float = 2.0  # servo following lag over the reference fixture's
     # W5b: yaw verification on fixtures that cannot sweep yaw fast enough within the torque budget.
     # Below this rate a sweep of 2 x 2 x yaw_probe_max_deg takes more than ~6 s (gantry: 25 deg/s);
     # VERIFY then checks yaw from the wall probes it already made (cavity geometry), not by sweeping.

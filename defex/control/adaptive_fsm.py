@@ -116,25 +116,27 @@ class AdaptiveInsertionController(InsertionController):
         # gantry (factor 1.0) computes exactly what it did before W5.
         self._probe_speed_mm_s = c.verify_probe_speed_mm_s * s
         self._yaw_probe_rate = min(
-            c.yaw_probe_speed_deg_s * DEG, max_rotation_speed(ctx, c.rotation_budget_fraction * c.max_torque_nm)
+            c.yaw_probe_speed_deg_s * DEG,
+            max_rotation_speed(ctx, c.rotation_budget_fraction * c.max_torque_nm, c.lagging_servo_min_ratio),
         )
         # W5b: keep the rotational admittance loop gains (stiffness / damping) at their value on the
-        # reference wrist. Both factors are exactly 1 on the gantry, which keeps its dampings untouched.
-        s_tilt, s_yaw = rotational_damping_scale(ctx)
+        # reference wrist, on wrists at least stiff_wrist_min_ratio x as stiff. Both factors are exactly 1
+        # on every gantry (nominal and randomized), which keeps its dampings untouched.
+        s_tilt, s_yaw = rotational_damping_scale(ctx, c.stiff_wrist_min_ratio)
         if (s_tilt, s_yaw) == (1.0, 1.0):
             self.adm_rot.d, self.adm_conf.d = self._adm_d0
         else:
             self.adm_rot.d = c.rot_damping_nm_s_per_rad * np.array([s_tilt, s_tilt, s_yaw])
             self.adm_conf.d = c.conform_damping_nm_s_per_rad * s_tilt
-        # Rate-mode conform on wrists stiffer than the reference (see AdaptiveConfig.rate_conform_*).
+        # Rate-mode conform on the same stiff tilt axes (see AdaptiveConfig.rate_conform_*).
         self._rate_conform = s_tilt > 1.0
         self._rc_dir: np.ndarray | None = None
         self._rc_flat = np.zeros(2, dtype=bool)
         self._rc_done = np.zeros(2, dtype=bool)
         self._rc_rev_since: list = [None, None]
         # Setpoint lead a wall probe carries beyond the reference fixture's following lag: the
-        # probe may travel that much further on the setpoint before giving up (0 on the gantry).
-        self._probe_lead = self._probe_speed_mm_s * MM * excess_following_lag(ctx)
+        # probe may travel that much further on the setpoint before giving up (0 on every gantry).
+        self._probe_lead = self._probe_speed_mm_s * MM * excess_following_lag(ctx, c.lagging_servo_min_ratio)
         # Sweep yaw between the rotational limits only where the fixture can do it in time.
         self._yaw_sweep = self._yaw_probe_rate >= c.yaw_sweep_min_speed_deg_s * DEG
         self._wall_contacts: list[tuple[float, float, float]] = []  # (measured position along probe, reaction, T_z)

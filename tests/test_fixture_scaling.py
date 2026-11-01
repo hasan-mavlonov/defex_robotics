@@ -1,9 +1,11 @@
-"""W5b: fixture-dynamics rules are exact no-ops on the gantry and active on the UR5e arm."""
+"""W5b: fixture-dynamics rules are exact no-ops on every gantry (nominal and randomized) and active on the UR5e arm."""
 
 import numpy as np
 import pytest
 
-from defex.config import DEG, MM, FixtureConfig, SensorNoiseConfig
+from dataclasses import replace
+
+from defex.config import DEG, MM, AdaptiveConfig, ConnectorSpec, FixtureConfig, SensorNoiseConfig
 from defex.control.adaptive_fsm import AdaptiveInsertionController
 from defex.control.base import (
     REFERENCE_FOLLOWING_LAG_S,
@@ -14,8 +16,12 @@ from defex.control.base import (
     rotational_damping_scale,
 )
 from defex.sim.arm_backend import menagerie_available
-from defex.sim.backend import FixtureDynamics
+from defex.sim.backend import FixtureDynamics, SceneParams
+from defex.sim.mujoco_backend import MuJoCoBackend
 from defex.utils.transforms import Pose
+from experiments.sim_randomization import BANDS
+
+CFG = AdaptiveConfig()
 
 
 def _ctx(spec, fd: FixtureDynamics | None) -> ControllerContext:
@@ -25,22 +31,19 @@ def _ctx(spec, fd: FixtureDynamics | None) -> ControllerContext:
 
 def _arm_dynamics() -> FixtureDynamics:
     # The UR5e values the arm backend reports (results/w5b_development/REPORT.md).
-    return FixtureDynamics(8.0, 400.0, 6.32, 0.006, tilt_stiffness_nm_per_rad=822.0, following_lag_s=0.2)
+    return FixtureDynamics(8.0, 400.0, 6.32, 0.006, tilt_stiffness_nm_per_rad=822.0, following_lag_s=0.2,
+                           rotational_following_lag_s=0.2)
 
 
-def test_gantry_backend_reports_reference_dynamics(backend):
-    fd = backend.fixture_dynamics
-    assert fd.tilt_stiffness_nm_per_rad == REFERENCE_ROTATIONAL_STIFFNESS_NM_PER_RAD == fd.yaw_stiffness_nm_per_rad
-    assert 0.0 < fd.following_lag_s <= REFERENCE_FOLLOWING_LAG_S  # critically damped servos, slowest axis x
-
-
-def test_rules_are_exact_no_ops_on_the_gantry(backend, spec):
-    ctx = _ctx(spec, backend.fixture_dynamics)
-    assert rotational_damping_scale(ctx) == (1.0, 1.0)
-    assert excess_following_lag(ctx) == 0.0
+def _assert_c_as_tuned_on_the_gantry(ctx: ControllerContext) -> None:
+    """C's reset leaves every W5b quantity at its pre-W5b value (the only places W5b enters C)."""
+    assert rotational_damping_scale(ctx, CFG.stiff_wrist_min_ratio) == (1.0, 1.0)
+    assert excess_following_lag(ctx, CFG.lagging_servo_min_ratio) == 0.0
+    assert excess_following_lag(ctx, CFG.lagging_servo_min_ratio, rotational=True) == 0.0
     # The W5 formula, unchanged: budget / (stiffness x (latency + filter + period)).
     reaction = 1.0 / (2.0 * np.pi * ctx.vision_accuracy.ft_filter_cutoff_hz) + 0.002
-    assert max_rotation_speed(ctx, 0.28) == pytest.approx(0.28 / (15.0 * reaction), rel=1e-12)
+    k = ctx.fixture_dynamics.yaw_stiffness_nm_per_rad
+    assert max_rotation_speed(ctx, 0.28, CFG.lagging_servo_min_ratio) == pytest.approx(0.28 / (k * reaction), rel=1e-12)
     c = AdaptiveInsertionController()
     d0 = (c.adm_rot.d, c.adm_conf.d)
     c.reset(ctx)
@@ -49,11 +52,71 @@ def test_rules_are_exact_no_ops_on_the_gantry(backend, spec):
     assert c._yaw_probe_rate == c.cfg.yaw_probe_speed_deg_s * DEG
 
 
+def test_gantry_backend_reports_reference_dynamics(backend):
+    fd = backend.fixture_dynamics
+    assert fd.tilt_stiffness_nm_per_rad == REFERENCE_ROTATIONAL_STIFFNESS_NM_PER_RAD == fd.yaw_stiffness_nm_per_rad
+    assert 0.0 < fd.following_lag_s <= REFERENCE_FOLLOWING_LAG_S  # critically damped servos, slowest axis x
+    assert 0.0 < fd.rotational_following_lag_s < fd.following_lag_s  # wrist servos are faster than the carriage
+
+
+def test_rules_are_exact_no_ops_on_the_nominal_gantry(backend, spec):
+    _assert_c_as_tuned_on_the_gantry(_ctx(spec, backend.fixture_dynamics))
+
+
+def test_rules_are_exact_no_ops_on_every_gantry_of_the_randomization_bands(spec):
+    """Checkpoint 2 review: experiments/sim_randomization.py draws the wrist servos from 10-25 N m/rad and the
+    linear servos from 5-20 kN/m; before the thresholds, any wrist above 15 N m/rad switched C to rate mode."""
+    lo_k, hi_k = BANDS["angular_kp_nm_per_rad"]
+    lo_l, hi_l = BANDS["linear_kp_n_per_m"]
+    corners = [(l, k) for l in (lo_l, hi_l) for k in (lo_k, hi_k)] + [(9677.0, 15.01)]  # dev 2026 variant 12
+    for lin_kp, ang_kp in corners:
+        be = MuJoCoBackend(fixture=replace(FixtureConfig(), linear_kp_n_per_m=lin_kp, angular_kp_nm_per_rad=ang_kp))
+        be.load(SceneParams(spec, spec.friction, Pose.identity()))
+        fd = be.fixture_dynamics
+        assert fd.yaw_stiffness_nm_per_rad == fd.tilt_stiffness_nm_per_rad == ang_kp
+        assert fd.following_lag_s < CFG.lagging_servo_min_ratio * REFERENCE_FOLLOWING_LAG_S, (lin_kp, fd)
+        _assert_c_as_tuned_on_the_gantry(_ctx(spec, fd))
+    # The thresholds stay clear of the bands (widening a band past them fails here).
+    assert hi_k / REFERENCE_ROTATIONAL_STIFFNESS_NM_PER_RAD < CFG.stiff_wrist_min_ratio
+    # and of the Micro-Fit fixture, whose tool mass differs.
+    mf = ConnectorSpec.load("microfit3_4ckt")
+    be = MuJoCoBackend(fixture=replace(FixtureConfig(), linear_kp_n_per_m=lo_l, angular_kp_nm_per_rad=hi_k))
+    be.load(SceneParams(mf, mf.friction, Pose.identity()))
+    _assert_c_as_tuned_on_the_gantry(_ctx(mf, be.fixture_dynamics))
+
+
+def test_thresholds_switch_each_rule_on_its_own_axis(spec):
+    ref_k, ref_lag = REFERENCE_ROTATIONAL_STIFFNESS_NM_PER_RAD, REFERENCE_FOLLOWING_LAG_S
+    r, q = CFG.stiff_wrist_min_ratio, CFG.lagging_servo_min_ratio
+    below = FixtureDynamics(10.0, 0.99 * r * ref_k, 0.88, 0.0, 0.99 * r * ref_k, 0.99 * q * ref_lag, 0.99 * q * ref_lag)
+    _assert_c_as_tuned_on_the_gantry(_ctx(spec, below))
+    # A stiff tilt axis alone: tilt damping scaled, rate-mode conform on, yaw untouched.
+    tilt_only = replace(below, tilt_stiffness_nm_per_rad=r * ref_k)
+    assert rotational_damping_scale(_ctx(spec, tilt_only), r) == (pytest.approx(r), 1.0)
+    c = AdaptiveInsertionController()
+    c.reset(_ctx(spec, tilt_only))
+    assert c._rate_conform
+    # A slow linear axis with fast wrist servos: probe lead only, the yaw rate keeps the W5 formula.
+    slow_linear = replace(below, following_lag_s=0.2, rotational_following_lag_s=0.02)
+    ctx = _ctx(spec, slow_linear)
+    assert excess_following_lag(ctx, q) == pytest.approx(0.2 - ref_lag)
+    assert excess_following_lag(ctx, q, rotational=True) == 0.0
+    reaction = 1.0 / (2.0 * np.pi * ctx.vision_accuracy.ft_filter_cutoff_hz) + 0.002
+    assert max_rotation_speed(ctx, 0.28, q) == pytest.approx(0.28 / (below.yaw_stiffness_nm_per_rad * reaction))
+    c.reset(ctx)
+    assert c._probe_lead > 0.0 and not c._rate_conform
+    # Not characterized (None): no lag correction; rotational falls back to the translational lag.
+    assert excess_following_lag(_ctx(spec, FixtureDynamics(10.0, 15.0, 0.88, 0.0)), q, rotational=True) == 0.0
+    assert FixtureDynamics(10.0, 15.0, 0.88, 0.0, following_lag_s=0.2).rotational_following_lag == 0.2
+
+
 def test_rules_are_active_on_the_arm(spec):
     ctx = _ctx(spec, _arm_dynamics())
-    s_tilt, s_yaw = rotational_damping_scale(ctx)
+    s_tilt, s_yaw = rotational_damping_scale(ctx, CFG.stiff_wrist_min_ratio)
     assert s_tilt == pytest.approx(822.0 / 15.0) and s_yaw == pytest.approx(400.0 / 15.0)
-    assert excess_following_lag(ctx) == pytest.approx(0.2 - REFERENCE_FOLLOWING_LAG_S)
+    for rotational in (False, True):
+        assert excess_following_lag(ctx, CFG.lagging_servo_min_ratio, rotational) == pytest.approx(
+            0.2 - REFERENCE_FOLLOWING_LAG_S)
     c = AdaptiveInsertionController()
     c.reset(ctx)
     cfg = c.cfg
@@ -64,7 +127,7 @@ def test_rules_are_active_on_the_arm(spec):
     assert c._probe_lead > 0.0
     assert c._yaw_probe_rate < cfg.yaw_sweep_min_speed_deg_s * DEG
     # Resetting on the gantry afterwards restores the original dampings exactly.
-    c.reset(_ctx(spec, FixtureDynamics(10.0, 15.0, 0.88, 0.0, 15.0, 0.037)))
+    c.reset(_ctx(spec, FixtureDynamics(10.0, 15.0, 0.88, 0.0, 15.0, 0.037, 0.024)))
     assert (c.adm_rot.d, c.adm_conf.d) == (cfg.rot_damping_nm_s_per_rad, cfg.conform_damping_nm_s_per_rad)
 
 
@@ -89,6 +152,6 @@ def test_arm_backend_reports_its_stiffness_and_lag(spec):
     be = MuJoCoArmBackend()
     be.load(SceneParams(spec, spec.friction, Pose.identity()))
     fd = be.fixture_dynamics
-    assert fd.following_lag_s == pytest.approx(0.2)  # Menagerie kv / kp on every joint
+    assert fd.following_lag_s == fd.rotational_following_lag_s == pytest.approx(0.2)  # Menagerie kv / kp on every joint
     assert 500.0 < fd.tilt_stiffness_nm_per_rad < 1000.0
-    assert rotational_damping_scale(_ctx(spec, fd))[0] > 30.0
+    assert rotational_damping_scale(_ctx(spec, fd), CFG.stiff_wrist_min_ratio)[0] > 30.0

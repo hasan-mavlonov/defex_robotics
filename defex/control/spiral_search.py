@@ -344,7 +344,8 @@ class SpiralSearchController(InsertionController):
         if self.cfg.retention_pull and m is not None and not self._pulled:
             self._pulled = True
             self._pull_start = float(obs.depth)
-            self._pull_target = self.cfg.pull_test_fraction * m.latch_retention_force_n
+            self._pull_target = max(self.cfg.pull_test_fraction * m.latch_retention_force_n,
+                                    self.cfg.pull_test_mating_factor * m.mating_force_max_n)
             self._pull_limit = self.cfg.pull_limit_wipe_fraction * m.terminal_wipe_mm * MM
             self._pull_phase = "pull"
             self._enter(obs.t, VERIFY, "pull")

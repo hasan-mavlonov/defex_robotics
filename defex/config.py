@@ -497,6 +497,7 @@ class SpiralSearchConfig:
     # datasheet terminal wipe, then push it back to the floor. Values as AdaptiveConfig's.
     retention_pull: bool = False
     pull_test_fraction: float = 0.5
+    pull_test_mating_factor: float = 0.0
     pull_limit_wipe_fraction: float = 0.6
     pull_test_max_s: float = 3.0
     reseat_tolerance_mm: float = 0.05

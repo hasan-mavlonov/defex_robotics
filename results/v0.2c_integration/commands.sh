@@ -57,3 +57,39 @@ $PY -m experiments.v02c_integration_compare \
   results/v0.2c_integration/diagnosis_arm_escapes/arm_robustness_a5bd452 results/v0.2c_integration/prior/data/arm/train_main \
   results/v0.2c_integration/diagnosis_arm_escapes/defect_verdict_afa08a4 results/v0.2c_integration/prior/data/arm/train_main \
   > results/v0.2c_integration/diagnosis_arm_escapes/comparison.md
+
+# 5. Review fixes (after 5131f29). Every run from a temporary detached worktree at the stated commit
+#    (~/projects/defex_robotics-c-intfix-run; 54f3097 in ~/projects/defex_robotics-c-intfix-cp2), outputs moved
+#    into results/v0.2c_integration/review_fixes/. Seeds 2026 (dev) and 4002 (validation) only. Workers 3.
+#    Variants: DEFEX_CONTROLLER_VARIANTS=<run worktree>/results/v0.2c_integration/review_fixes/variants.json
+RF=v0.2c_integration/review_fixes
+ALL=fixed,correction,adaptive,spiral,correction_rcc,spiral_rcc,adaptive_learned
+eq() { for S in latching standard heldout; do for B in gantry arm; do
+  $PY -m experiments.robustness --suite $S --backend $B --trials 20 --seed 2026 --workers 3 --controllers $2 --name $RF/$1/${B}_$S --no-plots
+done; done; }
+eq equiv_before $ALL                                    # at 5131f29 (untouched tip)
+eq equiv_after1 $ALL                                    # at 66bc8d0
+for B in gantry arm; do                                 # at 66bc8d0
+  $PY -m experiments.robustness --suite latch_spread --backend $B --trials 20 --seed 2026 --workers 3 --controllers $ALL \
+      --name $RF/spread_dev2026_before/${B}_latch_spread --no-plots; done
+eq cp2_54f3097 adaptive                                 # at 54f3097
+cand() { for S in latching latch_spread; do for B in gantry arm; do
+  $PY -m experiments.robustness --suite $S --backend $B --trials $3 --seed $2 --workers 3 \
+      --controllers adaptive@w3,adaptive@noclick,adaptive@w60,adaptive@w80,adaptive@w60f,adaptive@w80f --name $RF/verify_selection/$1/${B}_$S --no-plots
+done; done; }
+cand dev2026 2026 20                                    # at 97d4121 (SELECTION_RULE.md + amendment 1 committed)
+cand validation4002 4002 30                             # at 97d4121
+$PY -m experiments.v02c_verify_select results/$RF/verify_selection/validation4002 > results/$RF/verify_selection/validation4002/selection.md
+# install w60f (b57e0db), then at b57e0db:
+for S in latching latch_spread standard heldout; do for B in gantry arm; do
+  $PY -m experiments.robustness --suite $S --backend $B --trials 20 --seed 2026 --workers 3 --controllers $ALL --name $RF/snapshot2026_after/${B}_$S --no-plots
+done; done
+for S in latching latch_spread; do for B in gantry arm; do
+  $PY -m experiments.robustness --suite $S --backend $B --trials 20 --seed 2026 --workers 3 --controllers spiral@pull,spiral_rcc@pull --name $RF/baseline_pull_dev2026/${B}_$S --no-plots
+done; done
+eq alloff_final adaptive@cp2
+$PY -m experiments.checkpoint_report results/$RF/snapshot2026_after > results/$RF/snapshot2026_after/TABLES.md
+$PY -m experiments.checkpoint_report results/$RF/spread_dev2026_before > results/$RF/spread_dev2026_before/TABLES.md
+$PY -m experiments.v02c_review_tables > results/$RF/REVIEW_TABLES.md
+# before_after.md: experiments.v02c_integration_compare on (equiv_before | spread_dev2026_before, snapshot2026_after) pairs
+# Equivalence: scripts/compare_trials.py A/trials.csv B/trials.csv --ignore wall_time_s (all-off: --pair adaptive,adaptive@cp2)

@@ -39,3 +39,17 @@ def test_position_program_seats_on_the_arm(arm_task):
     sc = sample_scenario(conditions_by_name()["nominal"], 0, 2026, arm_task.backend.nominal_socket_pose)
     r = arm_task.run(make_controller("fixed"), sc)
     assert r.success, r.failure_reason
+
+
+@pytest.mark.slow
+def test_adaptive_seats_and_verifies_on_the_arm(arm_task):
+    """W5b: before the fix, C tripped the 0.6 N m stop while sweeping yaw in this trial (development seed)."""
+    from defex.control.registry import make_controller
+    from defex.tasks.conditions import conditions_by_name
+    from defex.tasks.scenarios import sample_scenario
+
+    sc = sample_scenario(conditions_by_name()["nominal"], 0, 2026, arm_task.backend.nominal_socket_pose)
+    r = arm_task.run(make_controller("adaptive"), sc)
+    assert r.success and r.declared_success is True, r.failure_reason
+    assert any(k == "wall_yaw" and "PASS" in d for _, k, d in r.events)
+    assert r.peak_measured_torque_nm < 0.35

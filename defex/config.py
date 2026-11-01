@@ -602,6 +602,10 @@ class AdaptiveConfig:
     # A corner contact sits near the plug's end: lever arm (T_z / F) of at least this fraction of
     # the plug half-length at both walls, with consistent sign, gives the direction of the yaw.
     wall_yaw_lever_fraction: float = 0.5
+    # ... and at most this fraction: a contact lies on the plug (|x| <= half-length), and wall friction
+    # adds up to mu x cavity half-width to the apparent lever (4.5 mm at mu = 1), so a longer lever (or
+    # no free travel at all) means the plug is wedged, not yawed: turning it would jam it harder.
+    wall_yaw_lever_max_fraction: float = 2.0
     wall_yaw_corrections: int = 1  # in-place corrections (then the walls are probed again)
     wall_yaw_correct_speed_deg_s: float = 4.0  # free-space turn towards the cavity axis (plug centred)
     # W5b: rate-mode conform on wrists stiffer than the reference. The zero-spring admittance, damped

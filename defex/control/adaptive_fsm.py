@@ -126,10 +126,6 @@ class AdaptiveInsertionController(InsertionController):
         else:
             self.adm_rot.d = c.rot_damping_nm_s_per_rad * np.array([s_tilt, s_tilt, s_yaw])
             self.adm_conf.d = c.conform_damping_nm_s_per_rad * s_tilt
-        # The CoP model assumes the plug settles onto its supports, which takes a wrist about as soft
-        # as the reference one. On a stiffer wrist the plug rests on whichever edge its residual tilt
-        # selects, so the measured CoP is trusted that much less (factor 1 on the gantry).
-        self._cop_sigma_scale = 1.0
         # Rate-mode conform on wrists stiffer than the reference (see AdaptiveConfig.rate_conform_*).
         self._rate_conform = s_tilt > 1.0
         self._rc_dir: np.ndarray | None = None
@@ -587,7 +583,7 @@ class AdaptiveInsertionController(InsertionController):
             clean = self._conf_saturated or (
                 diag.cop is not None and norm3(np.append(diag.cop, 0.0)) < c.clean_cop_mm * MM
             )
-            sigma = (c.cop_sigma_mm * MM if clean else c.unclean_cop_sigma_mm * MM) * self._cop_sigma_scale
+            sigma = c.cop_sigma_mm * MM if clean else c.unclean_cop_sigma_mm * MM
             cop = diag.cop if diag.kind == "surface_block" else None
             if self.ylocalizer is not None:
                 return self._plan_xyyaw(obs, diag, cop, sigma, lim_xy)
@@ -705,9 +701,15 @@ class AdaptiveInsertionController(InsertionController):
     def _latch_verify_step(self, obs: Observation) -> Command:
         c = self.cfg
         dt = self.ctx.control_period_s
-        F, _ = self._wrench(obs)
+        F, T = self._wrench(obs)
         f_ax = float(F[2])
         moved = self._pull_start - self._corrected_depth(obs)
+        if self._rate_conform:
+            # A soft wrist lets the latched plug find its own axis under the pull and the re-seat; a stiff
+            # one pulls along the camera's axis and loads the plug sideways (6 N, 0.6 N m in development).
+            # Give back that compliance in software (dampings scaled for a stable loop on this wrist).
+            self.adm_lat.update(F[:2], dt)
+            self.adm_rot.update(T, dt)
         if self.phase == "pull":
             # Guarded pull: back the setpoint out until the latch pulls back with the test force
             # (axial force negative: the environment holds the plug in), or the plug moves too far.
@@ -845,13 +847,17 @@ class AdaptiveInsertionController(InsertionController):
         return self._cmd(c.force_phase_speed_cap_mm_s)
 
     # ------------------------------------------------------------------ rate-mode conform (W5b)
+    def _orientation_lag(self, obs: Observation) -> np.ndarray:
+        """Measured minus commanded orientation (rotation vector, estimated socket axes): the servo lag."""
+        return self.S.R.T @ matrix_to_rotvec(obs.fixture_tcp.R @ obs.setpoint.R.T)
+
     def _rate_conform_step(self, obs: Observation, F: np.ndarray, T: np.ndarray, dt: float, rate: float) -> bool:
         """Tilt at ``rate`` towards the measured torque, per axis, until it reverses (the face passed flat:
         command the measured orientation) or the tilt limit is reached (tipped onto an edge). Returns True
         once both axes are resolved and the fixture has caught up with the setpoint."""
         c = self.cfg
         f_ax = max(float(F[2]), _EPS)
-        lag = self.S.R.T @ matrix_to_rotvec(obs.fixture_tcp.R @ obs.setpoint.R.T)  # measured - commanded
+        lag = self._orientation_lag(obs)
         if self._rc_dir is None:
             self._rc_dir = np.sign(T[:2])  # the zero-spring admittance's direction (x' = T / d)
             self._rc_flat[:] = False
@@ -873,8 +879,11 @@ class AdaptiveInsertionController(InsertionController):
                 # lag does not enter), less the turn made since.
                 self.adm_conf.x[k] += self._rc_rev_since[k][1] - self._rc_dir[k] * rate * (obs.t - self._rc_rev_since[k][0])
                 self._rc_done[k] = self._rc_flat[k] = True
-            elif abs(T[k]) > wall or abs(self.adm_conf.x[k]) >= c.conform_saturation_fraction * limit:
-                self._rc_done[k] = True  # tipped onto an edge (or held by a wall): stop turning
+            elif abs(T[k]) > wall:
+                self.adm_conf.x[k] += lag[k]  # held by a wall: stop where the plug is, not where the setpoint led
+                self._rc_done[k] = True
+            elif abs(self.adm_conf.x[k]) >= c.conform_saturation_fraction * limit:
+                self._rc_done[k] = True  # tipped onto an edge: stop turning
             else:
                 self.adm_conf.x[k] = float(np.clip(self.adm_conf.x[k] + self._rc_dir[k] * rate * dt, -limit, limit))
         return bool(self._rc_done.all() and norm3(np.append(lag[:2], 0.0)) < c.conform_rate_deg * DEG)
@@ -911,7 +920,9 @@ class AdaptiveInsertionController(InsertionController):
         if 0.5 * free >= need:
             self.log(obs.t, "wall_yaw", detail + " -> PASS")
             return self._succeed(obs)
-        corner = min(abs(levers[0]), abs(levers[1])) >= c.wall_yaw_lever_fraction * self.plug_half[0]
+        px = self.plug_half[0]
+        corner = (min(abs(levers[0]), abs(levers[1])) >= c.wall_yaw_lever_fraction * px
+                  and max(abs(levers[0]), abs(levers[1])) <= c.wall_yaw_lever_max_fraction * px and free > 0.0)
         if self._wall_yaw_left > 0 and levers[0] * levers[1] > 0 and corner:
             yaw = float(np.sign(levers[0])) * self._yaw_from_free_travel(free)
             self._wall_yaw_left -= 1
@@ -927,6 +938,7 @@ class AdaptiveInsertionController(InsertionController):
         err = self._yaw_target - self.yaw_adj
         if -float(T[2]) * np.sign(err) >= c.yaw_probe_torque_nm:  # a wall resists the turn: wrong estimate
             self.log(obs.t, "wall_yaw", f"turn blocked at {-float(T[2]):+.3f} N m -> FAIL")
+            self.yaw_adj += float(self._orientation_lag(obs)[2])  # drop the setpoint lead the servo carries
             return self._verify_failed(obs)
         step = c.wall_yaw_correct_speed_deg_s * DEG * dt
         self.yaw_adj += float(np.clip(err, -step, step))

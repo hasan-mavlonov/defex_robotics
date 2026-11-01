@@ -976,7 +976,9 @@ class AdaptiveInsertionController(InsertionController):
         (pos_a, r_a, tz_a), (pos_b, r_b, tz_b) = self._wall_contacts[-2:]
         free = pos_a + pos_b  # measured (encoders), not setpoint: the setpoint lead does not enter
         tol = c.wall_yaw_tolerance_deg * DEG
-        need = self._wall_half_travel(tol)
+        # In a cavity too tight for a plug yawed by the tolerance, need < 0 and any travel would pass;
+        # a plug the walls clamp (free travel near zero) is wedged, not seated.
+        need = max(self._wall_half_travel(tol), c.wall_yaw_min_free_fraction * self._wall_half_travel(0.0))
         levers = (-tz_a / max(r_a, _EPS), -tz_b / max(r_b, _EPS))
         detail = (f"half free travel {0.5 * free / MM:.3f} mm (>= {need / MM:.3f} for {c.wall_yaw_tolerance_deg:.1f} "
                   f"deg), levers ({levers[0] / MM:+.1f},{levers[1] / MM:+.1f}) mm")

@@ -19,8 +19,15 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from defex.config import DEG, MM, FixedTrajectoryConfig, PassiveComplianceConfig, PositionCorrectionConfig
-from defex.control.base import Command, ControllerContext, InsertionController
+from defex.config import (
+    DEG,
+    MM,
+    FixedTrajectoryConfig,
+    PassiveComplianceConfig,
+    PassiveComplianceStiffFixtureConfig,
+    PositionCorrectionConfig,
+)
+from defex.control.base import Command, ControllerContext, InsertionController, outside_reference_family
 from defex.perception.state_estimator import Observation
 from defex.utils.transforms import Pose
 
@@ -149,5 +156,21 @@ class PassiveComplianceController(PositionCorrectionController):
     label = "E: Vision correction + passive compliance"
     compliant_wrist = True
 
-    def __init__(self, cfg: PassiveComplianceConfig | None = None) -> None:
+    def __init__(
+        self, cfg: PassiveComplianceConfig | None = None, stiff_fixture_cfg: PassiveComplianceConfig | None = None
+    ) -> None:
         super().__init__(cfg or PassiveComplianceConfig())
+        # v0.2c: settings for fixtures outside the gantry family (the UR5e), tuned there.
+        self.stiff_fixture_cfg = stiff_fixture_cfg or PassiveComplianceStiffFixtureConfig()
+
+    def reset(self, ctx: ControllerContext) -> None:
+        super().reset(ctx)
+        # Per-machine program (v0.2c): the config set by the user or a script on every gantry,
+        # stiff_fixture_cfg on fixtures outside the gantry family. Never compounds across resets.
+        if getattr(self, "_machine_cfg", None) is not self.cfg:
+            self._user_cfg = self.cfg
+        c = self._user_cfg
+        if outside_reference_family(ctx, c.stiff_wrist_min_ratio, c.lagging_servo_min_ratio):
+            c = self.stiff_fixture_cfg
+        self.cfg = self._machine_cfg = c
+        self.dwell_s = c.dwell_s

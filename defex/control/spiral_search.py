@@ -32,8 +32,22 @@ from collections import deque
 
 import numpy as np
 
-from defex.config import DEG, MM, CompliantSpiralSearchConfig, SpiralSearchConfig
-from defex.control.base import Command, ControllerContext, InsertionController, budgeted, contact_speed_scale
+from defex.config import (
+    DEG,
+    MM,
+    CompliantSpiralSearchConfig,
+    CompliantSpiralSearchStiffFixtureConfig,
+    SpiralSearchConfig,
+    SpiralSearchStiffFixtureConfig,
+)
+from defex.control.base import (
+    Command,
+    ControllerContext,
+    InsertionController,
+    budgeted,
+    contact_speed_scale,
+    outside_reference_family,
+)
 from defex.control.compliance import Admittance, ForceGuidedAxis
 from defex.perception.state_estimator import Observation
 from defex.utils.transforms import Pose, norm3
@@ -53,14 +67,23 @@ class SpiralSearchController(InsertionController):
     name = "spiral"
     label = "D: Spiral search"
 
-    def __init__(self, cfg: SpiralSearchConfig | None = None) -> None:
+    def __init__(self, cfg: SpiralSearchConfig | None = None, stiff_fixture_cfg: SpiralSearchConfig | None = None) -> None:
         super().__init__()
         self.cfg = cfg or SpiralSearchConfig()
+        # v0.2c: settings for fixtures outside the gantry family (the UR5e), tuned there.
+        self.stiff_fixture_cfg = stiff_fixture_cfg or SpiralSearchStiffFixtureConfig()
+
+    def _machine_cfg(self, ctx: ControllerContext, cfg: SpiralSearchConfig) -> SpiralSearchConfig:
+        """The config for this fixture: ``cfg`` on every gantry, ``stiff_fixture_cfg`` on the arm (v0.2c)."""
+        if outside_reference_family(ctx, cfg.stiff_wrist_min_ratio, cfg.lagging_servo_min_ratio):
+            return self.stiff_fixture_cfg
+        return cfg
 
     def reset(self, ctx: ControllerContext) -> None:
         super().reset(ctx)
         # W3: same per-connector force budget as C (insertion force and abort threshold).
-        self.cfg = budgeted(self, ctx, insert_force_n="insert_target_n", max_force_n="abort_n")
+        self.cfg = budgeted(self, ctx, select=lambda cfg: self._machine_cfg(ctx, cfg),
+                            insert_force_n="insert_target_n", max_force_n="abort_n")
         c = self.cfg
         self.S: Pose | None = None
         self.G: Pose | None = None
@@ -236,7 +259,10 @@ class SpiralSearchController(InsertionController):
         if obs.depth - self.face_depth > c.hole_push_mm * MM:
             self.log(obs.t, "hole_found", f"pushed {(obs.depth - self.face_depth) / MM:.2f} mm at "
                                           f"({self.xy[0] / MM:+.2f},{self.xy[1] / MM:+.2f}) mm")
-            self.xy = self.xy + self.adm_search.x
+            if c.hole_at_measured_position:
+                self.xy = np.asarray(obs.lateral, dtype=float).copy()
+            else:
+                self.xy = self.xy + self.adm_search.x
             self.adm_search.reset()
             self.adm.reset()
             self._enter(obs.t, INSERT)
@@ -320,5 +346,7 @@ class CompliantSpiralSearchController(SpiralSearchController):
     label = "F: Spiral search + passive compliance"
     compliant_wrist = True
 
-    def __init__(self, cfg: CompliantSpiralSearchConfig | None = None) -> None:
-        super().__init__(cfg or CompliantSpiralSearchConfig())
+    def __init__(
+        self, cfg: CompliantSpiralSearchConfig | None = None, stiff_fixture_cfg: CompliantSpiralSearchConfig | None = None
+    ) -> None:
+        super().__init__(cfg or CompliantSpiralSearchConfig(), stiff_fixture_cfg or CompliantSpiralSearchStiffFixtureConfig())

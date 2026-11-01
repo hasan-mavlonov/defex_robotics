@@ -115,18 +115,19 @@ REFERENCE_ROTATIONAL_STIFFNESS_NM_PER_RAD = 15.0  # gantry wrist servos (Fixture
 REFERENCE_FOLLOWING_LAG_S = 0.04  # gantry: 0.037 s on its heaviest axis (x carriage), 0.019-0.024 s elsewhere
 
 
-def budgeted(controller, ctx: ControllerContext, **fields_from_budget: str):
+def budgeted(controller, ctx: ControllerContext, select=None, **fields_from_budget: str):
     """Controller config with force thresholds from the connector's force budget (W3).
 
     Starts from whatever config the controller holds at reset (scripts may swap it),
     never compounding an earlier override. ``fields_from_budget`` maps a config field
-    to a ForceBudget attribute, e.g. insert_force_n="insert_target_n".
+    to a ForceBudget attribute, e.g. insert_force_n="insert_target_n". ``select`` (v0.2c)
+    maps that config to the one to run on this fixture (per-machine settings); None keeps it.
     """
     from dataclasses import replace
 
     if getattr(controller, "_budget_cfg", None) is not controller.cfg:
         controller._user_cfg = controller.cfg
-    cfg = controller._user_cfg
+    cfg = controller._user_cfg if select is None else select(controller._user_cfg)
     budget = ctx.connector.force_budget
     if budget is not None:
         cfg = replace(cfg, **{f: getattr(budget, b) for f, b in fields_from_budget.items()})
@@ -186,3 +187,22 @@ def rotational_damping_scale(ctx: ControllerContext, min_ratio: float) -> tuple[
         return max(1.0, r) if r >= min_ratio else 1.0
 
     return factor(fd.tilt_stiffness), factor(fd.yaw_stiffness_nm_per_rad)
+
+
+def outside_reference_family(ctx: ControllerContext, stiff_wrist_min_ratio: float, lagging_servo_min_ratio: float) -> bool:
+    """True on fixtures well outside the gantry family the controllers were tuned on (v0.2c).
+
+    Uses the W5b thresholds: a wrist axis at least ``stiff_wrist_min_ratio`` x the reference
+    stiffness, or a translational or rotational servo lag at least ``lagging_servo_min_ratio`` x
+    the reference lag. False on the nominal gantry, on every gantry of the sim-randomization
+    bands, and when the fixture is not characterized; true on the UR5e arm.
+    """
+    if ctx.fixture_dynamics is None:
+        return False
+    s_tilt, s_yaw = rotational_damping_scale(ctx, stiff_wrist_min_ratio)
+    return (
+        s_tilt > 1.0
+        or s_yaw > 1.0
+        or excess_following_lag(ctx, lagging_servo_min_ratio) > 0.0
+        or excess_following_lag(ctx, lagging_servo_min_ratio, rotational=True) > 0.0
+    )

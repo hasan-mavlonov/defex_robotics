@@ -385,6 +385,17 @@ class PassiveComplianceConfig(PositionCorrectionConfig):
     approach_height_mm: float = 2.0
     insert_speed_mm_s: float = 4.0
     overtravel_mm: float = 1.0
+    # v0.2c: fixtures outside the gantry family run PassiveComplianceStiffFixtureConfig instead. Same
+    # thresholds and basis as AdaptiveConfig.stiff_wrist_min_ratio / lagging_servo_min_ratio: every
+    # gantry (nominal and sim-randomized) runs this config, the UR5e the stiff-fixture one.
+    stiff_wrist_min_ratio: float = 4.0
+    lagging_servo_min_ratio: float = 2.0
+
+
+@dataclass(frozen=True)
+class PassiveComplianceStiffFixtureConfig(PassiveComplianceConfig):
+    """Controller E on fixtures outside the gantry family (the UR5e): tuned on the arm with the W1
+    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep E's gantry values."""
 
 
 @dataclass(frozen=True)
@@ -435,6 +446,16 @@ class SpiralSearchConfig:
     time_limit_s: float = 26.0
     tare_settle_s: float = 0.06
     tare_average_s: float = 0.06
+    # v0.2c: fixtures outside the gantry family run the controller's stiff-fixture config instead
+    # (SpiralSearchStiffFixtureConfig, CompliantSpiralSearchStiffFixtureConfig). Same thresholds and
+    # basis as AdaptiveConfig.stiff_wrist_min_ratio / lagging_servo_min_ratio: every gantry (nominal
+    # and sim-randomized) runs this config, the UR5e the stiff-fixture one.
+    stiff_wrist_min_ratio: float = 4.0
+    lagging_servo_min_ratio: float = 2.0
+    # v0.2c: when the hole is found, continue from the measured tip position rather than the commanded
+    # spiral point. With servo following lag the command runs speed x lag ahead of the plug (UR5e:
+    # 0.2 s); a force-mode search that stops on the hole holds where the tool is.
+    hole_at_measured_position: bool = False
 
 
 @dataclass(frozen=True)
@@ -446,6 +467,18 @@ class CompliantSpiralSearchConfig(SpiralSearchConfig):
     seat_margin_mm: float = 1.0
     insert_force_n: float = 3.0
     max_attempts: int = 3
+
+
+@dataclass(frozen=True)
+class SpiralSearchStiffFixtureConfig(SpiralSearchConfig):
+    """Controller D on fixtures outside the gantry family (the UR5e): tuned on the arm with the W1
+    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep D's gantry values."""
+
+
+@dataclass(frozen=True)
+class CompliantSpiralSearchStiffFixtureConfig(CompliantSpiralSearchConfig):
+    """Controller F on fixtures outside the gantry family (the UR5e): tuned on the arm with the W1
+    protocol, dev seed 2026 (results/v0.2c_arm_baselines). Fields not listed keep F's gantry values."""
 
 
 @dataclass(frozen=True)
@@ -699,6 +732,7 @@ def dataclass_from_dict(cls: type, data: dict[str, Any]) -> Any:
 __all__ = [
     "AdaptiveConfig",
     "CompliantSpiralSearchConfig",
+    "CompliantSpiralSearchStiffFixtureConfig",
     "CompliantStageConfig",
     "Condition",
     "ConnectorSpec",
@@ -710,8 +744,10 @@ __all__ = [
     "MM",
     "PlugGeometry",
     "PassiveComplianceConfig",
+    "PassiveComplianceStiffFixtureConfig",
     "PositionCorrectionConfig",
     "SpiralSearchConfig",
+    "SpiralSearchStiffFixtureConfig",
     "REPO_ROOT",
     "SafetyConfig",
     "SensorNoiseConfig",

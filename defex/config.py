@@ -714,6 +714,69 @@ class AdaptiveConfig:
     rate_conform_flip_hold_s: float = 0.02
     # Pivot torque cannot exceed axial force x plug half-diagonal; this factor above it means a wall.
     rate_conform_wall_factor: float = 1.5
+    # v0.2c: C on a stiff, lagging arm under poor vision (results/v0.2c_arm_robustness). Each rule is
+    # gated like the W5b rules (stiff_wrist_min_ratio, lagging_servo_min_ratio) or by the W5 contact
+    # speed scale, so all are exact no-ops on every gantry; each has a switch for ablation.
+    # INSERT's phase timeout counts at the speeds the gantry uses: where contact speeds are scaled
+    # down by s < 1 (W5 rule), the same travel takes 1/s as long (UR5e: 6 s -> 15 s). Without it a
+    # plug still descending freely in the cavity timed out and was diagnosed as "no contact".
+    scale_insert_timeout: bool = True
+    # A force or torque trip at the floor on a stiff, lagging wrist is the impact of the servo's
+    # setpoint lead (speed x lag), not a jam: drop the lead (command the measured depth) and diagnose
+    # after the normal hold instead of retracting and repeating the same attempt.
+    settle_floor_impact: bool = True
+    # In-cavity tilt compliance on a stiff wrist. A soft wrist rotates under the torque the walls put
+    # on a tilted plug (gantry: 0.12 N m turns it ~12 deg/s); with dampings scaled for a stable loop
+    # the arm turns ~0.2 deg/s and the plug wedges. Once engaged, turn tilt at
+    # rate_seat_conform_speed_deg_s towards any tilt torque beyond this lever x axial force (same 1 mm
+    # basis as rate_conform_flip_lever_mm: F/T noise is 0.06 mm of lever at 8 N).
+    cavity_tilt_compliance: bool = True
+    cavity_tilt_lever_mm: float = 1.0
+    # Seat conform in the cavity (rate mode): a torque along the turn is the walls pushing the plug
+    # towards the floor's orientation, so it is followed, not treated as a wall that stops the turn;
+    # an axis whose torque is below the lever above x axial force is left alone (its sign is noise).
+    # Off: rescued single traces on seed 2026, but in the one-off ablation (dev2026/ablation2_*) switching it
+    # off lost nothing (noise_2mm one more success without it); the cavity tilt rule covers the same plugs.
+    seat_conform_follow_walls: bool = False
+    # The same noise rule for the top-face conform: an axis with less than that torque is balanced on its
+    # support and is not turned (W5b turned it on the noise sign until the tilt limit: the plug ended on a
+    # corner and its CoP missed the contact model by 1.8 mm median, gantry 0.13 mm, w5b cop_model/arm_after).
+    # Off: no measured gain on seed 2026 (ablation2: -1 on noise_1mm without it, +1 on mf_noise_1mm in the
+    # first ablation; the trace-level CoP error did not improve).
+    conform_skip_noise_axes: bool = False
+    # A rate-mode conform axis that reaches the tilt limit is only "tipped" once the plug has caught up with
+    # the setpoint; until then a torque reversal still marks it flat. W5b stopped at the setpoint limit with
+    # the plug 0.7 deg short of it, then measured the CoP after the plug passed flat (an edge, 4 mm off).
+    conform_limit_waits_for_plug: bool = True
+    # Tilt range of the rate-mode conform (stiff wrists only; the gantry's admittance conform keeps
+    # conform_limit_deg). At noise_2mm the camera's tilt sigma is 2 deg, so 4 deg covers 2 sigma; on seed
+    # 2026, 15 of the arm's 24 noise_2mm failures had a vision tilt error above 3 deg (gantry: 0 of 3).
+    # The W5b value unless the selection rule picks otherwise.
+    rate_conform_limit_deg: float = 4.0
+    # In-place un-jam on a stiff wrist: a stall or force/torque trip part-way into the cavity with a tilt
+    # torque beyond the face-contact bound (rate_conform_wall_factor x axial force x half-diagonal) means the
+    # walls hold a tilted plug. Hold a light preload and turn the tilt towards that torque until it is
+    # relieved (at most max_tilt_correction_deg), then insert again; at most this many times per attempt.
+    # Before, the attempt was retracted and repeated with the 0.2 deg the scaled admittance had learned.
+    unjam_in_cavity: bool = True
+    unjam_per_attempt: int = 2
+    # Turn rate: the plug's upper end overshoots by rate x lag x depth = 2 x 0.2 s x 15 mm = 0.1 mm on the
+    # UR5e, inside the 0.5 mm clearance (Micro-Fit: 0.06 mm at 8 mm depth, inside 0.15 mm).
+    unjam_speed_deg_s: float = 2.0
+    # A failed wall-probe verification on a stiff wrist is retried with the orientation and lateral offset
+    # the attempt learned (as after a jam), not at the identical pose (which repeated the same failure).
+    # Not for latching parts: push-click-pull cannot see tilt, and on dev seed 2026 a re-aimed retry
+    # latched a plug 3.04 deg tilted (one bad unit passed) with no gain in seated parts.
+    reaim_after_verify_fail: bool = True
+    # The wall-yaw check probes the two walls again (from the centre) when its first pair is
+    # inconsistent with a rigid yawed plug (lever arms of opposite sign): one probe was stopped by
+    # floor friction (seen at mu = 1), not by a wall.
+    wall_yaw_reprobes: int = 1
+    # Rate-mode conform counts as settled once the servo lag (measured minus commanded tilt) is below this.
+    # W5b used conform_rate_deg (0.03 deg), which on the 0.2 s servo takes ~0.7 s per conform to reach;
+    # 0.1 deg x 6 mm half-length is 0.01 mm, 1/20 of the 0.2 mm contact width (the face stays in contact).
+    # Kept at the W5b value unless the selection rule picks otherwise.
+    rate_conform_settle_deg: float = 0.03
     # W3 push-click-pull verification for latching connectors
     click_drop_fraction: float = 0.4  # force drop at the snap, as a fraction of the latch peak force
     click_window_after_snap_mm: float = 0.2  # search the trace this far past the expected snap

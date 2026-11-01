@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import os
+from dataclasses import replace
+from pathlib import Path
 from typing import Callable
 
 from defex.control.adaptive_fsm import AdaptiveInsertionController
@@ -46,7 +50,18 @@ COLORS = {
 
 
 def make_controller(name: str) -> InsertionController:
+    """``name`` or, for development comparisons, ``name@variant``: config overrides for ``variant`` come
+    from the JSON file named by the environment variable DEFEX_CONTROLLER_VARIANTS ({variant: {field: value}})."""
+    base, _, variant = name.partition("@")
     try:
-        return CONTROLLERS[name]()
+        ctrl = CONTROLLERS[base]()
     except KeyError as exc:
         raise ValueError(f"unknown controller '{name}', choose from {sorted(CONTROLLERS)}") from exc
+    if variant:
+        path = os.environ.get("DEFEX_CONTROLLER_VARIANTS")
+        if not path:
+            raise ValueError(f"'{name}': set DEFEX_CONTROLLER_VARIANTS to a variants JSON file")
+        overrides = json.loads(Path(path).read_text())[variant]
+        ctrl.cfg = replace(ctrl.cfg, **overrides)
+        ctrl.name = name
+    return ctrl

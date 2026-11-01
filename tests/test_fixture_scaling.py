@@ -50,6 +50,9 @@ def _assert_c_as_tuned_on_the_gantry(ctx: ControllerContext) -> None:
     assert (c.adm_rot.d, c.adm_conf.d) == d0  # the same objects: dampings untouched
     assert not c._rate_conform and c._yaw_sweep and c._probe_lead == 0.0
     assert c._yaw_probe_rate == c.cfg.yaw_probe_speed_deg_s * DEG
+    # v0.2c rules: off, and INSERT's timeout is the configured one.
+    assert not (c._cavity_tilt or c._floor_impact or c._reaim_verify or c._unjam)
+    assert c.monitor.timeout_s == c.cfg.insert_timeout_s
 
 
 def test_gantry_backend_reports_reference_dynamics(backend):
@@ -126,6 +129,14 @@ def test_rules_are_active_on_the_arm(spec):
     assert c._rate_conform and not c._yaw_sweep
     assert c._probe_lead > 0.0
     assert c._yaw_probe_rate < cfg.yaw_sweep_min_speed_deg_s * DEG
+    # v0.2c: on, and the insert timeout counts at the scaled contact speeds (sqrt(6.32) x 6 s).
+    assert c._cavity_tilt and c._floor_impact and c._reaim_verify
+    assert c.monitor.timeout_s == pytest.approx(cfg.insert_timeout_s * 6.32 ** 0.5)
+    off = AdaptiveInsertionController(replace(AdaptiveConfig(), scale_insert_timeout=False, cavity_tilt_compliance=False,
+                                              settle_floor_impact=False, reaim_after_verify_fail=False))
+    off.reset(ctx)
+    assert not (off._cavity_tilt or off._floor_impact or off._reaim_verify)
+    assert off.monitor.timeout_s == cfg.insert_timeout_s
     # Resetting on the gantry afterwards restores the original dampings exactly.
     c.reset(_ctx(spec, FixtureDynamics(10.0, 15.0, 0.88, 0.0, 15.0, 0.037, 0.024)))
     assert (c.adm_rot.d, c.adm_conf.d) == (cfg.rot_damping_nm_s_per_rad, cfg.conform_damping_nm_s_per_rad)

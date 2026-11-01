@@ -14,7 +14,8 @@ to offset map is piecewise (support hull edges, lead-in band, tipping) and its
 uncertainty is strongly input-dependent; numpy only, so the network is kept small.
 
     python -m experiments.train_contact_prior --backend gantry --feature-set contact
-    python -m experiments.train_contact_prior --backend gantry --feature-set contact --install --weight 0.5
+    python -m experiments.train_contact_prior --backend gantry --feature-set all --install-existing --weight 1 \\
+        --weight-source results/w9_development/validation/weights/paired.md
 
 Outputs: results/w9_development/models/<backend>_<feature set>.json (model) and
 ..._metrics.json (search table, train/val/dev NLL, MAE against the analytic
@@ -317,7 +318,11 @@ def main() -> None:
     ap.add_argument("--install", action="store_true", help="also write assets/models/contact_prior_<backend>.json")
     ap.add_argument("--weight", type=float, default=None, help="integration weight chosen on the validation seed")
     ap.add_argument("--weight-source", default="", help="file the weight choice comes from (recorded in the model)")
+    ap.add_argument("--install-existing", action="store_true",
+                    help="install the already trained results/w9_development/models/<backend>_<set>.json (no retraining)")
     args = ap.parse_args()
+    if args.install_existing:
+        return install(json.loads((MODELS / f"{args.backend}_{args.feature_set}.json").read_text()), args)
     t0 = time.time()
     tr_rows = load_rows(args.backend, args.train.split(","), set(TRAIN_BASE_SEEDS))
     va_rows = load_rows(args.backend, [args.val], {VALIDATION_SEED})
@@ -397,14 +402,18 @@ def main() -> None:
               f" / vision {m['mae_mm']['vision_estimate']['radial_mean']:.3f} mm; 1/2-sigma "
               f"{m['calibration_xy']['learned']['inside_1sigma']:.2f}/{m['calibration_xy']['learned']['inside_2sigma']:.2f}")
     if args.install:
-        if args.weight is None:
-            raise SystemExit("--install needs --weight (chosen on the validation seed)")
-        data["integration_weight"] = args.weight
-        data["metadata"]["integration_weight_source"] = args.weight_source
-        dest = REPO_ROOT / "assets" / "models" / f"contact_prior_{args.backend}.json"
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(json.dumps(data))
-        print(f"installed {dest} (integration weight {args.weight})")
+        install(data, args)
+
+
+def install(data: dict, args) -> None:
+    if args.weight is None:
+        raise SystemExit("installing needs --weight (chosen on the validation seed)")
+    data["integration_weight"] = args.weight
+    data["metadata"]["integration_weight_source"] = args.weight_source
+    dest = REPO_ROOT / "assets" / "models" / f"contact_prior_{args.backend}.json"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(data))
+    print(f"installed {dest} (integration weight {args.weight})")
 
 
 if __name__ == "__main__":

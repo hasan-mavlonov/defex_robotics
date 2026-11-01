@@ -93,7 +93,9 @@ paired trials on a fresh seed, 20261031.
   ([`results/sensitivity_v0.2`](results/sensitivity_v0.2/REPORT.md),
   development measurement).
 
-A, B and C agree with V0.1 within their intervals (V0.1: 23.5%, 85.9%, 99.25%).
+A, B and C are consistent with V0.1: their 95% intervals overlap (V0.1: 23.5%,
+85.9%, 99.25%), though C's V0.1 rate lies just outside this run's interval
+(99.4 to 99.9%).
 These are simulation results with assumed physical parameters.
 
 <!-- RESULTS:START -->

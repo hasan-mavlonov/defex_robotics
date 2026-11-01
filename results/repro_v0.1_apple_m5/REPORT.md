@@ -17,7 +17,7 @@ Command: `python -m experiments.robustness --trials 100 --seed 20261025 --name d
 
 ## Result
 
-| Controller | Successes, reported | Successes, this run | Same success outcome, trial by trial | Bit-identical trials |
+| Controller | Successes, reported | Successes, this run | Same success outcome, trial by trial | Trials with identical cycle time and peak force |
 |---|---|---|---|---|
 | A: fixed | 470 / 2,000 | 470 / 2,000 | 2,000 / 2,000 | 0 |
 | B: correction | 1,718 / 2,000 | 1,718 / 2,000 | 2,000 / 2,000 | 48 |
@@ -25,8 +25,9 @@ Command: `python -m experiments.robustness --trials 100 --seed 20261025 --name d
 
 C: 0 protective stops and 0 false accepts in both runs.
 
-Every trial has the same success outcome on both machines. Floating-point values
-(cycle time, peak force) differ in the last digits, as expected across CPU
+Every trial has the same success outcome on both machines. No trial is identical
+in every field (B has 48 trials whose cycle time and peak force match exactly);
+floating-point values differ in the last digits, as expected across CPU
 architectures and MuJoCo 3.16 vs 3.17, so the runs are not bit-identical. The
 rates agree exactly, which is stronger than "within their confidence intervals".
 

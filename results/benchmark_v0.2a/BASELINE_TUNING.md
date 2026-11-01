@@ -29,7 +29,13 @@ That is about 68,000 development trials for the three baselines.
 3. **Edge** (D, F). The coarse winners sat on the grid edges (lowest force,
    pitch, speed and push distance), so the grid was extended past them, down to
    Flexiv's minimum contact force of 2 N, on all 18 development conditions x 20
-   trials. Nothing beyond the edges did better.
+   trials. For F nothing beyond the edges did better. For D one edge setting
+   tied the selected one (search 2 N, 2.5 mm/s: 349/360, median 3.532 s
+   against 3.540 s, 4 false accepts against 7) and by the ranking rule below
+   should have been selected; it was not carried to the confirm stage. This
+   deviation was found in review after benchmark_v0.2a and is disclosed rather
+   than corrected: success on the development set is identical, the cycle-time
+   difference is 0.008 s, and changing D now would mean a new pre-registered run.
 4. **Confirm.** The top 5 settings on all 18 development conditions (the two
    generalization conditions stay held out), 20 trials each.
 

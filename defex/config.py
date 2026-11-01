@@ -685,6 +685,9 @@ class AdaptiveConfig:
     # Polarization guard: no yaw search once a hard stop has been seen in the cavity. A plug whose tip is past
     # the lead-in is inside the cavity's yaw capacity; turning it there only presses it into the walls.
     polarization_guard: bool = True
+    # Optional speed cap for the insertion setpoint once the tip is in the terminal zone (0: off). Tested in
+    # development against first-insertion stops on half-latched parts; see results/v0.2c_defect_verdict.
+    latch_zone_speed_mm_s: float = 0.0
     # VERIFY
     verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance
     seat_conform_min_s: float = 0.08

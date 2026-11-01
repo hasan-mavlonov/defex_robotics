@@ -432,6 +432,8 @@ class AdaptiveInsertionController(InsertionController):
             v = self._v_near_bottom
         else:
             v = self._v_free
+        if self._verdict and self.cfg.latch_zone_speed_mm_s > 0.0 and depth >= self._terminal_zone:
+            v = min(v, self.cfg.latch_zone_speed_mm_s * MM)
         self.z -= v * dt
         if self.latching:
             self._trace.append((depth, f_ax))

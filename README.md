@@ -10,14 +10,92 @@ wrist force/torque sensor, retracts and corrects, retries within hard limits, an
 verifies the result before it declares success.
 
 Everything here runs in MuJoCo with a real socket cavity, bounded actuators and
-noisy sensors. Every benchmark number in this README comes from the files in
-[`results/benchmark_v0.2a`](results/benchmark_v0.2a) unless it is marked as V0.1
-([`results/benchmark_v0.1`](results/benchmark_v0.1)) or as a development
+noisy sensors, on two machines: a gantry fixture and a UR5e arm (MuJoCo
+Menagerie). Every benchmark number in this README comes from the files in
+[`results/benchmark_v0.2b`](results/benchmark_v0.2b) unless it is marked as
+benchmark_v0.2a ([`results/benchmark_v0.2a`](results/benchmark_v0.2a)), V0.1
+([`results/benchmark_v0.1`](results/benchmark_v0.1)) or a development
 measurement. The physics behavior is pinned by the test suite (see
 [Validation](#validation)). This is a research prototype: it has not been
 validated on hardware (see [Limitations](#assumptions-and-limitations)).
 
-## Results: benchmark_v0.2a, against fair baselines
+## Results: benchmark_v0.2b (Checkpoint 2), two machines, latching parts
+
+Pre-registered ([`PREREGISTRATION.md`](results/benchmark_v0.2b/PREREGISTRATION.md),
+code frozen at 8e29f2e): seed 20261102, gantry and UR5e arm, seven controllers,
+54,600 paired trials. Full report:
+[`results/benchmark_v0.2b/REPORT.md`](results/benchmark_v0.2b/REPORT.md); every
+table is regenerated from the per-trial rows by
+`python -m experiments.checkpoint_report results/benchmark_v0.2b`.
+
+The controllers: **A** fixed program, **B** vision correction, **C** Defex
+adaptive, **D** force-controlled spiral search, **E** B on a passive compliance
+(RCC) device, **F** spiral search on the RCC device, **G** C plus a learned
+contact prior. D, E and F are the conventional cells a competent integrator
+would build. The suites: `standard` (20 conditions, housing-only connector),
+`latching` (Molex Micro-Fit 3.0 with latch and terminal forces, 3 good-part
+conditions and 4 deliberately bad parts) and the mis-characterized-vision
+families (the camera is worse than the cell is told).
+
+**Headline, as the pre-registered rules require.**
+
+* **On the arm, the strongest conventional cell, F, seats as many or more good
+  units than C.** Standard conditions: F 96.3%, C 96.7% (McNemar p = 0.3).
+  Latching good parts: F 95.2%, C 90.8% (p = 0.0003). Camera worse than
+  believed: F 81.4%, C 75.4% (p = 0.0018).
+* **On the gantry, with the camera worse than believed, F matches C**: 84.2%
+  against 87.4% (p = 0.13); in the combined worst case F seats 83 of 100, C 56.
+* **C passed none of the 1,600 deliberately bad parts** (half-latched, broken
+  latch, stubbed terminal, wrong polarization; Wilson 95% upper bound 0.24%).
+  F passed 1,062 of them as good, D 442.
+
+C leads every conventional cell on the gantry under the standard conditions
+(99.1% against F's 97.0%, p < 1e-6) and on latching good parts (95.7% against
+89.0%, p = 2.4e-6).
+
+**C is slower on every suite.** Good units per hour of cell time, C against F:
+gantry 608 against 862 (standard) and 476 against 527 (latching); arm 371
+against 474 and 289 against 458. Median successful cycle: gantry 5.30 s against
+3.54 s, arm 8.21 s against 6.50 s. It rejects a bad part only by running out of
+time or retries, about 26 s per bad part.
+
+So what C buys, measured here, is mostly **fewer bad units leaving the cell**,
+not more units seated. Whether that pays for the lower throughput depends on what
+a passed bad connector costs, which this benchmark does not price.
+
+| Machine, suite | C | Best of D, E, F | p | Bad units passed, C / F | Good units/h, C / F |
+|---|---|---|---|---|---|
+| gantry, standard | 99.1% | F 97.0% | < 1e-6 | 0 / 42 of 2,000 | 608 / 862 |
+| gantry, latching good parts | 95.7% | F 89.0% | 2.4e-6 | 0 / 3 of 600 | 476 / 527 |
+| gantry, mis-characterized vision | 87.4% | F 84.2% | 0.13 | 0 / 47 of 500 | 342 / 454 |
+| arm, standard | 96.7% | F 96.3% | 0.3 | 1 / 39 of 2,000 | 371 / 474 |
+| arm, latching good parts | 90.8% | F 95.2% | 0.0003 | 0 / 5 of 600 | 289 / 458 |
+| arm, mis-characterized vision | 75.4% | F 81.4% | 0.0018 | 5 / 52 of 500 | 193 / 271 |
+| both, deliberately bad parts passed as good | 0 of 1,600 | D 442, F 1,062 | < 1e-6 (vs D) | | |
+
+**What does not hold.**
+
+* **C is not free of escapes.** It passed 6 bad units in 6,200 good-part trials,
+  G 9 ([audit](results/benchmark_v0.2b/AUDIT_TABLES.md)). Five of C's six come
+  from one bug: in a 0.2 mm-clearance cavity the arm's wall-geometry yaw check
+  (W5b) requires a negative free travel, so it passes a plug wedged 0.5-1.5 mm
+  short of full depth. The sixth is a fully inserted plug tilted 3.004 degrees, just
+  over the 3.0 degree limit.
+* **The arm comparison favours C.** C's arm rules were set by hand on a dev
+  seed and G has an arm-trained model; D, E and F got no arm-specific tuning. F
+  matches or beats C there anyway.
+* **The learned prior (G) helps but does not change the picture.** It beats C on
+  four of six suites (p < 0.05), is never worse, and stays below F on the arm
+  (latching 92.8%, mis-characterized vision 78.8%). It raises protective stops on
+  wrong-polarization parts on the gantry (2 to 34 of 200).
+* **Simulation only.** The latch model is partly assumed; there is one latching
+  connector family and one arm model.
+
+## Earlier result: benchmark_v0.2a, gantry only
+
+This section is the previous pre-registered run (seed 20261031, before latch
+physics, the arm and G). It is superseded by benchmark_v0.2b above and kept as
+the record of what was claimed then.
 
 V0.1 compared C with a fixed program (A) and vision correction (B). Neither uses
 force feedback or compliance, and real connector cells use both. V0.2a adds the
@@ -109,12 +187,8 @@ A, B and C are consistent with V0.1: their 95% intervals overlap (V0.1: 23.5%,
 These are simulation results with assumed physical parameters.
 
 **Code has changed since these runs.** benchmark_v0.2a, the held-out run and the
-simulator randomization used C as frozen at commit 56707fa / fe48eca. Later
-branches change C's defaults: VERIFY re-centres yaw every cycle (W4, about +1.4 s)
-and insertion and probing are faster (W6). Development results for those changes
-are in `results/w4_development` and `results/w6_development`; none of them is a
-reported benchmark yet. The next pre-registered run (Checkpoint 2) will measure
-the current code.
+simulator randomization used C as frozen at commit 56707fa / fe48eca. Checkpoint
+2 (benchmark_v0.2b, above) measured the code after W3-W9.
 
 <!-- RESULTS:START -->
 Source: [`results/benchmark_v0.2a`](results/benchmark_v0.2a) (seed 20261031, commit `082f95e`, 20 conditions x 100 paired trials per controller; pre-registration in [`PREREGISTRATION.md`](results/benchmark_v0.2a/PREREGISTRATION.md)). Generated by `python -m experiments.readme_results results/benchmark_v0.2a`.
@@ -312,7 +386,7 @@ value that has not been measured on real parts.
 | Damage | 45 N contact force sustained over 10 ms | assumed conservative limit for a small plastic housing on a PCB |
 | Success tolerances | depth within 0.5 mm, lateral within clearance + 0.15 mm, tilt and yaw within 3 deg | assumed seating specification |
 
-## The six controllers
+## The seven controllers
 
 **A: fixed trajectory** ([`defex/control/baselines.py`](defex/control/baselines.py)).
 The taught program: transit to 5 mm above the nominal socket at 40 mm/s, descend at
@@ -417,7 +491,29 @@ rigid (181 N m/rad). No force feedback.
 **F: spiral search + RCC.** D's routine on E's compliance stage, tuned separately.
 
 D, E and F were tuned on development seed 2026 with about 68,000 trials
-([`BASELINE_TUNING.md`](results/benchmark_v0.2a/BASELINE_TUNING.md)).
+([`BASELINE_TUNING.md`](results/benchmark_v0.2a/BASELINE_TUNING.md)). From
+benchmark_v0.2b on, D uses the setting the W1 ranking rule selects (search 2 N,
+spiral 2.5 mm/s, seat margin 0.5 mm), correcting a deviation disclosed in that
+log. None of them was re-tuned for the arm or the latching connector.
+
+**G: C with a learned contact prior** ([`defex/control/adaptive_learned.py`](defex/control/adaptive_learned.py),
+[`defex/recovery/learned_prior.py`](defex/recovery/learned_prior.py)). After each
+blocked contact, C's hole localizer adds the log-likelihood of a small numpy MLP
+that predicts the plug-to-mouth offset from the contact's wrench, centre of
+pressure and depth (on the gantry also the probe position, attempt and vision
+sigmas), with a Gaussian head and an outlier floor of 0.1. One model per machine,
+trained on C's own contacts on seeds 3001-3030 and selected on seed 4001
+([`results/w9_development`](results/w9_development/REPORT.md),
+[`results/checkpoint2_prep`](results/checkpoint2_prep/REPORT.md)). G loads only a
+model whose stored fixture dynamics match the machine; otherwise it runs as C.
+
+**On the arm.** C's speed and loop-gain rules scale with the measured wrist tilt
+stiffness and servo following lag (W5, W5b); they switch on only for fixtures at
+least 4x stiffer or 2x slower than the gantry and are exact no-ops on it. Because
+the UR5e cannot sweep yaw within the torque budget, VERIFY on the arm checks yaw
+from the free travel between its two wall contacts instead
+([`results/w5b_development`](results/w5b_development/REPORT.md)). That check has
+a known hole at 0.2 mm clearance (see the headline).
 
 ## Experiment protocol
 
@@ -529,6 +625,11 @@ prototype model.
 ### Benchmark, plots and replay
 
 ```bash
+# benchmark_v0.2b, one of six runs (the full loop is in results/benchmark_v0.2b/REPORT.md)
+python -m experiments.robustness --suite latching --backend arm --trials 200 --seed 20261102 \
+  --name benchmark_v0.2b/arm_latching \
+  --controllers fixed,correction,adaptive,spiral,correction_rcc,spiral_rcc,adaptive_learned
+python -m experiments.checkpoint_report results/benchmark_v0.2b   # all Checkpoint 2 tables
 python -m experiments.robustness --trials 100 --seed 20261031 --name benchmark_v0.2a --record 1
 python -m experiments.readme_results results/benchmark_v0.2a   # regenerate the README results block
 python -m experiments.tune_baselines --controller spiral --stage coarse   # baseline tuning, dev seed only
@@ -537,8 +638,9 @@ python -m experiments.robustness --list                      # condition names
 python -m experiments.robustness --conditions lateral_3mm,noise_2mm --trials 20 --name dev_quick
 ```
 
-The reported benchmark took 27 minutes on four worker processes in a 4-vCPU Linux
-sandbox; `--workers` defaults to the CPU count minus one. `--record N` saves the
+benchmark_v0.2a took 27 minutes on four worker processes in a 4-vCPU Linux
+sandbox; benchmark_v0.2b took about 2.2 hours on nine workers on an Apple M5 that was
+also running other jobs; `--workers` defaults to the CPU count minus one. `--record N` saves the
 first N trials of every condition and controller as replayable trajectories:
 
 ```bash
@@ -627,15 +729,15 @@ simulator happens to do:
 These are the places where V0.1 is simpler than a production cell, roughly in the
 order they matter for transfer to hardware.
 
-1. **No terminal or latch forces.** Only the housing is modeled. Real connectors
-   add terminal insertion force and a latch snap; seat detection on real parts
-   should use that signature, and the force budget will change.
+1. **Latch and terminal forces are partly assumed.** The latching suite models a
+   Molex Micro-Fit 3.0 from its datasheet (`results/w3_development`), but there is
+   no measured force-depth curve yet. The `standard` suite is housing only.
 2. **Rigid grasp.** The in-hand pose error is sampled once per trial
    (`generalization_combined`), but the connector cannot slip or rotate in the
    gripper during contact.
-3. **Abstract fixture.** A gantry with a remote-center wrist and ideal servos, not
-   a serial arm. Arm dynamics, joint flexibility and controller latency beyond the
-   2 ms period are not modeled.
+3. **One arm model.** Besides the gantry, the UR5e from MuJoCo Menagerie runs the
+   same suites. Its PD servos lag 0.2 s, which may be more than a real UR5e under
+   servoj; on hardware, lag and wrist stiffness must be identified.
 4. **Contact physics.** MuJoCo soft contacts with velocity-proportional damping:
    impacts produce single-sample force spikes (hence the 10 ms damage criterion),
    and there is slow friction creep (about 0.02 mm/s at half the friction limit).
@@ -647,10 +749,9 @@ order they matter for transfer to hardware.
    by a bounded search sequence. All of C's failures occurred under 2 mm vision
    noise, and they concentrate where the vision yaw error exceeds 4 degrees (10 of
    33 such trials failed, against 5 of 67 otherwise).
-7. **Correctly characterized vision.** C is told each condition's true vision
-   accuracy (sigma and bias magnitude). A camera that is worse than its
-   characterization would leave C's search prior too narrow; that case is not in
-   the benchmark.
+7. **Characterized vision.** In the `standard` and `latching` suites C is told
+   each condition's true vision accuracy. The mis-characterized-vision families
+   test a camera worse than told, and that is where F matches or beats C.
 8. **One connector family.** Generalization is tested on unseen clearance, chamfer,
    friction and combined disturbances, not on other connector shapes.
 9. **Determinism is per platform.** Trials are bit-for-bit reproducible on a given
@@ -664,21 +765,28 @@ order they matter for transfer to hardware.
 
 ## Roadmap (V0.2)
 
-The V0.2 plan (brief of 2026-10-26) runs in workstreams, one PR each:
+The V0.2 plan (brief of 2026-10-26) runs in workstreams, one branch each:
 
 1. W0, done: CI, payload identification from F/T readings, Apple Silicon reproduction.
-2. W1, done: fair baselines D, E, F and benchmark_v0.2a (this README's results).
+2. W1, done: fair baselines D, E, F and benchmark_v0.2a.
 3. W2, done: tuned constants moved into configuration (behaviour identical),
    sensitivity sweep, pre-registered held-out families and simulator randomization.
-4. W4: joint (x, y, yaw) hole localizer, aimed at the `noise_2mm` tail.
-5. W3: terminal and latch physics from a real connector datasheet, push-click-pull
-   verification, deliberately bad parts to measure false accepts.
-6. W5 and W6: serial-arm backend; cycle-time tail and throughput.
-7. W7: hardware-in-the-loop backend, rig options, test protocol, calibration.
-8. W8: evidence pack.
+4. W3, done: terminal and latch physics (Micro-Fit 3.0), push-click-pull
+   verification, four deliberately bad parts.
+5. W4, done: yaw re-centred every cycle.
+6. W5, W5b and W6, done: UR5e backend, fixture-aware rules for a stiff, lagging
+   wrist, faster probing.
+7. W9, done: learned contact prior (controller G).
+8. Checkpoint 2, done: benchmark_v0.2b (this README's results).
+9. W7, software done: hardware backend and drivers (`defex/hardware/`), rig
+   options and BOM ([`hardware/BOM.md`](hardware/BOM.md)), test protocol
+   ([`hardware/TEST_PROTOCOL.md`](hardware/TEST_PROTOCOL.md)); needs a rig.
+10. W8: evidence pack ([`docs/TECHNICAL_BRIEF.md`](docs/TECHNICAL_BRIEF.md)).
 
-Learning (residual policies, learned search priors) comes only after real
-force traces exist.
+Next, from what Checkpoint 2 found: fix the arm's wall-yaw check at tight
+clearance and add a tilt check to VERIFY; an explicit defect verdict so a bad
+part costs one cycle, not about 26 s; give D, E and F an arm tuning pass. These
+are development work for a v0.2c run on a fresh seed.
 
 ## Porting to another simulator
 

@@ -111,3 +111,9 @@ def test_housing_only_connector_never_runs_the_new_rules(task):
     r = task.run(make_controller("adaptive"), sc)
     kinds = {k for _, k, _ in r.events}
     assert not kinds & {"defect_verdict", "proof_push", "capture_probe", "hard_stop", "gentle_retract"}
+
+
+def test_latch_phases_entered_before_a_latch_check_have_their_state():
+    """Regression: a plug held while backing out on the first attempt enters the latch phases before any pull."""
+    c = _ctrl("microfit3_4ckt")
+    assert c._pull_start == 0.0 and not c._held_reseated and not c._no_retract

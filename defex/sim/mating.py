@@ -25,6 +25,8 @@ latch cannot engage while it rests on the face).
 
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -68,6 +70,16 @@ class MatingForce:
         self.lpeak = m.latch_peak_depth_mm * MM
         self.snap = m.latch_snap_depth_mm * MM
         self.latch_peak = 0.0 if defect == "broken_latch" else m.latch_peak_force_n
+        # Review-only part-to-part spread, simulator side (the controller keeps the drawing values).
+        scale = float(os.environ.get("DEFEX_REVIEW_LATCH_PEAK_SCALE", "1"))
+        shift = float(os.environ.get("DEFEX_REVIEW_LATCH_SHIFT_MM", "0")) * MM
+        self.latch_peak *= scale
+        tscale = float(os.environ.get("DEFEX_REVIEW_TERMINAL_SCALE", "1"))
+        self.peak_t *= tscale
+        self.slide_t *= tscale
+        self.onset += shift
+        self.lpeak += shift
+        self.snap += shift
         self.retention = 0.0 if defect == "broken_latch" else m.latch_retention_force_n
         self.stop = {
             "half_latched": self.snap - 0.3 * MM,

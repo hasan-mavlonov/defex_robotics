@@ -21,6 +21,11 @@ DEFECTS = ("mf_half_latched", "mf_broken_latch", "mf_stubbed_terminal", "mf_wron
 IGNORE = {"wall_time_s"}
 
 
+def is_bad(r: dict) -> bool:
+    """A deliberately bad part: the four W3 defects, or any condition in the bad_part group (latch_spread)."""
+    return r["condition"] in DEFECTS or r.get("group") == "bad_part"
+
+
 def load(path: Path) -> dict[str, dict[tuple, dict]]:
     out: dict[str, dict[tuple, dict]] = {}
     with (path / "trials.csv").open() as fh:
@@ -51,8 +56,8 @@ def mcnemar(b: int, c: int) -> float:
 
 
 def stats(rows: list[dict]) -> dict:
-    good = [r for r in rows if r["condition"] not in DEFECTS]
-    bad = [r for r in rows if r["condition"] in DEFECTS]
+    good = [r for r in rows if not is_bad(r)]
+    bad = [r for r in rows if is_bad(r)]
     cyc = [float(r["cycle_time_s"]) for r in good if truthy(r["success"])]
     return {
         "good": len(good), "succ": sum(truthy(r["success"]) for r in good),
@@ -77,9 +82,9 @@ def compare(a_dir: Path, b_dir: Path, only: set[str] | None) -> list[str]:
         differ = sum(any(x[f] != y[f] for f in x if f not in IGNORE) for x, y in zip(ra, rb))
         sa, sb = stats(ra), stats(rb)
         a_only = sum(truthy(x["success"]) and not truthy(y["success"]) for x, y in zip(ra, rb)
-                     if x["condition"] not in DEFECTS)
+                     if not is_bad(x))
         b_only = sum(truthy(y["success"]) and not truthy(x["success"]) for x, y in zip(ra, rb)
-                     if x["condition"] not in DEFECTS)
+                     if not is_bad(x))
         lines.append(
             f"| {ctrl} | {len(keys)} | {differ} | {sa['succ']} / {sb['succ']} of {sa['good']} "
             f"({a_only} / {b_only}, {mcnemar(a_only, b_only):.2g}) | {sa['bad_passed']} / {sb['bad_passed']} of {sa['bad']} | "

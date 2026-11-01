@@ -3,6 +3,7 @@
     python -m experiments.eval_learned_prior variants.json --seed 4001 --trials 60 \\
         --conditions noise_0.5mm,noise_1mm,noise_2mm,mf_noise_1mm --name validation/weights --workers 4
     python -m experiments.eval_learned_prior --analyze results/w9_development/dev2026/standard
+    python -m experiments.eval_learned_prior --analyze DIR1 DIR2 --out results/w9_development/dev2026/pooled
 
 ``variants.json`` maps a variant name to {"controller": "adaptive" | "adaptive_learned",
 optional "model_path", "weight"}; the C variant must be named "adaptive" (the paired
@@ -161,7 +162,8 @@ def write_paired(results: list[TrialResult], out: Path) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("variants", type=Path, nargs="?")
-    ap.add_argument("--analyze", type=Path, help="write paired.json/paired.md for an existing run directory")
+    ap.add_argument("--analyze", type=Path, nargs="+", help="write paired.json/paired.md for existing run directories")
+    ap.add_argument("--out", type=Path, help="with several --analyze directories: where the pooled analysis goes")
     ap.add_argument("--seed", type=int)
     ap.add_argument("--conditions", default="noise_0.5mm,noise_1mm,noise_2mm,mf_noise_1mm")
     ap.add_argument("--trials", type=int, default=60)
@@ -170,8 +172,15 @@ def main() -> None:
     ap.add_argument("--backend", choices=["gantry", "arm"], default="gantry")
     args = ap.parse_args()
     if args.analyze:
-        d = args.analyze.resolve()
-        print(paired_markdown(write_paired(read_trials_csv(d / "trials.csv"), d)))
+        dirs = [d.resolve() for d in args.analyze]
+        out = dirs[0] if len(dirs) == 1 else args.out
+        if out is None:
+            raise SystemExit("several --analyze directories need --out")
+        out.mkdir(parents=True, exist_ok=True)
+        results = [r for d in dirs for r in read_trials_csv(d / "trials.csv")]
+        if len(dirs) > 1:
+            (out / "sources.json").write_text(json.dumps([str(d.relative_to(REPO_ROOT)) for d in dirs], indent=2))
+        print(paired_markdown(write_paired(results, out)))
         return
     if args.variants is None or args.seed is None or not args.name:
         raise SystemExit("need variants.json, --seed and --name (or --analyze DIR)")

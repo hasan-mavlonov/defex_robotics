@@ -14,3 +14,7 @@ $T --mode residual --components 1 --sources "$CDATA;$DAG" --name ${B}_residual_k
 $T --mode posterior --components 3 --sources "$CDATA;$DAG" --name ${B}_posterior_k3
 $PY -m experiments.train_contact_likelihood to-ratio --model results/v0.2c_learned_prior/models/${B}_posterior_k3.json \
     --out results/v0.2c_learned_prior/models/${B}_ratio_k3.json
+# Added after the first gantry results: residual K=2 with a fitted temperature on C's posterior.
+if [ "${TEMPER:-1}" = 1 ]; then
+  $T --mode residual --components 2 --temper --sources "$CDATA;$DAG" --name ${B}_residual_k2_tempered
+fi

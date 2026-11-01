@@ -231,6 +231,7 @@ class AdaptiveInsertionController(InsertionController):
         self._slid_pulls: list[float] = []  # raw bottom depths at which the plug slid out under the pull
         self._no_retract = False
         self._bottom_proofed = False
+        self._held_reseated = False
         self._capture: dict = {}
         self._proof_t_force: float | None = None
         self._proof_depth0 = 0.0
@@ -804,6 +805,15 @@ class AdaptiveInsertionController(InsertionController):
         if norm3(F) > c.max_force_n * c.retract_stuck_force_factor and obs.t - self.phase_t > c.retract_stuck_delay_s:
             return self._fail(obs, "stuck_during_retract")
         if self._pull_capped(obs, F):
+            if not self._held_reseated:
+                # Held while backing out (the plug may have latched as the attempt was cut short): push it
+                # back to the bottom and run the latch check there, once per cycle.
+                self._held_reseated = True
+                self._no_retract = False
+                self._bottom_since = None
+                self._enter(obs.t, VERIFY, "held_reseat")
+                self.log(obs.t, "gentle_retract", "held while backing out: re-seat and check the latch")
+                return self._cmd(c.force_phase_speed_cap_mm_s)
             return self._fail(obs, "stuck_during_retract")
         self.z = self._retract_height()
         if self._reached(obs, tol=c.retract_reach_tol_mm * MM, rot_tol=c.retract_reach_tol_rad):
@@ -1005,6 +1015,20 @@ class AdaptiveInsertionController(InsertionController):
             return self._cmd(c.force_phase_speed_cap_mm_s)
         if self.phase == "bottom_proof":
             return self._bottom_proof_step(obs, f_ax, dt)
+        if self.phase == "held_reseat":
+            self.z -= self.force_axis.velocity(c.insert_force_n, f_ax) * dt
+            if f_ax >= c.bottom_force_fraction * c.insert_force_n:
+                if self._bottom_since is None:
+                    self._bottom_since = obs.t
+                elif obs.t - self._bottom_since > c.bottom_hold_s:
+                    return self._begin_latch_verify(obs)
+            else:
+                self._bottom_since = None
+            if obs.t - self.phase_t > c.pull_test_max_s:
+                self._no_retract = True
+                self.z = float(obs.rel_pose.p[2])
+                return self._fail(obs, "stuck_during_retract")
+            return self._cmd(c.force_phase_speed_cap_mm_s)
         # re-seat: the pull leaves the plug on the latch hook; push it back to the floor
         self.z -= self.force_axis.velocity(c.insert_force_n, f_ax) * dt
         back = self._corrected_depth(obs) >= self._pull_start - c.reseat_tolerance_mm * MM

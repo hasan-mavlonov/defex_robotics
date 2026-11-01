@@ -42,3 +42,18 @@ B=gantry W=3 CHOSEN=results/v0.2c_integration/prior/models/gantry_posterior_k3.j
 results/v0.2c_integration/snapshot.sh 2026 3             # at 96a4be3
 results/v0.2c_integration/snapshot_vs_cp2.sh             # -> snapshot_seed2026/vs_checkpoint2_prep.md
 results/v0.2c_integration/snapshot.sh 3032 3             # at 586caed (results-only commit after 96a4be3); run once
+
+# 4. Diagnosis (after step 3): which workstream's code produces the arm escapes and false rejects seen in the
+#    integrated C's training data. Arm C on training seeds 3001-3030, noise_2mm and mf_noise_1mm, 40 trials,
+#    at each workstream's final controller code, in temporary detached worktrees (removed afterwards);
+#    outputs copied to diagnosis_arm_escapes/<workstream>_<commit>/.
+for w in a5bd452 afa08a4; do
+  git worktree add --detach ../diag-$w $w
+  (cd ../diag-$w && $PY -m experiments.collect_contacts --backend arm --seeds 3001-3030 --conditions noise_2mm,mf_noise_1mm \
+      --trials 40 --name train_main_diag --root results/diag --workers 3)
+done
+$PY -m experiments.v02c_integration_compare \
+  results/checkpoint2_prep/arm_prior/data/arm/train_main results/v0.2c_integration/prior/data/arm/train_main \
+  results/v0.2c_integration/diagnosis_arm_escapes/arm_robustness_a5bd452 results/v0.2c_integration/prior/data/arm/train_main \
+  results/v0.2c_integration/diagnosis_arm_escapes/defect_verdict_afa08a4 results/v0.2c_integration/prior/data/arm/train_main \
+  > results/v0.2c_integration/diagnosis_arm_escapes/comparison.md

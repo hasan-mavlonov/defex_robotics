@@ -368,8 +368,9 @@ def train(fit: Prepared, stop: Prepared, hidden, lr, weight_decay, components, f
     rng = np.random.default_rng(seed)
     net = init_net(rng, fit.x.shape[1], hidden, components, temper)
     params = [*(W for W, _ in net.layers), *(b for _, b in net.layers)]
-    m = [np.zeros_like(q) for q in params] + [0.0]
-    v = [np.zeros_like(q) for q in params] + [0.0]
+    n_scalar = 1 if net.zeta is None else 2  # floor logit, and the temperature logit when tempering
+    m = [np.zeros_like(q) for q in params] + [0.0] * n_scalar
+    v = [np.zeros_like(q) for q in params] + [0.0] * n_scalar
     b1, b2, eps = 0.9, 0.999, 1e-8
     step = 0
     best = (np.inf, None, -1)

@@ -207,3 +207,18 @@ def test_tempered_residual_gradient_and_runtime_tempering(c_run, task):
     data = _v2_model(recs, task.backend.fixture_dynamics)
     assert ContactLikelihood(data).base_temperature == 1.0
     assert ContactLikelihood({**data, "base_temperature": 0.7}).base_temperature == 0.7
+
+
+def test_tempered_training_runs_and_reproduces():
+    from experiments.train_contact_likelihood import Prepared, train
+
+    rng = np.random.default_rng(3)
+    n, c = 40, 25
+    grid = rng.normal(size=(c, 2))
+    p = Prepared(x=rng.normal(size=(n, 4)), probe=rng.normal(size=(n, 2)),
+                 base=rng.normal(size=(n, c)).astype(np.float32), cell=rng.integers(0, c, n),
+                 earlier=[[] if i % 2 == 0 else [i - 1] for i in range(n)], keep=np.arange(n), grid=grid,
+                 o_mean=np.zeros(2), o_std=np.ones(2), needed=np.arange(0, n, 2))
+    runs = [train(p, p, (4,), 3e-3, 1e-3, 2, 0.01, 0.0, True, max_epochs=3, patience=5, temper=True) for _ in range(2)]
+    assert 0.05 < runs[0]["net"].tau < 1.0
+    assert runs[0]["stop_loss"] == runs[1]["stop_loss"]  # fixed numpy seed: retraining reproduces

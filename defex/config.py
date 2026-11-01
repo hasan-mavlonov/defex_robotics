@@ -722,6 +722,11 @@ class AdaptiveConfig:
     # to the 3 deg seating criterion. Tilt only narrows the free travel further, so the check
     # can reject a good plug but not pass a plug yawed beyond this.
     wall_yaw_tolerance_deg: float = 2.0
+    # The check also needs a free travel of at least this fraction of an aligned plug's: within
+    # ~10% of zero the walls clamp the plug (wedged), whatever the yaw bound allows. v0.2c, from the
+    # benchmark_v0.2b audit; on dev seeds wedged plugs read <= 0.001 mm, free seated ones >= 0.03 mm
+    # in the 0.2 mm cavity (aligned half travel 0.2 mm, so 0.02 mm here).
+    wall_yaw_min_free_fraction: float = 0.1
     # A corner contact sits near the plug's end: lever arm (T_z / F) of at least this fraction of
     # the plug half-length at both walls, with consistent sign, gives the direction of the yaw.
     wall_yaw_lever_fraction: float = 0.5

@@ -12,14 +12,96 @@ verifies the result before it declares success.
 Everything here runs in MuJoCo with a real socket cavity, bounded actuators and
 noisy sensors, on two machines: a gantry fixture and a UR5e arm (MuJoCo
 Menagerie). Every benchmark number in this README comes from the files in
-[`results/benchmark_v0.2b`](results/benchmark_v0.2b) unless it is marked as
+[`results/benchmark_v0.2c`](results/benchmark_v0.2c) unless it is marked as
+benchmark_v0.2b ([`results/benchmark_v0.2b`](results/benchmark_v0.2b)),
 benchmark_v0.2a ([`results/benchmark_v0.2a`](results/benchmark_v0.2a)), V0.1
 ([`results/benchmark_v0.1`](results/benchmark_v0.1)) or a development
 measurement. The physics behavior is pinned by the test suite (see
 [Validation](#validation)). This is a research prototype: it has not been
 validated on hardware (see [Limitations](#assumptions-and-limitations)).
 
-## Results: benchmark_v0.2b (Checkpoint 2), two machines, latching parts
+## Results: benchmark_v0.2c, two machines, conventional cells with the same pull test
+
+Pre-registered ([`PREREGISTRATION.md`](results/benchmark_v0.2c/PREREGISTRATION.md),
+code frozen at 45f8b06): seed 20261116, gantry and UR5e arm, nine controllers,
+four suites, 86,400 paired trials. Full report:
+[`results/benchmark_v0.2c/REPORT.md`](results/benchmark_v0.2c/REPORT.md); every
+table is regenerated from the per-trial rows by
+`python -m experiments.checkpoint_report results/benchmark_v0.2c` and
+`python -m experiments.v02c_paired results/benchmark_v0.2c`.
+
+The controllers: **A** fixed program, **B** vision correction, **C** Defex
+adaptive, **D** force-controlled spiral search, **E** B on a passive compliance
+(RCC) device, **F** spiral search on the RCC device, **G** C plus a learned
+contact prior, and new in this run **H** and **I**: D and F with C's retention
+pull test. D, E, F, H and I are the conventional cells. Since Checkpoint 2, D, E
+and F were tuned for the arm and re-tuned on the gantry with the latching
+connector, and C's latch check now uses datasheet forces instead of the
+simulator's latch geometry. The suites: `standard` (20 conditions,
+housing-only connector), `latching` (Molex Micro-Fit 3.0, 3 good-part conditions,
+4 deliberately bad parts), the mis-characterized-vision families (the camera is
+worse than the cell is told) and `latch_spread` (good and bad Micro-Fit parts
+whose latch and terminal forces vary within or at the edge of the datasheet).
+
+**Headline, as the pre-registered rules require.**
+
+* **On latching good parts, the best conventional cell seats more than C on
+  both machines**: gantry F and I 99.2% against C 95.7% (McNemar p = 4.9e-5);
+  arm F 96.5% and I 96.2% against 93.7% (p = 0.012 and 0.028).
+* **With the camera worse than the cell believes, F and I match C on both
+  machines**: gantry 84.0% against 85.8% (p = 0.4), arm 78.8% against 78.0%
+  (p = 0.78).
+* **With the same pull test, the conventional cells pass no bad parts either.**
+  C, H and I each passed 0 of 2,200 deliberately bad latching parts (Wilson 95%
+  upper bound 0.17%); D and F, which check depth only, passed 1,174 and 1,468.
+  Checkpoint 2's bad-part result came from having a pull test.
+
+C leads every conventional cell on the standard suite (gantry 99.0% against
+96.6%, p < 1e-6; arm 97.6% against 96.4%, p = 0.0027) and on latch_spread good
+parts (gantry 100.0% against 83.0%, arm 99.5% against 86.8%; p < 1e-6).
+
+**What is left of C's lead.**
+
+* **It does not pass mis-seated connectors that a depth check accepts.** Across
+  all good-part trials C passed 0 of 7,400 as good (upper bound 0.05%); I passed
+  67 (gantry) and 68 (arm) of 3,700, mostly tilted or short plugs under 2 mm of
+  camera error. The pull test does not apply to the housing-only connector, so
+  this is C's verification.
+* **Its latch_spread lead is mostly one rule the baselines lack.** When a plug
+  stalls short, C pushes at 1.1 x the datasheet's maximum mating force (35.2 N).
+  D, F, H and I push at the connector file's 30 N insert target, below the
+  datasheet's 32 N maximum, and seat none of the 100 parts at maximum terminal
+  friction on either machine. Without that condition C still leads (500 against
+  473 of 500 on the gantry, 497 against 474 on the arm), but a conventional cell
+  with the same push has not been tested.
+
+**C is slower on every suite.** Good units per hour, C against F (I in
+brackets): standard, gantry 606 against 1,101 (1,101) and arm 373 against 596
+(596); latching good parts, gantry 438 against 866 (513) and arm 282 against 515
+(334). Median successful cycle on the standard suite: gantry 5.30 s against
+2.43 s, arm 8.14 s against 4.77 s. I, with the pull test, makes more good units
+per hour than C on seven of eight suites.
+
+| Machine, suite | C | Best of D, E, F, H, I | p | Bad units passed, C / I | Good units/h, C / I |
+|---|---|---|---|---|---|
+| gantry, standard | 99.0% | F/I 96.6% | < 1e-6 | 0 / 33 of 2,000 | 606 / 1,101 |
+| gantry, latching good parts | 95.7% | F/I 99.2% | 4.9e-5 | 0 / 0 of 600 | 438 / 513 |
+| gantry, mis-characterized vision | 85.8% | F/I 84.0% | 0.4 | 0 / 34 of 500 | 322 / 468 |
+| gantry, latch_spread good parts | 100.0% | E 83.0% | < 1e-6 | 0 / 0 of 600 | 527 / 538 |
+| arm, standard | 97.6% | F/I 96.4% | 0.0027 | 0 / 34 of 2,000 | 373 / 596 |
+| arm, latching good parts | 93.7% | F 96.5% | 0.012 | 0 / 3 of 600 | 282 / 334 |
+| arm, mis-characterized vision | 78.0% | F/I 78.8% | 0.78 | 0 / 31 of 500 | 171 / 268 |
+| arm, latch_spread good parts | 99.5% | E 86.8% | < 1e-6 | 0 / 0 of 600 | 351 / 341 |
+| both, deliberately bad parts passed as good | 0 of 2,200 | H 0, I 0 | 1 | | |
+
+**The learned prior (G)** beats C on six of eight suites (p < 0.05), with no
+measurable gain on latch_spread, and passed one bad unit: an arm latching plug
+at 3.21 degrees of tilt. Tilt is not checked by VERIFY on either machine.
+
+**Simulation only.** The latch model and the spread around it are assumed;
+there is one latching connector family, one arm model, and no rig yet.
+
+## Earlier result: benchmark_v0.2b (Checkpoint 2), two machines, latching parts
 
 Pre-registered ([`PREREGISTRATION.md`](results/benchmark_v0.2b/PREREGISTRATION.md),
 code frozen at 8e29f2e): seed 20261102, gantry and UR5e arm, seven controllers,
@@ -105,36 +187,30 @@ gantry baselines were never tuned with the latching connector: re-tuned, F seats
 
 ## What we can claim / what we cannot claim yet
 
-**Can claim (simulation, benchmark_v0.2b):**
+**Can claim (simulation, benchmark_v0.2c):**
 
-* C passed none of 1,600 deliberately bad latching parts as good (Wilson 95%
-  upper bound 0.24%); the conventional cells, which check depth only, passed
-  between 442 (D) and 1,062 (F).
-* On the gantry with correctly characterized vision, C seats more housing-only
-  connectors than every conventional cell tested (99.1% against 97.0%,
-  p < 1e-6). Its latching good-part lead (95.7% against 89.0%) was against
-  baselines not tuned for that connector and does not survive their re-tuning on
-  a dev seed.
+* C passed none of 7,400 good-part trials as good when the connector was not
+  seated (Wilson 95% upper bound 0.05%). The strongest conventional cell with a
+  pull test, I, passed 135, mostly tilted or short plugs under camera error that
+  its depth check accepts.
+* Under the standard conditions C seats more housing-only connectors than every
+  conventional cell tested, on both machines (gantry 99.0% against 96.6%, arm
+  97.6% against 96.4%).
 * The comparison is paired, pre-registered and regenerable from committed
   per-trial files.
 
 **Cannot claim yet:**
 
-* That C seats more units than a good conventional cell in general. On the UR5e
-  arm F matches or beats it, and with a camera worse than believed F matches it
-  on the gantry and beats it on the arm.
-* That C is faster or cheaper per good unit. It makes 10-37% fewer good units per
-  hour than F, and the cost of a passed bad unit is not priced.
-* That C never passes a bad unit: 6 in 6,200 good-part trials, 5 from one known
-  bug.
-* That C's way of checking a latch beats a conventional cell with a pull test:
-  in development, D and F with the same pull pass 0 bad parts too. C's remaining
-  edge there, seating good parts whose latch and terminal forces vary within the
-  datasheet range (120 of 120 against F's 91-93), is one dev seed and not yet
-  pre-registered.
-* That C's latching results survive real part-to-part variation: its pull test
-  uses the assumed latch geometry, and a 0.15 mm earlier latch makes it reject
-  most good parts in simulation.
+* That C rejects bad parts better than a conventional cell. With the same pull
+  test, H and I passed 0 of 2,200 bad parts, as C did.
+* That C seats more latching parts. F and I seat more good latching parts than C
+  on both machines, and match it when the camera is worse than believed.
+* That C handles part-to-part variation better. Its latch_spread lead comes
+  mostly from pushing above the datasheet's maximum mating force when a plug
+  stalls; a conventional cell with that rule has not been tested.
+* That C is faster or cheaper per good unit. It makes 2-45% fewer good units per
+  hour than I on seven of eight suites, and the cost of a passed bad unit is not
+  priced.
 * Anything on hardware. The latch snap force is assumed, there is one latching
   connector and one simulated arm, and no rig yet.
 
@@ -433,7 +509,7 @@ value that has not been measured on real parts.
 | Damage | 45 N contact force sustained over 10 ms | assumed conservative limit for a small plastic housing on a PCB |
 | Success tolerances | depth within 0.5 mm, lateral within clearance + 0.15 mm, tilt and yaw within 3 deg | assumed seating specification |
 
-## The seven controllers
+## The controllers
 
 **A: fixed trajectory** ([`defex/control/baselines.py`](defex/control/baselines.py)).
 The taught program: transit to 5 mm above the nominal socket at 40 mm/s, descend at
@@ -541,7 +617,16 @@ D, E and F were tuned on development seed 2026 with about 68,000 trials
 ([`BASELINE_TUNING.md`](results/benchmark_v0.2a/BASELINE_TUNING.md)). From
 benchmark_v0.2b on, D uses the setting the W1 ranking rule selects (search 2 N,
 spiral 2.5 mm/s, seat margin 0.5 mm), correcting a deviation disclosed in that
-log. None of them was re-tuned for the arm or the latching connector.
+log. For benchmark_v0.2c they were tuned for the arm
+([`results/v0.2c_arm_baselines`](results/v0.2c_arm_baselines/REPORT.md)) and re-tuned on
+the gantry with the latching connector
+([`results/v0.2c_gantry_baselines`](results/v0.2c_gantry_baselines/REPORT.md)),
+each by a selection rule committed before its runs.
+
+**H and I: D and F with C's retention pull** ([`defex/control/spiral_search.py`](defex/control/spiral_search.py)).
+After a latching insertion they run the same pull as C (1.1 x the datasheet's
+32 N maximum mating force, movement limit 0.6 x the 1.75 mm terminal wipe). On
+the housing-only connector they are identical to D and F.
 
 **G: C with a learned contact prior** ([`defex/control/adaptive_learned.py`](defex/control/adaptive_learned.py),
 [`defex/recovery/learned_prior.py`](defex/recovery/learned_prior.py)). After each
@@ -559,8 +644,9 @@ stiffness and servo following lag (W5, W5b); they switch on only for fixtures at
 least 4x stiffer or 2x slower than the gantry and are exact no-ops on it. Because
 the UR5e cannot sweep yaw within the torque budget, VERIFY on the arm checks yaw
 from the free travel between its two wall contacts instead
-([`results/w5b_development`](results/w5b_development/REPORT.md)). That check has
-a known hole at 0.2 mm clearance (see the headline).
+([`results/w5b_development`](results/w5b_development/REPORT.md)). Benchmark_v0.2b
+found a hole in that check at 0.2 mm clearance; since v0.2c it fails a plug the
+walls clamp ([`results/v0.2c_verify_fixes`](results/v0.2c_verify_fixes/REPORT.md)).
 
 ## Experiment protocol
 
@@ -824,16 +910,20 @@ The V0.2 plan (brief of 2026-10-26) runs in workstreams, one branch each:
 6. W5, W5b and W6, done: UR5e backend, fixture-aware rules for a stiff, lagging
    wrist, faster probing.
 7. W9, done: learned contact prior (controller G).
-8. Checkpoint 2, done: benchmark_v0.2b (this README's results).
+8. Checkpoint 2, done: benchmark_v0.2b.
 9. W7, software done: hardware backend and drivers (`defex/hardware/`), rig
    options and BOM ([`hardware/BOM.md`](hardware/BOM.md)), test protocol
    ([`hardware/TEST_PROTOCOL.md`](hardware/TEST_PROTOCOL.md)); needs a rig.
 10. W8: evidence pack ([`docs/TECHNICAL_BRIEF.md`](docs/TECHNICAL_BRIEF.md)).
 
-Next, from what Checkpoint 2 found: fix the arm's wall-yaw check at tight
-clearance and add a tilt check to VERIFY; an explicit defect verdict so a bad
-part costs one cycle, not about 26 s; give D, E and F an arm tuning pass. These
-are development work for a v0.2c run on a fresh seed.
+11. v0.2c, done: wall-yaw fix, defect verdict, datasheet-based latch check,
+    arm tuning of D, E and F, gantry re-tuning with latching parts, H and I,
+    benchmark_v0.2c (this README's results).
+
+Open after benchmark_v0.2c: the connector file's 30 N insert target is below
+the datasheet's 32 N maximum mating force; a conventional cell with C's
+stall push (H and I plus that push) is untested; VERIFY does not check tilt.
+Each is development work for a further run on a fresh seed.
 
 ## Porting to another simulator
 

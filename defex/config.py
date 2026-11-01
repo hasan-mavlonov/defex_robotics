@@ -591,6 +591,35 @@ class AdaptiveConfig:
     # "gate_or_corrected": also if C changed the yaw itself; "always": every cycle.
     yaw_center_policy: str = "always"  # W4 default; V0.1 used "sigma_gate" (see results/w4_development)
     rotation_budget_fraction: float = 0.8  # of max_torque_nm, for torque overshoot while probing yaw (W5)
+    # W5b: yaw verification on fixtures that cannot sweep yaw fast enough within the torque budget.
+    # Below this rate a sweep of 2 x 2 x yaw_probe_max_deg takes more than ~6 s (gantry: 25 deg/s);
+    # VERIFY then checks yaw from the wall probes it already made (cavity geometry), not by sweeping.
+    yaw_sweep_min_speed_deg_s: float = 5.0
+    # Yaw error the wall-geometry check accepts without correcting: 2 deg leaves a 1 deg margin
+    # to the 3 deg seating criterion. Tilt only narrows the free travel further, so the check
+    # can reject a good plug but not pass a plug yawed beyond this.
+    wall_yaw_tolerance_deg: float = 2.0
+    # A corner contact sits near the plug's end: lever arm (T_z / F) of at least this fraction of
+    # the plug half-length at both walls, with consistent sign, gives the direction of the yaw.
+    wall_yaw_lever_fraction: float = 0.5
+    wall_yaw_corrections: int = 1  # in-place corrections (then the walls are probed again)
+    wall_yaw_correct_speed_deg_s: float = 4.0  # free-space turn towards the cavity axis (plug centred)
+    # W5b: rate-mode conform on wrists stiffer than the reference. The zero-spring admittance, damped
+    # for a stable loop gain on such a wrist, turns the plug 50x slower and never settles (servo lag);
+    # instead tilt at a fixed rate in the direction of the measured torque. Pressed on a face or floor
+    # the plug pivots on an edge, so the torque stays below axial force x half-diagonal at any rate.
+    rate_conform_speed_deg_s: float = 4.0  # on the top face (outside the cavity): 4 deg in ~1 s (dev-chosen)
+    # In the cavity the plug's upper end moves (depth x tilt); keep its overshoot from the servo lag
+    # (rate x lag x 15 mm = 0.05 mm at 0.2 s lag) well inside the 0.5 mm clearance.
+    rate_seat_conform_speed_deg_s: float = 1.0
+    # Torque reversal that marks the face passing flat: the CoP crossed to this far beyond the tip on the
+    # other side (a real flip jumps it from one edge to the other, several mm; F/T noise 0.0005 N m is
+    # 0.06 mm at 8 N), held for flip_hold_s with the axial force at least half the conform force
+    # (a plug that lifts off the face momentarily has no meaningful CoP).
+    rate_conform_flip_lever_mm: float = 1.0
+    rate_conform_flip_hold_s: float = 0.02
+    # Pivot torque cannot exceed axial force x plug half-diagonal; this factor above it means a wall.
+    rate_conform_wall_factor: float = 1.5
     # W3 push-click-pull verification for latching connectors
     click_drop_fraction: float = 0.4  # force drop at the snap, as a fraction of the latch peak force
     click_window_after_snap_mm: float = 0.2  # search the trace this far past the expected snap

@@ -80,3 +80,24 @@ def test_spiral_search_finds_a_hole_outside_the_lead_in(task):
             found = True
             break
     assert found
+
+
+@pytest.mark.slow
+def test_optional_retention_pull_on_the_spiral_baseline(task):
+    """v0.2c review: F with retention_pull fails a broken latch it would pass on depth; off by default."""
+    from dataclasses import replace as _replace
+
+    from defex.control.registry import make_controller
+    from defex.tasks.conditions import latching_conditions_by_name
+    from defex.tasks.scenarios import sample_scenario
+
+    assert not make_controller("spiral_rcc").cfg.retention_pull
+    out = {}
+    for cond in ("mf_nominal", "mf_broken_latch"):
+        sc = sample_scenario(latching_conditions_by_name()[cond], 0, 2026, task.backend.nominal_socket_pose)
+        ctrl = make_controller("spiral_rcc")
+        ctrl.cfg = _replace(ctrl.cfg, retention_pull=True)
+        out[cond] = task.run(ctrl, sc)
+    assert out["mf_nominal"].success
+    assert not out["mf_broken_latch"].declared_success
+    assert out["mf_broken_latch"].failure_reason == "aborted:retention_failed"

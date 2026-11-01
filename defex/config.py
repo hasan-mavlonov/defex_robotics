@@ -491,6 +491,15 @@ class SpiralSearchConfig:
     # rule like the others. C does the same (AdaptiveConfig.free_insert_speed_mm_s, near_bottom_*).
     free_speed_mm_s: float = 0.0
     near_floor_margin_mm: float = 2.0  # as AdaptiveConfig.near_bottom_margin_mm
+    # v0.2c review, off (a development comparison, not a tuned baseline): after the depth check, on a connector
+    # with a mating spec, a guarded retention pull like C's. Back out at pull_test_fraction x the datasheet
+    # minimum retention; pass if the plug holds before it has backed out pull_limit_wipe_fraction x the
+    # datasheet terminal wipe, then push it back to the floor. Values as AdaptiveConfig's.
+    retention_pull: bool = False
+    pull_test_fraction: float = 0.5
+    pull_limit_wipe_fraction: float = 0.6
+    pull_test_max_s: float = 3.0
+    reseat_tolerance_mm: float = 0.05
 
 
 @dataclass(frozen=True)

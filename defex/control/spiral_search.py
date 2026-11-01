@@ -61,6 +61,7 @@ APPROACH, TARE, DESCEND, SPIRAL, INSERT, SUCCESS, FAILURE = (
     "SUCCESS",
     "FAILURE",
 )
+VERIFY = "VERIFY"  # only with SpiralSearchConfig.retention_pull (v0.2c review)
 
 
 class SpiralSearchController(InsertionController):
@@ -102,6 +103,7 @@ class SpiralSearchController(InsertionController):
         self._settled_since: float | None = None
         self._hist: deque[tuple[float, float]] = deque()
         self._fail_reason = ""
+        self._pulled = False
         s = contact_speed_scale(ctx)  # W5: same fixture-aware limit as C
         self._v_descent = c.descent_speed_mm_s * MM * s
         self._v_insert = c.insert_speed_mm_s * MM * s
@@ -188,6 +190,7 @@ class SpiralSearchController(InsertionController):
             DESCEND: self._descend_step,
             SPIRAL: self._spiral_step,
             INSERT: self._insert_step,
+            VERIFY: self._pull_step,
             SUCCESS: self._success_step,
             FAILURE: self._failure_step,
         }[self.state]
@@ -337,8 +340,41 @@ class SpiralSearchController(InsertionController):
         return self._cmd(self.cfg.retract_speed_mm_s)
 
     def _succeed(self, obs: Observation) -> Command:
+        m = self.ctx.connector.mating
+        if self.cfg.retention_pull and m is not None and not self._pulled:
+            self._pulled = True
+            self._pull_start = float(obs.depth)
+            self._pull_target = self.cfg.pull_test_fraction * m.latch_retention_force_n
+            self._pull_limit = self.cfg.pull_limit_wipe_fraction * m.terminal_wipe_mm * MM
+            self._pull_phase = "pull"
+            self._enter(obs.t, VERIFY, "pull")
+            return self._cmd(10.0)
         self._enter(obs.t, SUCCESS)
         self.finish(obs.t, True)
+        return self._cmd(10.0)
+
+    def _pull_step(self, obs: Observation) -> Command:
+        """v0.2c review: guarded retention pull after the depth check, then re-seat (as C's latch check)."""
+        c = self.cfg
+        dt = self.ctx.control_period_s
+        F, _ = self._wrench(obs)
+        f_ax = float(F[2])
+        moved = self._pull_start - float(obs.depth)
+        timed_out = obs.t - self._phase_t > c.pull_test_max_s
+        if self._pull_phase == "pull":
+            self.z -= self.insert_axis.velocity(-self._pull_target, f_ax) * dt
+            held = f_ax <= -self._pull_target
+            if held or moved > self._pull_limit or timed_out:
+                passed = held and moved <= self._pull_limit
+                self.log(obs.t, "verify", f"pull {-f_ax:.1f} N at {moved / MM:.2f} mm -> {'PASS' if passed else 'FAIL'}")
+                if not passed:
+                    return self._fail(obs, "retention_failed")
+                self._pull_phase, self._phase_t = "reseat", obs.t
+            return self._cmd(10.0)
+        self.z -= self.insert_axis.velocity(c.insert_force_n, f_ax) * dt
+        back = float(obs.depth) >= self._pull_start - c.reseat_tolerance_mm * MM
+        if (back and f_ax >= 0.8 * c.insert_force_n) or timed_out:
+            return self._succeed(obs)
         return self._cmd(10.0)
 
     def _success_step(self, obs: Observation) -> Command:

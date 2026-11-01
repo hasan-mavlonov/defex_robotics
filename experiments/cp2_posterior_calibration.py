@@ -82,10 +82,15 @@ def evaluate_split(backend: str, root: str, split: str, seed: int, model: Contac
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--v1-copies", action="store_true",
+                    help="v0.2c: read the v1 models from results/v0.2c_learned_prior/models/v1_contact_prior_*.json "
+                         "(byte copies of the Checkpoint 2 models, after a v2 model is installed)")
     args = ap.parse_args()
     results = []
     for backend, root, split, seed in SPLITS:
-        model = ContactPrior.from_json(DEFAULT_MODEL_DIR / f"contact_prior_{backend}.json")
+        path = (REPO_ROOT / "results" / "v0.2c_learned_prior" / "models" / f"v1_contact_prior_{backend}.json"
+                if args.v1_copies else DEFAULT_MODEL_DIR / f"contact_prior_{backend}.json")
+        model = ContactPrior.from_json(path)
         results.append(evaluate_split(backend, root, split, seed, model))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(results, indent=2))

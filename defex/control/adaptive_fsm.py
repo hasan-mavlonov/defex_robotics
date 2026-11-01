@@ -985,7 +985,10 @@ class AdaptiveInsertionController(InsertionController):
                 self.adm_conf.x[k] += lag[k]  # held by a wall: stop where the plug is, not where the setpoint led
                 self._rc_done[k] = True
             elif abs(self.adm_conf.x[k]) >= c.conform_saturation_fraction * limit:
-                self._rc_done[k] = True  # tipped onto an edge: stop turning
+                # Tipped onto an edge: stop turning. v0.2c: the plug trails the setpoint by rate x lag (0.8 deg
+                # on the UR5e), so it may still reach flat; keep watching for the reversal until it has caught up.
+                if not (c.conform_limit_waits_for_plug and abs(lag[k]) >= c.rate_conform_settle_deg * DEG):
+                    self._rc_done[k] = True
             else:
                 self.adm_conf.x[k] = float(np.clip(self.adm_conf.x[k] + self._rc_dir[k] * rate * dt, -limit, limit))
         return bool(self._rc_done.all() and norm3(np.append(lag[:2], 0.0)) < c.rate_conform_settle_deg * DEG)

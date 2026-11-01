@@ -127,3 +127,29 @@ def test_registry_variants(tmp_path, monkeypatch):
     monkeypatch.delenv("DEFEX_CONTROLLER_VARIANTS")
     with pytest.raises(ValueError):
         make_controller("adaptive@no_tilt")
+
+
+def test_rate_conform_at_the_limit_waits_for_the_plug(spec):
+    """v0.2c: at the tilt limit the axis stays open while the plug still trails the setpoint (servo lag)."""
+    c = _arm_c(spec)
+    c.S = Pose.identity()
+    cfg = c.cfg
+    f_ax = 8.0
+    F = np.array([0.0, 0.0, f_ax])
+    T = np.array([-0.03, 0.0, 0.0])  # pivoting: torque well above the noise lever, never reversed yet
+    rate = cfg.rate_conform_speed_deg_s * DEG
+    c._rc_dir = None
+    c._rate_conform_step(_obs(), F, T, 0.002, rate)
+    c.adm_conf.x[0] = -cfg.conform_limit_deg * DEG
+    lagging = _obs(lag_rv=(0.7 * DEG, 0.0, 0.0))
+    c._rate_conform_step(lagging, F, T, 0.002, rate)
+    assert not c._rc_done[0]
+    c._rate_conform_step(_obs(), F, T, 0.002, rate)  # caught up, still no reversal: tipped
+    assert c._rc_done[0] and not c._rc_flat[0]
+    old = _arm_c(spec, conform_limit_waits_for_plug=False)
+    old.S = Pose.identity()
+    old._rc_dir = None
+    old._rate_conform_step(_obs(), F, T, 0.002, rate)
+    old.adm_conf.x[0] = -cfg.conform_limit_deg * DEG
+    old._rate_conform_step(lagging, F, T, 0.002, rate)
+    assert old._rc_done[0]

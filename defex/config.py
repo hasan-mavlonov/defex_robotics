@@ -665,6 +665,10 @@ class AdaptiveConfig:
     # support and is not turned (W5b turned it on the noise sign until the tilt limit: the plug ended on a
     # corner and its CoP missed the contact model by 1.8 mm median, gantry 0.13 mm, w5b cop_model/arm_after).
     conform_skip_noise_axes: bool = True
+    # A rate-mode conform axis that reaches the tilt limit is only "tipped" once the plug has caught up with
+    # the setpoint; until then a torque reversal still marks it flat. W5b stopped at the setpoint limit with
+    # the plug 0.7 deg short of it, then measured the CoP after the plug passed flat (an edge, 4 mm off).
+    conform_limit_waits_for_plug: bool = True
     # A failed verification on a stiff wrist is retried with the orientation and lateral offset the
     # attempt learned (as after a jam), not at the identical pose (which repeated the same failure).
     reaim_after_verify_fail: bool = True

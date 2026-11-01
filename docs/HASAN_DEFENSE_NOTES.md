@@ -84,6 +84,12 @@ simulator or ground truth
 worse than its stated accuracy, C does worse: F matches or beats it
 (`results/benchmark_v0.2b/REPORT.md`, mis-characterized vision).
 
+One exception, found after Checkpoint 2: on latching parts C's click window and
+pull limit use the connector file's assumed latch geometry, which is exactly what
+the simulator builds parts from. That is a soft form of knowing the simulator, and
+it is why C fails when the simulated latch moves 0.15 mm
+(`results/v0.2b_latch_spread/REPORT.md`).
+
 ## 9. "Has C ever passed a bad part?"
 
 Yes: 6 in 6,200 good-part trials. Five are one bug: on the arm, in a 0.2 mm

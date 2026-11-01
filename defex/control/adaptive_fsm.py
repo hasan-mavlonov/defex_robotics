@@ -232,6 +232,7 @@ class AdaptiveInsertionController(InsertionController):
         self._no_retract = False
         self._bottom_proofed = False
         self._held_reseated = False
+        self._pull_start = 0.0  # set by each latch check; read by the latch phases entered before one
         self._capture: dict = {}
         self._proof_t_force: float | None = None
         self._proof_depth0 = 0.0

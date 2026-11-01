@@ -562,7 +562,7 @@ def cmd_fit(args) -> None:
         },
     }
     if mode == "ratio":
-        data["offset_marginal"] = fit_marginal(o)
+        data["offset_marginal"] = fit_marginal(o, components=2)
     out = OUT / "models"
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{args.name}.json").write_text(json.dumps(data))
@@ -570,6 +570,27 @@ def cmd_fit(args) -> None:
         {"search": search, "selected": entry, "history_best_run": res["history"], "wall_time_s": time.time() - t0},
         indent=1))
     print(f"wrote {out / (args.name + '.json')} ({time.time() - t0:.0f} s)")
+
+
+def cmd_to_ratio(args) -> None:
+    """A ``ratio`` model from a trained ``posterior`` model: same network, plus the Gaussian-mixture
+    marginal of the offsets in its own fit split (what the network's output implicitly contains)."""
+    cfg = AdaptiveConfig()
+    src = REPO_ROOT / args.model
+    data = json.loads(src.read_text())
+    if data["mode"] != "posterior":
+        raise SystemExit("to-ratio needs a posterior-mode model")
+    sources = [(REPO_ROOT / Path(d).parent.parent, Path(d).name) for d in data["metadata"]["data"]]
+    rows = load_split(data["backend"], sources, FIT_SEEDS, cfg)
+    keep = [i for i, c in enumerate(rows.cell) if c >= 0]
+    o = np.array([rows.records[i]["probe_xy_mm"] for i in keep]) - np.array([rows.h_mm[i] for i in keep])
+    data["mode"] = "ratio"
+    data["offset_marginal"] = fit_marginal(o, components=args.marginal_components)
+    data["metadata"] = {**data["metadata"], "ratio_from": _rel(src), "n_marginal": len(keep),
+                        "marginal_components": args.marginal_components, "command_ratio": args.command_line}
+    dest = REPO_ROOT / args.out
+    dest.write_text(json.dumps(data))
+    print(f"wrote {dest}")
 
 
 def load_any(path: str):
@@ -627,9 +648,13 @@ def main() -> None:
     e.add_argument("--models", required=True, help="name=path@weight,...")
     e.add_argument("--splits", default="stop,dev")
     e.add_argument("--out", required=True)
+    r = sub.add_parser("to-ratio")
+    r.add_argument("--model", required=True)
+    r.add_argument("--out", required=True)
+    r.add_argument("--marginal-components", type=int, default=2)
     args = ap.parse_args()
     args.command_line = "python -m experiments.train_contact_likelihood " + " ".join(sys.argv[1:])
-    (cmd_fit if args.cmd == "fit" else cmd_evaluate)(args)
+    {"fit": cmd_fit, "evaluate": cmd_evaluate, "to-ratio": cmd_to_ratio}[args.cmd](args)
 
 
 if __name__ == "__main__":

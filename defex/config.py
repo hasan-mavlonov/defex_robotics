@@ -646,6 +646,45 @@ class AdaptiveConfig:
     pull_test_margin_mm: float = 0.3  # allowed movement beyond the post-snap stroke
     pull_test_max_s: float = 3.0
     reseat_tolerance_mm: float = 0.05  # after the pull, back within this of the depth it bottomed at
+    # v0.2c: defect verdict, gentle retract and polarization guard. Latching parts only (a connector with a
+    # mating spec); with defect_verdict False, or on a housing-only connector, none of this runs.
+    # Evidence is observation-only, compared with the drawing and the datasheet (ConnectorSpec, ForceBudget).
+    defect_verdict: bool = True
+    # A candidate hard stop: the plug stalled while pushing (stall, bottomed or excess-force trigger) with the
+    # centre of pressure at the tip centre and little side load, i.e. supported under its whole tip. A face
+    # block next to the hole is supported on a strip and has an off-centre CoP.
+    hard_stop_cop_mm: float = 0.5  # just above clean_cop_mm (0.4); F/T noise is ~0.06 mm of CoP at 8 N
+    hard_stop_depth_tol_mm: float = 0.15  # same stop: raw encoder depths agree (encoders 2 um; tilt/CoP ~0.1 mm)
+    hard_stop_repeats: int = 2  # identical hard stops in the cavity (re-aimed or moved between them)
+    lead_in_sigma_k: float = 3.0  # in the cavity: depth beyond the drawing's lead-in by this many depth sigmas
+    # Proof push for stops where the drawing puts the terminals (seat - wipe, less a margin): a good part may
+    # need up to the datasheet maximum mating force, more than the 30 N insertion target, so the stop counts as
+    # hard only if it holds at that maximum plus a margin. 1.1 x 32 N = 35 N: below abort (40 N) and stop (48 N).
+    proof_push_factor: float = 1.1  # x MatingSpec.mating_force_max_n; margin for the latch ramp (not rated)
+    proof_push_s: float = 0.4  # hold at the proof force (the force loop settles in ~0.1 s)
+    proof_push_speed_mm_s: float = 2.0  # speed cap: an end stop met at 2 mm/s adds a few N, at 10 mm/s ~20 N
+    proof_push_max_s: float = 1.5  # give up building the proof force after this long
+    proof_advance_mm: float = 0.1  # depth gained during the push that means "not a hard stop"
+    terminal_zone_margin_mm: float = 0.5  # terminal zone starts this far above seat - wipe
+    # Capture probe: a repeated flat stop whose depth is ambiguous (mouth calibrated on that same stop, and the
+    # camera's depth at least a lead-in below its mouth estimate) is in the cavity if guarded side moves meet
+    # both walls within the clearance budget (the VERIFY wall probes and thresholds). Probed once per stop depth.
+    capture_probe: bool = True
+    # Latch check: after a pull in which the plug slides out, C retracts and retries as before, but the next
+    # bottom is first held at the proof force: if the plug goes deeper, the first bottom was premature and the
+    # insertion continues. Slid out twice at the same bottom: "defect_suspected:no_retention". (Pushing back from
+    # the pulled-out position instead releases the setpoint lead stored at the terminal entry peak into the
+    # bottom; on the half-latched part's end stop that excited a 15 Hz force oscillation up to 54 N in development.)
+    no_retention_repeats: int = 2
+    # Gentle retract: a plug that holds the pull test force but showed no click is latched; the datasheet
+    # minimum retention (58 N) exceeds the cell stop (48 N), so it cannot be backed out. C re-seats it, declares
+    # "unverified:latched_no_click" and leaves it in place. Any retract on a latching part stops pulling once the
+    # pull exceeds this fraction of the protective-stop force (0.75 x 48 = 36 N, above the 29 N pull test and
+    # the ~12 N terminal friction; leaves 12 N for the force loop's reaction, ~150-200 N/s x 0.05 s on the arm).
+    retract_pull_cap_fraction: float = 0.75
+    # Polarization guard: no yaw search once a hard stop has been seen in the cavity. A plug whose tip is past
+    # the lead-in is inside the cavity's yaw capacity; turning it there only presses it into the walls.
+    polarization_guard: bool = True
     # VERIFY
     verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance
     seat_conform_min_s: float = 0.08

@@ -223,6 +223,24 @@ class AdaptiveInsertionController(InsertionController):
         # learned contact prior; labels are attached offline, never here).
         self.contact_records: list[dict] = []
         self._record_diag: ContactDiagnosis | None = None
+        # v0.2c: defect verdict, gentle retract, polarization guard (latching parts only).
+        self._verdict = self.latching and c.defect_verdict
+        self._f_insert = c.insert_force_n
+        self._hard_stops: list[dict] = []  # candidate hard stops: raw depth, probe, yaw correction, captured
+        self._pending_stop: dict | None = None
+        self._slid_pulls: list[float] = []  # raw bottom depths at which the plug slid out under the pull
+        self._no_retract = False
+        self._bottom_proofed = False
+        self._capture: dict = {}
+        self._proof_t_force: float | None = None
+        self._proof_depth0 = 0.0
+        if self._verdict:
+            m = spec.mating
+            self._proof_force = c.proof_push_factor * m.mating_force_max_n
+            self._terminal_zone = self.depth - (m.terminal_wipe_mm + c.terminal_zone_margin_mm) * MM
+            budget = spec.force_budget
+            stop = budget.protective_stop_n if budget is not None else c.max_force_n * c.retract_stuck_force_factor
+            self._retract_pull_cap = c.retract_pull_cap_fraction * stop
 
     # ------------------------------------------------------------------ helpers
     def _wrench(self, obs: Observation) -> tuple[np.ndarray, np.ndarray]:
@@ -381,6 +399,8 @@ class AdaptiveInsertionController(InsertionController):
             self._contact = False
             self._bottom_since = None
             self._trace = []
+            self._f_insert = c.insert_force_n
+            self._bottom_proofed = False
             self._enter(obs.t, INSERT)
         return self._cmd(c.reposition_speed_mm_s)
 
@@ -402,7 +422,7 @@ class AdaptiveInsertionController(InsertionController):
         engaged = self._engaged(depth)
         near_bottom = depth > self.depth - (c.near_bottom_margin_mm * MM + c.near_bottom_sigma_k * self._sigma_depth())
         if self._contact:
-            v = self.force_axis.velocity(c.insert_force_n, f_ax)
+            v = self.force_axis.velocity(self._f_insert, f_ax)
             self.adm_lat.update(F[:2], dt)
             self.adm_rot.update(T, dt, active=np.array([engaged, engaged, True], dtype=float))
         elif not engaged and depth < self._engage_threshold():
@@ -415,14 +435,14 @@ class AdaptiveInsertionController(InsertionController):
         if self.latching:
             self._trace.append((depth, f_ax))
         # Bottoming: deep enough and pushing at the target force -> diagnose quickly.
-        if depth >= self._seat_threshold() and f_ax > c.bottom_force_fraction * c.insert_force_n:
+        if depth >= self._seat_threshold() and f_ax > c.bottom_force_fraction * self._f_insert:
             if self._bottom_since is None:
                 self._bottom_since = obs.t
             elif obs.t - self._bottom_since > c.bottom_hold_s:
                 return self._to_detect(obs, "bottomed")
         else:
             self._bottom_since = None
-        reason = self.monitor.update_values(obs.t, depth, F, T, c.insert_force_n)
+        reason = self.monitor.update_values(obs.t, depth, F, T, self._f_insert)
         if reason is not None:
             return self._to_detect(obs, reason)
         return self._cmd(c.force_phase_speed_cap_mm_s)
@@ -437,6 +457,11 @@ class AdaptiveInsertionController(InsertionController):
             self.diagnosis = self._diagnose(list(self._recent)[-self.cfg.excess_diagnosis_samples :], trigger)
             self._record_contact(obs, self.diagnosis, self.adm_conf.x.copy(), conform_ran=False)
             self.log(obs.t, "detect", self.diagnosis.describe())
+            if self._verdict and trigger == "excess_force" and self._stop_candidate(self.diagnosis):
+                # The force already passed the abort level, above the proof force: no proof push needed.
+                cmd = self._confirm_stop(obs, self._stop_entry(self.diagnosis, proofed=True))
+                if cmd is not None:
+                    return cmd
             return self._begin_recover(obs)
         return self._cmd(self.cfg.force_phase_speed_cap_mm_s)
 
@@ -464,6 +489,10 @@ class AdaptiveInsertionController(InsertionController):
     def _detect_step(self, obs: Observation) -> Command:
         c = self.cfg
         dt = self.ctx.control_period_s
+        if self.phase == "proof":
+            return self._proof_step(obs, dt)
+        if self.phase.startswith("capture"):
+            return self._capture_step(obs, dt)
         if self.phase == "hold":
             self._window.append(obs)
             depth = self._corrected_depth(obs)
@@ -592,6 +621,13 @@ class AdaptiveInsertionController(InsertionController):
                     self.log(obs.t, "surface_alignment", f"tilt corrected ({conf[0] / DEG:+.2f},{conf[1] / DEG:+.2f}) deg")
         self._record_contact(obs, diag, conf_at_detect, conform_ran)
         self.log(obs.t, "detect", diag.describe())
+        if self._verdict and diag.kind != "seated_candidate" and self._stop_candidate(diag):
+            cmd = self._stop_evidence(obs, diag)
+            if cmd is not None:
+                return cmd
+        return self._route_detect(obs, diag)
+
+    def _route_detect(self, obs: Observation, diag: ContactDiagnosis) -> Command:
         if diag.kind == "seated_candidate":
             lat = float(np.hypot(*diag.lateral_force))
             if lat <= self.cfg.seat_lateral_ratio * diag.axial_force + self.cfg.seat_lateral_offset_n:
@@ -599,6 +635,160 @@ class AdaptiveInsertionController(InsertionController):
             diag.kind = "partial_jam"
             self.log(obs.t, "detect", "deep stall with high lateral load: treated as jam")
         return self._begin_recover(obs)
+
+    # ------------------------------------------------------------------ v0.2c: hard-stop evidence (latching parts)
+    def _stop_candidate(self, diag: ContactDiagnosis) -> bool:
+        """Stalled while pushing, supported under the whole tip (centred CoP, little side load)."""
+        c = self.cfg
+        if diag.trigger not in ("stall", "bottomed", "excess_force") or diag.cop is None:
+            return False
+        centred = norm3(np.append(diag.cop, 0.0)) <= c.hard_stop_cop_mm * MM
+        lateral_small = (
+            float(np.hypot(*diag.lateral_force))
+            <= c.surface_lateral_ratio * max(diag.axial_force, _EPS) + c.surface_lateral_offset_n
+        )
+        return bool(centred and lateral_small)
+
+    def _in_cavity(self, raw_depth: float) -> bool:
+        """Tip past the drawing's lead-in by lead_in_sigma_k depth sigmas (calibrated mouth)."""
+        lead_in = self.ctx.connector.chamfer + self.cfg.lead_in_sigma_k * self._sigma_depth()
+        return raw_depth - self.depth_offset > lead_in
+
+    def _stop_entry(self, diag: ContactDiagnosis, proofed: bool) -> dict:
+        return {
+            "raw": float(diag.depth + self.depth_offset),
+            "xy": diag.probe_xy.copy(),
+            "yaw": float(matrix_to_rotvec(self.R_corr)[2]),
+            "attempt": int(self.attempts),
+            "proofed": proofed,
+            "captured": None,
+        }
+
+    def _stop_evidence(self, obs: Observation, diag: ContactDiagnosis) -> Command | None:
+        """A candidate hard stop: proof push where the terminals are, then the repeat check."""
+        entry = self._stop_entry(diag, proofed=False)
+        if diag.depth >= self._terminal_zone - self.cfg.lead_in_sigma_k * self._sigma_depth():
+            self._pending_stop = entry
+            self._proof_t_force = None
+            self._proof_depth0 = float(obs.depth)
+            self.phase, self.phase_t = "proof", obs.t
+            self.log(obs.t, "proof_push", f"stop at {diag.depth / MM:.2f} mm in the terminal zone: "
+                                          f"push at {self._proof_force:.1f} N")
+            return self._cmd(self.cfg.force_phase_speed_cap_mm_s)
+        return self._confirm_stop(obs, entry)
+
+    def _proof_step(self, obs: Observation, dt: float) -> Command:
+        c = self.cfg
+        F, T = self._wrench(obs)
+        f_ax = float(F[2])
+        v = min(self.force_axis.velocity(self._proof_force, f_ax), c.proof_push_speed_mm_s * MM)
+        self.z -= v * dt
+        self.adm_lat.update(F[:2], dt)
+        self.adm_rot.update(T, dt)
+        advanced = float(obs.depth) - self._proof_depth0
+        if advanced > c.proof_advance_mm * MM:
+            self.log(obs.t, "proof_push", f"advanced {advanced / MM:.2f} mm: not a hard stop, inserting at "
+                                          f"{self._proof_force:.1f} N")
+            self._pending_stop = None
+            self._f_insert = self._proof_force
+            self.monitor.reset(obs.t)
+            self._bottom_since = None
+            self._enter(obs.t, INSERT)
+            return self._cmd(c.force_phase_speed_cap_mm_s)
+        if f_ax >= c.bottom_force_fraction * self._proof_force and self._proof_t_force is None:
+            self._proof_t_force = obs.t
+        held = self._proof_t_force is not None and obs.t - self._proof_t_force >= c.proof_push_s
+        if held or obs.t - self.phase_t > c.proof_push_max_s:
+            entry = self._pending_stop
+            self._pending_stop = None
+            entry["proofed"] = bool(held)
+            self.log(obs.t, "proof_push", f"held at {f_ax:.1f} N, advanced {advanced / MM:+.3f} mm")
+            if held:
+                cmd = self._confirm_stop(obs, entry)
+                if cmd is not None:
+                    return cmd
+            return self._route_detect(obs, self.diagnosis)
+        return self._cmd(c.force_phase_speed_cap_mm_s)
+
+    def _confirm_stop(self, obs: Observation, entry: dict) -> Command | None:
+        """Add a hard stop to the evidence; declare the part defective once it repeats in the cavity."""
+        c = self.cfg
+        self._hard_stops.append(entry)
+        same = [e for e in self._hard_stops if abs(e["raw"] - entry["raw"]) <= c.hard_stop_depth_tol_mm * MM]
+        inside = [e for e in same if e["captured"] or self._in_cavity(e["raw"])]
+        self.log(obs.t, "hard_stop", f"#{len(self._hard_stops)} raw depth {entry['raw'] / MM:.2f} mm, "
+                                     f"{len(same)} at this depth, {len(inside)} known in the cavity")
+        if len(same) < c.hard_stop_repeats:
+            return None
+        if inside:
+            return self._defect(obs, "hard_stop_short", f"{len(same)} hard stops at {entry['raw'] / MM:.2f} mm "
+                                                         f"(mouth {self.depth_offset / MM:+.2f} mm), centred CoP")
+        # Ambiguous only if the mouth was calibrated on this very stop (it is the highest support seen, so it may
+        # be the face or an obstruction in the cavity) and the camera puts it at least a lead-in below the mouth.
+        # A stop below a higher calibrated support but inside the lead-in is a lead-in contact (yaw), not probed.
+        ambiguous = (abs(entry["raw"] - self.depth_offset) <= c.hard_stop_depth_tol_mm * MM
+                     and entry["raw"] >= self.ctx.connector.chamfer)
+        if c.capture_probe and ambiguous and not any(e["captured"] is False for e in same):
+            return self._begin_capture(obs, entry)
+        return None
+
+    def _defect(self, obs: Observation, kind: str, evidence: str) -> Command:
+        self.log(obs.t, "defect_verdict", f"{kind}: {evidence}")
+        return self._fail(obs, f"defect_suspected:{kind}")
+
+    def _any_in_cavity_stop(self) -> dict | None:
+        inside = [e for e in self._hard_stops if e["captured"] or self._in_cavity(e["raw"])]
+        return inside[-1] if inside else None
+
+    # Capture probe: the VERIFY wall probes, run on a repeated flat stop whose depth is ambiguous.
+    def _begin_capture(self, obs: Observation, entry: dict) -> Command:
+        self._capture = {"entry": entry, "base": self.adm_lat.x.copy(), "results": [],
+                         "dirs": [np.array(d, dtype=float) for d in ((0, 1), (0, -1))], "unsettled": obs.t}
+        self.phase, self.phase_t = "capture_preload", obs.t
+        self.log(obs.t, "capture_probe", f"repeated flat stop at {entry['raw'] / MM:.2f} mm: probing for the walls")
+        return self._cmd(self.cfg.force_phase_speed_cap_mm_s)
+
+    def _capture_step(self, obs: Observation, dt: float) -> Command:
+        c = self.cfg
+        cap = self._capture
+        F, _ = self._wrench(obs)
+        self._hold_preload(F, dt)
+        speed = self._probe_speed_mm_s * c.verify_return_speed_factor
+        if self.phase == "capture_preload":
+            self.adm_lat.update(F[:2], dt)
+            if abs(float(F[2]) - c.verify_preload_n) > c.preload_tolerance_n:
+                cap["unsettled"] = obs.t
+            elapsed = obs.t - self.phase_t
+            if (elapsed > c.preload_min_s and obs.t - cap["unsettled"] >= c.preload_settle_s) or elapsed > c.preload_max_s:
+                cap["base"] = self.adm_lat.x.copy()
+                self.phase, self.phase_t = "capture_out", obs.t
+            return self._cmd(c.force_phase_speed_cap_mm_s)
+        if self.phase == "capture_out":
+            d = cap["dirs"][len(cap["results"])]
+            reaction = float(-np.dot(F[:2], d))
+            travel = float(np.dot(self.adm_lat.x - cap["base"], d))
+            if reaction >= c.verify_force_n or travel >= self.verify_probe + self._probe_lead:
+                cap["results"].append((reaction, travel))
+                self.phase, self.phase_t = "capture_back", obs.t
+            else:
+                self.adm_lat.x = self.adm_lat.x + d * self._probe_speed_mm_s * MM * dt
+            return self._cmd(speed)
+        # capture_back
+        self.adm_lat.x = cap["base"].copy()
+        if self._reached(obs, tol=c.probe_reach_tol_mm * MM):
+            if len(cap["results"]) < len(cap["dirs"]):
+                self.phase, self.phase_t = "capture_out", obs.t
+                return self._cmd(speed)
+            captured = all(r >= c.verify_force_n for r, _ in cap["results"])
+            cap["entry"]["captured"] = captured
+            self.log(obs.t, "capture_probe", f"wall reactions {[round(r, 1) for r, _ in cap['results']]} N at travel "
+                                             f"{[round(t / MM, 2) for _, t in cap['results']]} mm -> "
+                                             f"{'in the cavity' if captured else 'not captured'}")
+            if captured:
+                return self._defect(obs, "hard_stop_short", f"repeated flat stop at {cap['entry']['raw'] / MM:.2f} mm "
+                                                             f"with both walls within the clearance, centred CoP")
+            return self._route_detect(obs, self.diagnosis)
+        return self._cmd(speed)
 
     # ------------------------------------------------------------------ RECOVER
     def _begin_recover(self, obs: Observation) -> Command:
@@ -612,6 +802,8 @@ class AdaptiveInsertionController(InsertionController):
         c = self.cfg
         F, _ = self._wrench(obs)
         if norm3(F) > c.max_force_n * c.retract_stuck_force_factor and obs.t - self.phase_t > c.retract_stuck_delay_s:
+            return self._fail(obs, "stuck_during_retract")
+        if self._pull_capped(obs, F):
             return self._fail(obs, "stuck_during_retract")
         self.z = self._retract_height()
         if self._reached(obs, tol=c.retract_reach_tol_mm * MM, rot_tol=c.retract_reach_tol_rad):
@@ -632,6 +824,16 @@ class AdaptiveInsertionController(InsertionController):
             # lead-in) or a sticking lead-in; repeated surprises trigger the yaw search.
             if self.localizer.entry_probability_at(diag.probe_xy) > c.yaw_search_entry_probability:
                 self.blocks_at_best += 1
+            guard = self._verdict and c.polarization_guard and self._any_in_cavity_stop()
+            if guard:
+                # The tip has been past the lead-in, so the plug's yaw fits the cavity: a block there is an
+                # obstruction, not a yaw error. No yaw search; keep the yaw it entered with.
+                self.blocks_at_best = 0
+                rv = matrix_to_rotvec(self.R_corr)
+                if rv[2] != guard["yaw"]:
+                    rv[2] = guard["yaw"]
+                    self.R_corr = rotvec_to_matrix(rv)
+                    detail = f"polarization guard: yaw back to {guard['yaw'] / DEG:+.1f} deg; "
             # CoP reliability: a conform that settled flat (CoP ~ 0) or tipped onto a
             # pivot edge matches the contact model; an intermediate stop indicates mixed
             # support (top face + lead-in) whose CoP magnitude is biased.
@@ -720,6 +922,14 @@ class AdaptiveInsertionController(InsertionController):
 
     # ------------------------------------------------------------------ VERIFY
     def _begin_verify(self, obs: Observation) -> Command:
+        if self.latching and self._verdict and self._slid_pulls and not self._bottom_proofed:
+            # v0.2c: the plug slid out of an earlier bottom; first test this one at the proof force.
+            self._bottom_proofed = True
+            self._proof_t_force = None
+            self._proof_depth0 = float(obs.depth)
+            self._enter(obs.t, VERIFY, "bottom_proof")
+            self.log(obs.t, "proof_push", f"bottom after a slide-out: push at {self._proof_force:.1f} N")
+            return self._cmd(self.cfg.force_phase_speed_cap_mm_s)
         if self.latching:
             return self._begin_latch_verify(obs)
         # Seat conformity first: zero-spring tilt compliance lets the plug face settle
@@ -782,6 +992,10 @@ class AdaptiveInsertionController(InsertionController):
                 ok = held and moved <= self._pull_limit and self._clicked
                 self.log(obs.t, "verify", f"pull {-f_ax:.1f} N at {moved / MM:.2f} mm, click "
                                           f"{'seen' if self._clicked else 'not seen'} -> {'PASS' if ok else 'FAIL'}")
+                if not ok and self._verdict:
+                    cmd = self._latch_check_failed(obs, held and moved <= self._pull_limit, moved > self._pull_limit)
+                    if cmd is not None:
+                        return cmd
                 if not ok:
                     self.diagnosis = ContactDiagnosis("verify_failed", self._corrected_depth(obs), 0.0, np.zeros(2),
                                                       np.zeros(3), None, obs.lateral.copy(), "verify")
@@ -789,13 +1003,63 @@ class AdaptiveInsertionController(InsertionController):
                     return self._recover_step(obs)
                 self.phase, self.phase_t = "release", obs.t
             return self._cmd(c.force_phase_speed_cap_mm_s)
+        if self.phase == "bottom_proof":
+            return self._bottom_proof_step(obs, f_ax, dt)
         # re-seat: the pull leaves the plug on the latch hook; push it back to the floor
         self.z -= self.force_axis.velocity(c.insert_force_n, f_ax) * dt
         back = self._corrected_depth(obs) >= self._pull_start - c.reseat_tolerance_mm * MM
         if (back and f_ax >= c.bottom_force_fraction * c.insert_force_n) or obs.t - self.phase_t > c.pull_test_max_s:
             self.log(obs.t, "reseat", f"{'back on the floor' if back else 'not back on the floor'}")
+            if self.phase == "latched_reseat":
+                self._no_retract = True
+                self.z = float(obs.rel_pose.p[2])
+                self.log(obs.t, "gentle_retract", "latched without a click: the datasheet retention exceeds the cell "
+                                                  "stop, so the plug is left in place")
+                return self._fail(obs, "unverified:latched_no_click")
             return self._succeed(obs)
         return self._cmd(c.force_phase_speed_cap_mm_s)
+
+    # ------------------------------------------------------------------ v0.2c: failed latch check
+    def _latch_check_failed(self, obs: Observation, held: bool, slid: bool) -> Command | None:
+        """After a failed pull: leave a latched plug in place, re-push a plug that slid out, or give the verdict."""
+        c = self.cfg
+        if held:
+            # Retained at the test force without a click: latched (or held some other way). Never pull it out.
+            self.phase, self.phase_t = "latched_reseat", obs.t
+            return self._cmd(c.force_phase_speed_cap_mm_s)
+        if not slid:
+            return None  # neither held nor slid out within the test time: the normal recovery
+        bottom = self._pull_start + self.depth_offset
+        same = [b for b in self._slid_pulls if abs(b - bottom) <= c.hard_stop_depth_tol_mm * MM]
+        self._slid_pulls.append(bottom)
+        if len(same) + 1 >= c.no_retention_repeats:
+            return self._defect(obs, "no_retention", f"slid out under the pull {len(same) + 1} times at the same bottom "
+                                                     f"({bottom / MM:.2f} mm), click "
+                                                     f"{'seen' if self._clicked else 'not seen'}")
+        return None  # retract and retry; the next bottom gets a proof push first
+
+    def _bottom_proof_step(self, obs: Observation, f_ax: float, dt: float) -> Command:
+        """On a bottom after an earlier slide-out: hold it at the proof force before the click and pull."""
+        c = self.cfg
+        v = min(self.force_axis.velocity(self._proof_force, f_ax), c.proof_push_speed_mm_s * MM)
+        self.z -= v * dt
+        self._trace.append((self._corrected_depth(obs), f_ax))
+        advanced = float(obs.depth) - self._proof_depth0
+        if advanced > c.proof_advance_mm * MM:
+            self.log(obs.t, "proof_push", f"advanced {advanced / MM:.2f} mm past the bottom: inserting at "
+                                          f"{self._proof_force:.1f} N")
+            self._f_insert = self._proof_force
+            self.monitor.reset(obs.t)
+            self._bottom_since = None
+            self._enter(obs.t, INSERT)
+            return self._cmd(c.force_phase_speed_cap_mm_s)
+        if f_ax >= c.bottom_force_fraction * self._proof_force and self._proof_t_force is None:
+            self._proof_t_force = obs.t
+        held = self._proof_t_force is not None and obs.t - self._proof_t_force >= c.proof_push_s
+        if not (held or obs.t - self.phase_t > c.proof_push_max_s):
+            return self._cmd(c.force_phase_speed_cap_mm_s)
+        self.log(obs.t, "proof_push", f"bottom held at {f_ax:.1f} N, advanced {advanced / MM:+.3f} mm")
+        return self._begin_latch_verify(obs)
 
     def _verify_step(self, obs: Observation) -> Command:
         if self.latching:
@@ -1071,8 +1335,26 @@ class AdaptiveInsertionController(InsertionController):
         # The admittance offsets stay frozen: zeroing them while the plug is still in
         # the cavity commands a sudden re-orientation against the walls, and a wedged
         # plug then loads the wrist past the cell's torque stop.
-        self.z = self._retract_height()
         c = self.cfg
+        if not self._no_retract and self._pull_capped(obs, self._wrench(obs)[0]):
+            self.log(obs.t, "abort", "plug held while backing out: left in place")
+        if self._no_retract:
+            # Gentle retract not possible (held, e.g. latched): command the plug where it is, so the servo stops
+            # pulling, and leave it for the operator.
+            if not self.done and self._reached(obs, tol=c.retract_reach_tol_mm * MM, rot_tol=c.retract_reach_tol_rad):
+                self.finish(obs.t, False, getattr(self, "_fail_reason", "unknown"))
+            return self._cmd(self.cfg.retract_speed_mm_s)
+        self.z = self._retract_height()
         if not self.done and self._reached(obs, tol=c.retract_reach_tol_mm * MM, rot_tol=c.retract_reach_tol_rad):
             self.finish(obs.t, False, getattr(self, "_fail_reason", "unknown"))
         return self._cmd(self.cfg.retract_speed_mm_s)
+
+    def _pull_capped(self, obs: Observation, F: np.ndarray) -> bool:
+        """v0.2c gentle retract: stop pulling a plug that holds (latching parts). Holds it where it is."""
+        if not self._verdict or float(F[2]) >= -self._retract_pull_cap:
+            return False
+        self._no_retract = True
+        self.z = float(obs.rel_pose.p[2])
+        self.log(obs.t, "gentle_retract", f"pull {-float(F[2]):.1f} N above {self._retract_pull_cap:.1f} N: "
+                                          f"stop pulling, plug held at {self._corrected_depth(obs) / MM:.2f} mm")
+        return True

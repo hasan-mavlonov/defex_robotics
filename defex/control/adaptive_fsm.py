@@ -502,7 +502,8 @@ class AdaptiveInsertionController(InsertionController):
             F, T = self._wrench(obs)
             self.z -= self.force_axis.velocity(c.conform_force_n, float(F[2])) * dt
             if self._rate_conform:
-                settled = self._rate_conform_step(obs, F, T, dt, c.rate_conform_speed_deg_s * DEG)
+                settled = self._rate_conform_step(obs, F, T, dt, c.rate_conform_speed_deg_s * DEG,
+                                                  skip_noise=c.conform_skip_noise_axes)
             else:
                 self.adm_conf.update(T, dt, active=np.array([1.0, 1.0, 0.0]))
             # Lateral and yaw compliance stay active: if conforming tips the plug onto
@@ -944,13 +945,14 @@ class AdaptiveInsertionController(InsertionController):
         return self.S.R.T @ matrix_to_rotvec(obs.fixture_tcp.R @ obs.setpoint.R.T)
 
     def _rate_conform_step(self, obs: Observation, F: np.ndarray, T: np.ndarray, dt: float, rate: float,
-                           in_cavity: bool = False) -> bool:
+                           in_cavity: bool = False, skip_noise: bool = False) -> bool:
         """Tilt at ``rate`` towards the measured torque, per axis, until it reverses (the face passed flat:
         command the measured orientation) or the tilt limit is reached (tipped onto an edge). Returns True
         once both axes are resolved and the fixture has caught up with the setpoint.
 
-        ``in_cavity`` (v0.2c, seat conform): axes with a torque below the noise lever are not turned, and a
-        large torque along the turn (walls pushing the plug) does not stop it."""
+        v0.2c: with ``skip_noise`` an axis whose torque starts below the noise lever is not turned (its sign is
+        noise; a soft wrist would not move it either); with ``in_cavity`` (seat conform) the same, and a large
+        torque along the turn (walls pushing the plug) does not stop it."""
         c = self.cfg
         f_ax = max(float(F[2]), _EPS)
         lag = self._orientation_lag(obs)
@@ -958,8 +960,10 @@ class AdaptiveInsertionController(InsertionController):
             self._rc_dir = np.sign(T[:2])  # the zero-spring admittance's direction (x' = T / d)
             self._rc_flat[:] = False
             self._rc_done[:] = self._rc_dir == 0
-            if in_cavity:
-                self._rc_done[:] |= np.abs(T[:2]) < c.cavity_tilt_lever_mm * MM * f_ax
+            if in_cavity or skip_noise:
+                balanced = np.abs(T[:2]) < c.cavity_tilt_lever_mm * MM * f_ax  # CoP within the noise lever
+                self._rc_done[:] |= balanced
+                self._rc_flat[:] |= balanced
             self._rc_rev_since = [None, None]
         wall = c.rate_conform_wall_factor * f_ax * float(np.hypot(*self.plug_half))
         limit = c.conform_limit_deg * DEG

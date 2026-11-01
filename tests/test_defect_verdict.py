@@ -117,3 +117,12 @@ def test_latch_phases_entered_before_a_latch_check_have_their_state():
     """Regression: a plug held while backing out on the first attempt enters the latch phases before any pull."""
     c = _ctrl("microfit3_4ckt")
     assert c._pull_start == 0.0 and not c._held_reseated and not c._no_retract
+
+
+def test_slide_out_counts_as_evidence_only_from_a_flat_bottom():
+    c = _ctrl("microfit3_4ckt")
+    px = c.plug_half[0]
+    assert c._seat_on_face(_diag(kind="seated_candidate", cop_mm=(0.2, -0.1)))
+    assert c._seat_on_face(_diag(kind="seated_candidate", cop_mm=(2.0, -1.9)))  # stiff wrist, plug on the floor
+    assert not c._seat_on_face(_diag(kind="seated_candidate", cop_mm=(px / MM + 1.5, -1.9)))  # off the face: wedged
+    assert not c._seat_on_face(None)

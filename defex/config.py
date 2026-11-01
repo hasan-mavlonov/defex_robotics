@@ -672,7 +672,8 @@ class AdaptiveConfig:
     capture_probe: bool = True
     # Latch check: after a pull in which the plug slides out, C retracts and retries as before, but the next
     # bottom is first held at the proof force: if the plug goes deeper, the first bottom was premature and the
-    # insertion continues. Slid out twice at the same bottom: "defect_suspected:no_retention". (Pushing back from
+    # insertion continues. Slid out twice at the same flat bottom (CoP under the plug face, the same margin as
+    # surface_cop_margin_mm): "defect_suspected:no_retention". (Pushing back from
     # the pulled-out position instead releases the setpoint lead stored at the terminal entry peak into the
     # bottom; on the half-latched part's end stop that excited a 15 Hz force oscillation up to 54 N in development.)
     no_retention_repeats: int = 2

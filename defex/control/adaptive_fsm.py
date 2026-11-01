@@ -228,7 +228,7 @@ class AdaptiveInsertionController(InsertionController):
         self._f_insert = c.insert_force_n
         self._hard_stops: list[dict] = []  # candidate hard stops: raw depth, probe, yaw correction, captured
         self._pending_stop: dict | None = None
-        self._slid_pulls: list[float] = []  # raw bottom depths at which the plug slid out under the pull
+        self._slid_pulls: list[tuple[float, bool]] = []  # (raw bottom depth, flat bottom) of each slide-out
         self._no_retract = False
         self._bottom_proofed = False
         self._held_reseated = False
@@ -843,7 +843,7 @@ class AdaptiveInsertionController(InsertionController):
                 # obstruction, not a yaw error. No yaw search; keep the yaw it entered with.
                 self.blocks_at_best = 0
                 rv = matrix_to_rotvec(self.R_corr)
-                if rv[2] != guard["yaw"]:
+                if abs(rv[2] - guard["yaw"]) > _EPS:
                     rv[2] = guard["yaw"]
                     self.R_corr = rotvec_to_matrix(rv)
                     detail = f"polarization guard: yaw back to {guard['yaw'] / DEG:+.1f} deg; "
@@ -1057,13 +1057,26 @@ class AdaptiveInsertionController(InsertionController):
         if not slid:
             return None  # neither held nor slid out within the test time: the normal recovery
         bottom = self._pull_start + self.depth_offset
-        same = [b for b in self._slid_pulls if abs(b - bottom) <= c.hard_stop_depth_tol_mm * MM]
-        self._slid_pulls.append(bottom)
+        # Evidence only from a flat bottom: the centre of pressure under the plug face. Outside the face the plug
+        # is tilted or wedged, and a slide-out says nothing about the latch (still re-pushed at the next bottom).
+        flat = self._seat_on_face(self.diagnosis)
+        same = [b for b, f in self._slid_pulls if f and abs(b - bottom) <= c.hard_stop_depth_tol_mm * MM]
+        self._slid_pulls.append((bottom, flat))
+        if not flat:
+            self.log(obs.t, "latch", "slid out, but the CoP at the bottom was off the plug face: not counted")
+            return None
         if len(same) + 1 >= c.no_retention_repeats:
             return self._defect(obs, "no_retention", f"slid out under the pull {len(same) + 1} times at the same bottom "
                                                      f"({bottom / MM:.2f} mm), click "
                                                      f"{'seen' if self._clicked else 'not seen'}")
         return None  # retract and retry; the next bottom gets a proof push first
+
+    def _seat_on_face(self, diag: ContactDiagnosis | None) -> bool:
+        if diag is None or diag.cop is None:
+            return False
+        px, py = self.plug_half
+        m = self.cfg.surface_cop_margin_mm * MM
+        return bool(abs(diag.cop[0]) <= px + m and abs(diag.cop[1]) <= py + m)
 
     def _bottom_proof_step(self, obs: Observation, f_ax: float, dt: float) -> Command:
         """On a bottom after an earlier slide-out: hold it at the proof force before the click and pull."""

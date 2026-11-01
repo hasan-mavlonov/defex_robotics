@@ -26,7 +26,7 @@ from experiments.runner import nominal_socket_pose
 from experiments.train_contact_prior import init_layers, loss_and_grads, model_json, standardize
 
 BLOCKING_TRIAL = ("noise_2mm", 4, 2026)  # development seed; C blocks twice on this trial
-ARM_LIKE = FixtureDynamics(8.0, 400.0, 6.3, 0.006)
+ARM_LIKE = FixtureDynamics(8.0, 400.0, 6.3, 0.006, 822.0, 0.2)  # UR5e values after W5b (tilt stiffness, servo lag)
 
 
 @pytest.fixture(scope="module")
@@ -93,7 +93,12 @@ def test_installed_models_load_and_match_only_their_fixture(task):
     if (DEFAULT_MODEL_DIR / "contact_prior_gantry.json").exists():
         assert gantry is not None and gantry.backend == "gantry"
     arm = find_model(ARM_LIKE)
-    assert arm is None or arm.backend == "arm"
+    if (DEFAULT_MODEL_DIR / "contact_prior_arm.json").exists():
+        assert arm is not None and arm.backend == "arm"
+    else:
+        assert arm is None
+    # Without the W5b servo terms the arm model does not apply (they are stored with it).
+    assert find_model(FixtureDynamics(8.0, 400.0, 6.3, 0.006)) is None
 
 
 def test_find_model_needs_a_matching_fixture(tmp_path, c_run, task):

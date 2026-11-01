@@ -293,6 +293,21 @@ def git_info() -> dict:
             "dirty": bool(run("status", "--porcelain", "--untracked-files=no", "--", ".", ":(exclude)results"))}
 
 
+def consistent_fixture_dynamics(fds: list[dict], rel_tol: float) -> dict:
+    """The first dataset's fixture dynamics, after checking every dataset agrees within ``rel_tol``."""
+    first = fds[0]
+
+    def same(a, b):
+        if a is None or b is None:
+            return a is None and b is None
+        return abs(a - b) <= rel_tol * max(abs(a), abs(b))
+
+    for fd in fds[1:]:
+        if set(fd) != set(first) or not all(same(v, fd[k]) for k, v in first.items()):
+            raise SystemExit(f"datasets disagree on the fixture dynamics: {fds}")
+    return first
+
+
 def _rel(path: Path) -> str:
     return str(path.relative_to(REPO_ROOT)) if path.is_relative_to(REPO_ROOT) else str(path)
 
@@ -381,14 +396,9 @@ def main() -> None:
     # Fixture dynamics the data was collected on (a model applies only to a matching fixture):
     # the first training set's, after checking that every dataset agrees within the tolerance
     # G matches with (the tool's mass differs by a fraction of a percent between connectors).
-    fd_list = [json.loads((data_root / args.backend / n / "summary.json").read_text())["fixture_dynamics"]
-               for n in [*args.train.split(","), args.val]]
-    rel_tol = LearnedPriorConfig().fixture_match_rel_tol
-    for fd in fd_list[1:]:
-        if set(fd) != set(fd_list[0]) or any(
-                abs(fd[k] - v) > rel_tol * max(abs(v), abs(fd[k])) for k, v in fd_list[0].items() if v is not None):
-            raise SystemExit(f"datasets disagree on the fixture dynamics: {fd_list}")
-    meta["fixture_dynamics"] = fd_list[0]
+    meta["fixture_dynamics"] = consistent_fixture_dynamics(
+        [json.loads((data_root / args.backend / n / "summary.json").read_text())["fixture_dynamics"]
+         for n in [*args.train.split(","), args.val]], LearnedPriorConfig().fixture_match_rel_tol)
     data = model_json(args.backend, args.feature_set, names, x_mean, x_std, y_mean, y_std, res["layers"], meta)
     model = ContactPrior(data)
     metrics = {

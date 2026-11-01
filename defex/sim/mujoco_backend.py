@@ -173,6 +173,11 @@ class MuJoCoBackend:
         mujoco.mj_jacBody(m, d, jp, jr, self._tool_body)
         return float(1.0 / (jp @ np.linalg.solve(M, jp.T))[2, 2])
 
+    def _servo_following_lag(self, actuators: np.ndarray) -> float:
+        """Slowest kv / kp of the position servos: steady following error per unit speed (s)."""
+        m = self.model
+        return float(max(-m.actuator_biasprm[a, 2] / m.actuator_gainprm[a, 0] for a in actuators))
+
     def _fixture_dynamics(self) -> FixtureDynamics:
         f = self.fixture_cfg
         return FixtureDynamics(
@@ -180,6 +185,8 @@ class MuJoCoBackend:
             yaw_stiffness_nm_per_rad=f.angular_kp_nm_per_rad,
             effective_mass_kg=self._tool_effective_mass_z(),
             command_latency_s=0.0,
+            tilt_stiffness_nm_per_rad=f.angular_kp_nm_per_rad,
+            following_lag_s=self._servo_following_lag(np.arange(self.model.nu)),
         )
 
     @property

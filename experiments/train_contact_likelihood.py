@@ -655,6 +655,21 @@ def cmd_to_ratio(args) -> None:
     print(f"wrote {dest}")
 
 
+def cmd_install(args) -> None:
+    """Install a selected v2 model as assets/models/contact_prior_<backend>.json (replacing the file there;
+    the v1 models stay reproducible as results/v0.2c_learned_prior/models/v1_contact_prior_*.json)."""
+    data = json.loads((REPO_ROOT / args.model).read_text())
+    if data.get("format") != FORMAT_V2:
+        raise SystemExit("install takes a v2 model")
+    characterized_fixture_dynamics(data["fixture_dynamics"])
+    data["integration_weight"] = args.weight
+    data["metadata"] = {**data["metadata"], "selection_rule": args.rule, "selection_result": args.result,
+                        "installed_from": args.model, "installed_utc": datetime.now(timezone.utc).isoformat()}
+    dest = REPO_ROOT / "assets" / "models" / f"contact_prior_{data['backend']}.json"
+    dest.write_text(json.dumps(data))
+    print(f"installed {dest} from {args.model}")
+
+
 def load_any(path: str):
     data = json.loads((REPO_ROOT / path).read_text())
     return ContactLikelihood(data, path) if data.get("format") == FORMAT_V2 else ContactPrior(data, path)
@@ -716,9 +731,14 @@ def main() -> None:
     r.add_argument("--model", required=True)
     r.add_argument("--out", required=True)
     r.add_argument("--marginal-components", type=int, default=2)
+    i = sub.add_parser("install")
+    i.add_argument("--model", required=True)
+    i.add_argument("--weight", type=float, default=1.0)
+    i.add_argument("--rule", default="results/v0.2c_learned_prior/SELECTION_RULE.md")
+    i.add_argument("--result", required=True, help="the committed table the choice comes from")
     args = ap.parse_args()
     args.command_line = "python -m experiments.train_contact_likelihood " + " ".join(sys.argv[1:])
-    {"fit": cmd_fit, "evaluate": cmd_evaluate, "to-ratio": cmd_to_ratio}[args.cmd](args)
+    {"fit": cmd_fit, "evaluate": cmd_evaluate, "to-ratio": cmd_to_ratio, "install": cmd_install}[args.cmd](args)
 
 
 if __name__ == "__main__":

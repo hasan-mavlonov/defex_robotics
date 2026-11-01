@@ -11,8 +11,10 @@ against 97.0% for spiral search on a compliance device, F; p < 1e-6). On the UR5
 arm F matches or beats C: 96.3% against 96.7% on standard conditions, 95.2%
 against 90.8% on latching parts. C passed 0 of 1,600 deliberately bad parts, F
 1,062. Be careful with that number: spiral search here checks depth only and C
-ends with a pull test, so the fair answer is "a spiral cell with a pull test has
-not been run yet". On latching parts, F re-tuned for that connector seats 60 of
+ends with a pull test. Given the same pull test (development, dev seed 2026), D
+and F pass 0 bad parts too. The answer that holds: "with a pull test, spiral
+search also stops bad parts; where C did better in development is good parts that
+vary within the datasheet, 120 of 120 against 91-93" (not yet pre-registered). On latching parts, F re-tuned for that connector seats 60 of
 60 on a dev seed against C's 54 (`results/v0.2c_gantry_baselines`, branch
 `v0.2c/gantry-baselines`). `results/benchmark_v0.2b/REPORT.md`, `TABLES.md`.
 
@@ -21,8 +23,10 @@ not been run yet". On latching parts, F re-tuned for that connector seats 60 of
 Today, in simulation, a well-tuned spiral search on a compliance device is the
 faster cell, with 10-37% more good units per hour than C, and it seats as many
 parts on the arm. C's measured edge is bad parts not passed, and that comes from a
-pull test a spiral cell could add. The honest answer: C's case is not proven yet.
-The next run should put a pull test on F and vary the latch geometry
+pull test a spiral cell can add (in development, F with the pull passes 0 too).
+The honest answer: C's case is not proven yet. The candidate edge is handling
+part-to-part variation (dev seed only); the next pre-registered run must test it
+against F with a pull test
 (`results/benchmark_v0.2b/REPORT.md`, "After the run").
 
 ## 3. "Why should I trust MuJoCo contact?"

@@ -48,8 +48,9 @@ families (the camera is worse than the cell is told).
 * **C passed none of the 1,600 deliberately bad parts** (half-latched, broken
   latch, stubbed terminal, wrong polarization; Wilson 95% upper bound 0.24%).
   F passed 1,062 of them as good, D 442. But only C and G run a retention pull
-  test; the conventional cells check depth only, and none was given a pull test.
-  This gap measures having a pull test, not the adaptive method (see below).
+  test; the conventional cells check depth only. Given the same pull test in
+  development, D and F also pass 0 bad parts (dev seed 2026). This gap measures
+  having a pull test, not the adaptive method (see below).
 
 C leads every conventional cell on the gantry under the standard conditions
 (99.1% against F's 97.0%, p < 1e-6) and on latching good parts (95.7% against
@@ -127,7 +128,10 @@ gantry baselines were never tuned with the latching connector: re-tuned, F seats
 * That C never passes a bad unit: 6 in 6,200 good-part trials, 5 from one known
   bug.
 * That C's way of checking a latch beats a conventional cell with a pull test:
-  no such baseline has been run.
+  in development, D and F with the same pull pass 0 bad parts too. C's remaining
+  edge there, seating good parts whose latch and terminal forces vary within the
+  datasheet range (120 of 120 against F's 91-93), is one dev seed and not yet
+  pre-registered.
 * That C's latching results survive real part-to-part variation: its pull test
   uses the assumed latch geometry, and a 0.15 mm earlier latch makes it reject
   most good parts in simulation.

@@ -180,8 +180,14 @@ pre-registered number, it changes what they can be taken to mean.
    insertion with a guarded pull at half the rated retention force. D, E and F
    check depth only (`defex/control/spiral_search.py`, `baselines.py`); none was
    given a pull test, which a conventional integrator could add. So "C 0 of 1,600,
-   F 1,062" compares a cell with a retention test against cells without one. A
-   baseline with a pull test has not been measured.
+   F 1,062" compares a cell with a retention test against cells without one.
+   Measured since (development, dev seed 2026, branch `v0.2c/integration`
+   36ca4b1, `results/v0.2c_integration/review_fixes/REVIEW_TABLES.md`): with the
+   same pull as C, **D and F also pass 0 of 80 bad parts** on both machines, and F
+   seats 54 and 58 of 60 latching good parts against C's 58 and 56. Where C still
+   leads in that run is a new suite of good parts that vary within their datasheet
+   ranges (latch position, latch force, terminal friction): C 120 of 120 on each
+   machine, F with the pull 91 and 93 (p < 1e-6).
 2. **C's pull test depends on the assumed latch geometry.** It passes only if the
    plug moves at most the model's 0.5 mm post-snap stroke plus 0.3 mm. That 0.5 mm
    is listed as assumed in `assets/connectors/microfit3_4ckt.json` and is the value

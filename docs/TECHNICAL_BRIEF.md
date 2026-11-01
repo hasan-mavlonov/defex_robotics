@@ -61,8 +61,12 @@ the terminal-friction drop), so the pull does the work.
 **Caveats found after the run** (development seeds,
 [`REPORT.md`](../results/benchmark_v0.2b/REPORT.md#after-the-run-review-findings-not-pre-registered)):
 
-- Only C and G run a pull test; D, E and F check depth only. The gap measures
-  having a pull test. A conventional cell with one has not been run.
+- Only C and G run a pull test; D, E and F check depth only. Given the same
+  pull in development (dev seed 2026), D and F also pass 0 of 80 bad parts. The
+  gap measures having a pull test. C's remaining edge in that run: good parts
+  whose latch and terminal forces vary within the datasheet range, C 120 of 120
+  per machine against F's 91-93 (`results/v0.2c_integration/review_fixes/REVIEW_TABLES.md`
+  on branch `v0.2c/integration`; not pre-registered).
 - C's pull limit comes from the simulator's assumed latch geometry. If the
   simulated latch engages 0.15 mm earlier, C seats 4 of 60 good parts on the
   gantry instead of 54; F is unaffected

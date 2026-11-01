@@ -27,7 +27,7 @@ def _load(run: Path):
 def overall_table(before: Path, after: Path) -> str:
     rb, ob = _load(before)
     ra, oa = _load(after)
-    out = ["| Controller | Success before | Success after | Bad units passed (before / after) | "
+    out = ["| Controller | Success before | Success after | Escapes: failed units passed as good (before / after) | "
            "Protective stops (before / after) | Median cycle of successes, s (before / after) |",
            "|---|---|---|---|---|---|"]
 

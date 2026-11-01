@@ -51,7 +51,7 @@ def _assert_c_as_tuned_on_the_gantry(ctx: ControllerContext) -> None:
     assert not c._rate_conform and c._yaw_sweep and c._probe_lead == 0.0
     assert c._yaw_probe_rate == c.cfg.yaw_probe_speed_deg_s * DEG
     # v0.2c rules: off, and INSERT's timeout is the configured one.
-    assert not (c._cavity_tilt or c._floor_impact or c._reaim_verify)
+    assert not (c._cavity_tilt or c._floor_impact or c._reaim_verify or c._unjam)
     assert c.monitor.timeout_s == c.cfg.insert_timeout_s
 
 

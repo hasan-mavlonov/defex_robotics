@@ -669,6 +669,21 @@ class AdaptiveConfig:
     # the setpoint; until then a torque reversal still marks it flat. W5b stopped at the setpoint limit with
     # the plug 0.7 deg short of it, then measured the CoP after the plug passed flat (an edge, 4 mm off).
     conform_limit_waits_for_plug: bool = True
+    # Tilt range of the rate-mode conform (stiff wrists only; the gantry's admittance conform keeps
+    # conform_limit_deg). At noise_2mm the camera's tilt sigma is 2 deg, so 4 deg covers 2 sigma; on seed
+    # 2026, 15 of the arm's 24 noise_2mm failures had a vision tilt error above 3 deg (gantry: 0 of 3).
+    # The W5b value unless the selection rule picks otherwise.
+    rate_conform_limit_deg: float = 4.0
+    # In-place un-jam on a stiff wrist: a stall or force/torque trip part-way into the cavity with a tilt
+    # torque beyond the face-contact bound (rate_conform_wall_factor x axial force x half-diagonal) means the
+    # walls hold a tilted plug. Hold a light preload and turn the tilt towards that torque until it is
+    # relieved (at most max_tilt_correction_deg), then insert again; at most this many times per attempt.
+    # Before, the attempt was retracted and repeated with the 0.2 deg the scaled admittance had learned.
+    unjam_in_cavity: bool = True
+    unjam_per_attempt: int = 2
+    # Turn rate: the plug's upper end overshoots by rate x lag x depth = 2 x 0.2 s x 15 mm = 0.1 mm on the
+    # UR5e, inside the 0.5 mm clearance (Micro-Fit: 0.06 mm at 8 mm depth, inside 0.15 mm).
+    unjam_speed_deg_s: float = 2.0
     # A failed verification on a stiff wrist is retried with the orientation and lateral offset the
     # attempt learned (as after a jam), not at the identical pose (which repeated the same failure).
     reaim_after_verify_fail: bool = True

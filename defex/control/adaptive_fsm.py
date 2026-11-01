@@ -135,6 +135,9 @@ class AdaptiveInsertionController(InsertionController):
         self._cavity_tilt = self._rate_conform and c.cavity_tilt_compliance
         self._floor_impact = self._rate_conform and c.settle_floor_impact
         self._reaim_verify = self._rate_conform and c.reaim_after_verify_fail
+        self._unjam = self._rate_conform and c.unjam_in_cavity
+        self._unjams_left = 0
+        self._unjam_dir = np.zeros(2)
         self._rc_dir: np.ndarray | None = None
         self._rc_flat = np.zeros(2, dtype=bool)
         self._rc_done = np.zeros(2, dtype=bool)
@@ -384,6 +387,7 @@ class AdaptiveInsertionController(InsertionController):
                 f"yaw_corr={matrix_to_rotvec(self.R_corr)[2] / DEG:+.1f} deg",
             )
             self.monitor.reset(obs.t)
+            self._unjams_left = c.unjam_per_attempt
             self._contact = False
             self._bottom_since = None
             self._trace = []
@@ -396,6 +400,8 @@ class AdaptiveInsertionController(InsertionController):
         dt = self.ctx.control_period_s
         F, T = self._wrench(obs)
         f_ax = float(F[2])
+        if self.phase == "unjam":
+            return self._unjam_step(obs, F, T, dt)
         depth = self._corrected_depth(obs)
         # contact state with hysteresis
         if f_ax > c.contact_force_n or norm3(F) > c.contact_on_norm_factor * c.contact_force_n:
@@ -437,6 +443,21 @@ class AdaptiveInsertionController(InsertionController):
 
     # ------------------------------------------------------------------ DETECT
     def _to_detect(self, obs: Observation, trigger: str) -> Command:
+        if self._unjam and self._unjams_left > 0 and trigger in ("excess_torque", "excess_force", "stall"):
+            depth = self._corrected_depth(obs)
+            F, T = self._wrench(obs)
+            dead = self.cfg.cavity_tilt_lever_mm * MM * max(float(F[2]), self.cfg.contact_force_n)
+            wall = self.cfg.rate_conform_wall_factor * max(float(F[2]), _EPS) * float(np.hypot(*self.plug_half))
+            if self._engaged(depth) and depth < self._seat_threshold() and float(np.hypot(T[0], T[1])) > wall:
+                # v0.2c: jammed part-way in on a stiff wrist, the walls loading the plug (torque beyond what a
+                # face contact can give). Turn the tilt towards the torque in place, as a soft wrist would.
+                self._unjams_left -= 1
+                self.z = -obs.depth  # drop the setpoint lead
+                self._unjam_dir = np.where(np.abs(T[:2]) > dead, np.sign(T[:2]), 0.0)
+                self.phase, self.phase_t = "unjam", obs.t
+                self.log(obs.t, "unjam", f"{trigger} at {depth / MM:.2f} mm, T=({T[0]:+.3f},{T[1]:+.3f}) N m: "
+                                         f"turning tilt towards the walls' torque")
+                return self._cmd(self.cfg.force_phase_speed_cap_mm_s)
         self._window = []
         self._trigger = trigger
         self._enter(obs.t, DETECT, "hold", trigger)
@@ -526,7 +547,7 @@ class AdaptiveInsertionController(InsertionController):
                 rate = 0.0 if settled else np.inf
             max_s = c.conform_max_s
             if self._rate_conform:  # plus the time to turn through the whole tilt range
-                max_s += c.conform_limit_deg / c.rate_conform_speed_deg_s
+                max_s += c.rate_conform_limit_deg / c.rate_conform_speed_deg_s
             if (elapsed > c.conform_min_s and (rate < c.conform_rate_deg * DEG or saturated and not self._rate_conform)) \
                     or elapsed > max_s:
                 self._conf_saturated = saturated
@@ -848,7 +869,7 @@ class AdaptiveInsertionController(InsertionController):
             max_s = c.seat_conform_max_s
             if self._rate_conform:
                 rate = 0.0 if settled else np.inf
-                max_s += c.conform_limit_deg / c.rate_seat_conform_speed_deg_s
+                max_s += c.rate_conform_limit_deg / c.rate_seat_conform_speed_deg_s
             if (elapsed > c.seat_conform_min_s and rate < c.conform_rate_deg * DEG) or elapsed > max_s:
                 conf = self.adm_conf.x
                 self.log(obs.t, "seat_conform", f"tilt aligned to floor by ({conf[0] / DEG:+.2f},{conf[1] / DEG:+.2f}) deg")
@@ -966,7 +987,7 @@ class AdaptiveInsertionController(InsertionController):
                 self._rc_flat[:] |= balanced
             self._rc_rev_since = [None, None]
         wall = c.rate_conform_wall_factor * f_ax * float(np.hypot(*self.plug_half))
-        limit = c.conform_limit_deg * DEG
+        limit = c.rate_conform_limit_deg * DEG
         loaded = f_ax >= 0.5 * c.conform_force_n
         for k in (0, 1):
             if self._rc_done[k]:
@@ -992,6 +1013,28 @@ class AdaptiveInsertionController(InsertionController):
             else:
                 self.adm_conf.x[k] = float(np.clip(self.adm_conf.x[k] + self._rc_dir[k] * rate * dt, -limit, limit))
         return bool(self._rc_done.all() and norm3(np.append(lag[:2], 0.0)) < c.rate_conform_settle_deg * DEG)
+
+    def _unjam_step(self, obs: Observation, F: np.ndarray, T: np.ndarray, dt: float) -> Command:
+        """v0.2c: light preload, tilt turning towards the wall torque until it is relieved; then insert again."""
+        c = self.cfg
+        self._hold_preload(F, dt)
+        dead = c.cavity_tilt_lever_mm * MM * max(float(F[2]), c.contact_force_n)
+        x = self.adm_rot.x.copy()
+        for k in (0, 1):
+            if self._unjam_dir[k] != 0.0 and np.sign(T[k]) == self._unjam_dir[k] and abs(T[k]) > dead:
+                x[k] += self._unjam_dir[k] * c.unjam_speed_deg_s * DEG * dt
+            else:
+                self._unjam_dir[k] = 0.0  # relieved (or reversed) on this axis
+        n = norm3(x)
+        if n > self.adm_rot.limit:
+            x *= self.adm_rot.limit / n
+            self._unjam_dir[:] = 0.0
+        self.adm_rot.x = x
+        if not self._unjam_dir.any() or obs.t - self.phase_t > c.max_tilt_correction_deg / c.unjam_speed_deg_s:
+            self.log(obs.t, "unjam", f"tilt now ({x[0] / DEG:+.2f},{x[1] / DEG:+.2f}) deg: inserting again")
+            self.monitor.reset(obs.t)
+            self.phase, self.phase_t = "", obs.t
+        return self._cmd(c.force_phase_speed_cap_mm_s)
 
     def _cavity_tilt_step(self, T: np.ndarray, f_ax: float, dt: float) -> None:
         """v0.2c: turn the tilt at the seat-conform rate towards a wall torque on the engaged plug."""

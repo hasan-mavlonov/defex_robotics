@@ -153,3 +153,34 @@ def test_rate_conform_at_the_limit_waits_for_the_plug(spec):
     old.adm_conf.x[0] = -cfg.conform_limit_deg * DEG
     old._rate_conform_step(lagging, F, T, 0.002, rate)
     assert old._rc_done[0]
+
+
+def test_unjam_turns_towards_the_wall_torque_then_inserts_again(spec):
+    from defex.control.adaptive_fsm import INSERT
+
+    c = _arm_c(spec)
+    c.S, c.G = Pose.identity(), Pose.identity()
+    cfg = c.cfg
+    c.state, c.phase = INSERT, ""
+    c.touch_calibrated = True
+    c._unjams_left = cfg.unjam_per_attempt
+    o = _obs()
+    o.depth = 9.0 * MM
+    o.force = np.array([0.0, 0.0, 5.0])
+    o.torque = np.array([0.0, 0.13, 0.0])  # 26 mm of lever at 5 N: walls, not a face contact
+    c._to_detect(o, "excess_torque")
+    assert c.state == INSERT and c.phase == "unjam" and c._unjams_left == cfg.unjam_per_attempt - 1
+    assert c.z == pytest.approx(-9.0 * MM)
+    np.testing.assert_array_equal(c._unjam_dir, [0.0, 1.0])
+    c._unjam_step(o, o.force, o.torque, 0.002)
+    assert c.adm_rot.x[1] == pytest.approx(cfg.unjam_speed_deg_s * DEG * 0.002) and c.adm_rot.x[0] == 0.0
+    c._unjam_step(o, o.force, np.zeros(3), 0.002)  # relieved
+    assert c.phase == "" and c.state == INSERT
+    # A face-level torque (CoP inside the plug) is a normal stop: no unjam.
+    c2 = _arm_c(spec)
+    c2.S, c2.G, c2.state, c2.touch_calibrated, c2._unjams_left = Pose.identity(), Pose.identity(), INSERT, True, 2
+    o.torque = np.array([0.0, 0.01, 0.0])
+    c2._to_detect(o, "stall")
+    assert c2.phase != "unjam"
+    off = _arm_c(spec, unjam_in_cavity=False)
+    assert not off._unjam

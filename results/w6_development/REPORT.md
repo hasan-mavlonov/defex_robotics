@@ -8,15 +8,22 @@ friction_1, tilt_10deg) x 30 trials:
 
 | Profile | Changes from V0.1 | Success | Bad units | Median | p95 | p95 peak force |
 |---|---|---|---|---|---|---|
-| S0 | none | 179/180 | 0 | 6.90 s | 11.83 s | 8.5 N |
-| S6 | yaw probe 25 deg/s, near-floor 10 mm/s | 179/180 | 0 | 6.14 s | 11.22 s | 10.8 N |
-| S5 | S6 + insert 10 mm/s, wall probe 3.5 mm/s | 179/180 | 0 | 5.50 s | 9.94 s | 12.7 N |
-| **S2 (W6 default)** | S6 + insert 10 mm/s, wall probe 5 mm/s | 179/180 | 0 | **5.35 s** | **9.84 s** | 12.7 N |
-| S3 | S2 + shorter seat conform and preload | 177/180 | 2 | 5.34 s | 9.29 s | 12.7 N (rejected: bad units) |
+| S0 | none | 179/180 | 0 | 6.90 s | 11.85 s | 8.5 N |
+| S6 | yaw probe 25 deg/s, near-floor 10 mm/s | 179/180 | 0 | 6.14 s | 11.24 s | 10.8 N |
+| S5 | S6 + insert 10 mm/s, wall probe 3.5 mm/s | 179/180 | 0 | 5.50 s | 9.96 s | 12.7 N |
+| **S2 (W6 default)** | S6 + insert 10 mm/s, wall probe 5 mm/s | 179/180 | 0 | **5.35 s** | **9.86 s** | 12.8 N |
+| S3 | S2 + shorter seat conform and preload | 177/180 | 2 | 5.34 s | 9.40 s | 12.8 N (rejected: bad units) |
+
+Source: `experiments/compare_configs.py` with `configs/speed.json`; trials and
+summary in `data/speed` (re-run after review with every speed set explicitly;
+counts and medians match the first, unsaved run, p95 values now use
+interpolated percentiles). A second, unsaved exploration (S4, S7) is omitted.
+The time breakdown above (approach 1.5 s, insert 2.4 s, verify 2.7 s) came from
+an unsaved 8-trial profile and is indicative only.
 
 Floor impact speed drives the extra force: faster cycles cost contact force.
 
-The brief's tail target, p95 at most 1.5 x median, is not met (S2: 1.84 x).
+The brief's tail target, p95 at most 1.5 x median, is not met (S2: 9.86 / 5.35 = 1.84 x).
 The tail is recoveries: each costs 3-4 s (retract, re-align, tare, re-insert).
 Shorter recoveries need a faster tare and re-approach, or fewer recoveries
 (better first probe), which W4's joint localizer did not deliver.

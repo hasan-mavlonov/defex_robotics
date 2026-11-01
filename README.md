@@ -70,6 +70,29 @@ paired trials on a fresh seed, 20261031.
   probes would catch a bad insertion. Deliberately bad parts (half-latched,
   broken latch, stubbed terminal) are W3 of the V0.2 plan.
 
+**Robustness checks (W2).**
+
+* **When the camera is worse than the cell believes, C loses its lead.** On
+  five pre-registered held-out families
+  ([`results/heldout_v0.2`](results/heldout_v0.2/REPORT.md)), F seated 82.6%
+  and C 79.8% (C-only 27, F-only 41, McNemar p = 0.1). F beat C outright with
+  an unknown 1.5 mm hand-eye bias (100 against 97) and in the combined worst
+  case (85 against 56, all of C's failures retry-limit aborts: its search prior
+  trusts the stated camera accuracy). C was still ahead when the true error was
+  2 mm against a claimed 0.5 mm (54 against 36). **C passed 29 bad units** there,
+  every one a plug seated more than 3 degrees off in yaw: VERIFY re-centred yaw
+  only when the camera claimed poor yaw accuracy. The W4 branch re-centres yaw
+  every cycle, which removed this escape in development at about 1.4 s per cycle.
+* **The comparison does not hinge on one MuJoCo tuning.** On 12 randomized
+  simulators plus the nominal one (contact stiffness and damping, solver
+  softness, elliptic or pyramidal friction cone, servo stiffness 7-19 N/mm),
+  C led the best of D, E, F in all 13, by 8.3 to 12.5 points
+  ([`results/sim_randomization_v0.2`](results/sim_randomization_v0.2/REPORT.md)).
+* **No cliffs in C's own constants.** Every one of 113 constants, scaled by
+  +/-20% one at a time, cost at most 10 points; the worst +/-50% change cost 8.3
+  ([`results/sensitivity_v0.2`](results/sensitivity_v0.2/REPORT.md),
+  development measurement).
+
 A, B and C agree with V0.1 within their intervals (V0.1: 23.5%, 85.9%, 99.25%).
 These are simulation results with assumed physical parameters.
 
@@ -625,9 +648,8 @@ The V0.2 plan (brief of 2026-10-26) runs in workstreams, one PR each:
 
 1. W0, done: CI, payload identification from F/T readings, Apple Silicon reproduction.
 2. W1, done: fair baselines D, E, F and benchmark_v0.2a (this README's results).
-3. W2: move tuned constants into configuration, sensitivity sweep, new held-out
-   families (mis-characterized vision, vision outliers, combined worst case),
-   MuJoCo parameter randomization.
+3. W2, done: tuned constants moved into configuration (behaviour identical),
+   sensitivity sweep, pre-registered held-out families and simulator randomization.
 4. W4: joint (x, y, yaw) hole localizer, aimed at the `noise_2mm` tail.
 5. W3: terminal and latch physics from a real connector datasheet, push-click-pull
    verification, deliberately bad parts to measure false accepts.

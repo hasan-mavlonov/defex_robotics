@@ -17,7 +17,10 @@ uncertainty is strongly input-dependent; numpy only, so the network is kept smal
     python -m experiments.train_contact_prior --backend gantry --feature-set all --install-existing --weight 1 \\
         --weight-source results/w9_development/validation/weights/paired.md
 
-Outputs: results/w9_development/models/<backend>_<feature set>.json (model) and
+Data is read from <root>/data/<backend>/ and models are written to <root>/models/
+(root: results/w9_development unless --root says otherwise).
+
+Outputs: <root>/models/<backend>_<feature set>.json (model) and
 ..._metrics.json (search table, train/val/dev NLL, MAE against the analytic
 localizer, calibration). ``--install`` also writes assets/models/contact_prior_<backend>.json
 with the integration weight chosen on the validation seed.
@@ -55,17 +58,16 @@ from defex.tasks.scenarios import resolve_connector
 from experiments.collect_contacts import RESERVED_SEEDS, TRAIN_SEEDS, VALIDATION_SEED, all_conditions
 
 DATA = REPO_ROOT / "results" / "w9_development" / "data"
-MODELS = REPO_ROOT / "results" / "w9_development" / "models"
 TRAIN_BASE_SEEDS = tuple(range(3001, 3031))
 GRID = {"hidden": [(32, 32), (64, 64)], "lr": [1e-3, 3e-3], "weight_decay": [1e-4, 1e-3]}
 NUMPY_SEED = 9
 
 
 # ------------------------------------------------------------------ data
-def load_rows(backend: str, names: list[str], seeds: set[int] | None = None) -> list[dict]:
+def load_rows(backend: str, names: list[str], seeds: set[int] | None = None, data_root: Path = DATA) -> list[dict]:
     rows = []
     for name in names:
-        with gzip.open(DATA / backend / name / "contacts.jsonl.gz", "rt") as fh:
+        with gzip.open(data_root / backend / name / "contacts.jsonl.gz", "rt") as fh:
             for line in fh:
                 r = json.loads(line)
                 if r["base_seed"] in RESERVED_SEEDS:
@@ -291,6 +293,10 @@ def git_info() -> dict:
             "dirty": bool(run("status", "--porcelain", "--untracked-files=no", "--", ".", ":(exclude)results"))}
 
 
+def _rel(path: Path) -> str:
+    return str(path.relative_to(REPO_ROOT)) if path.is_relative_to(REPO_ROOT) else str(path)
+
+
 def standardize(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     mean = x.mean(axis=0)
     std = x.std(axis=0)
@@ -319,15 +325,17 @@ def main() -> None:
     ap.add_argument("--weight", type=float, default=None, help="integration weight chosen on the validation seed")
     ap.add_argument("--weight-source", default="", help="file the weight choice comes from (recorded in the model)")
     ap.add_argument("--install-existing", action="store_true",
-                    help="install the already trained results/w9_development/models/<backend>_<set>.json (no retraining)")
+                    help="install the already trained <root>/models/<backend>_<set>.json (no retraining)")
+    ap.add_argument("--root", default="results/w9_development", help="data and model root, relative to the repository")
     args = ap.parse_args()
+    data_root, models = REPO_ROOT / args.root / "data", REPO_ROOT / args.root / "models"
     if args.install_existing:
-        return install(json.loads((MODELS / f"{args.backend}_{args.feature_set}.json").read_text()), args)
+        return install(json.loads((models / f"{args.backend}_{args.feature_set}.json").read_text()), args)
     t0 = time.time()
-    tr_rows = load_rows(args.backend, args.train.split(","), set(TRAIN_BASE_SEEDS))
-    va_rows = load_rows(args.backend, [args.val], {VALIDATION_SEED})
-    dev_dir = DATA / args.backend / args.dev
-    dev_rows = load_rows(args.backend, [args.dev], {2026}) if (dev_dir / "contacts.jsonl.gz").exists() else []
+    tr_rows = load_rows(args.backend, args.train.split(","), set(TRAIN_BASE_SEEDS), data_root)
+    va_rows = load_rows(args.backend, [args.val], {VALIDATION_SEED}, data_root)
+    dev_dir = data_root / args.backend / args.dev
+    dev_rows = load_rows(args.backend, [args.dev], {2026}, data_root) if (dev_dir / "contacts.jsonl.gz").exists() else []
     names = FEATURE_SETS[args.feature_set]
     x_tr_raw = feature_matrix([r["record"] for r in tr_rows], names)
     x_va_raw = feature_matrix([r["record"] for r in va_rows], names)
@@ -362,20 +370,25 @@ def main() -> None:
             "numpy_seed": NUMPY_SEED, "numpy": np.__version__,
             "train_base_seeds": [min(TRAIN_BASE_SEEDS), max(TRAIN_BASE_SEEDS)], "validation_base_seed": VALIDATION_SEED,
             "dev_sanity_seed": 2026, "unused_training_seeds": [s for s in TRAIN_SEEDS if s not in TRAIN_BASE_SEEDS],
-            "data": {"train": [str((DATA / args.backend / n).relative_to(REPO_ROOT)) for n in args.train.split(",")],
-                     "validation": str((DATA / args.backend / args.val).relative_to(REPO_ROOT))},
+            "data": {"train": [_rel(data_root / args.backend / n) for n in args.train.split(",")],
+                     "validation": _rel(data_root / args.backend / args.val)},
             "n_train": len(tr_rows), "n_val": len(va_rows),
             "conditions_train": sorted({r["condition"] for r in tr_rows}),
             "selected_hyperparameters": {k: entry[k] for k in ("hidden", "lr", "weight_decay", "best_epoch")},
             "selection": "lowest validation NLL over the grid; early stopping on validation NLL (patience 150 epochs)",
         },
     }
-    # Fixture dynamics the data was collected on (a model applies only to a matching fixture).
-    fds = {json.dumps(json.loads((DATA / args.backend / n / "summary.json").read_text())["fixture_dynamics"],
-                      sort_keys=True) for n in [*args.train.split(","), args.val]}
-    if len(fds) != 1:
-        raise SystemExit(f"datasets disagree on the fixture dynamics: {fds}")
-    meta["fixture_dynamics"] = json.loads(fds.pop())
+    # Fixture dynamics the data was collected on (a model applies only to a matching fixture):
+    # the first training set's, after checking that every dataset agrees within the tolerance
+    # G matches with (the tool's mass differs by a fraction of a percent between connectors).
+    fd_list = [json.loads((data_root / args.backend / n / "summary.json").read_text())["fixture_dynamics"]
+               for n in [*args.train.split(","), args.val]]
+    rel_tol = LearnedPriorConfig().fixture_match_rel_tol
+    for fd in fd_list[1:]:
+        if set(fd) != set(fd_list[0]) or any(
+                abs(fd[k] - v) > rel_tol * max(abs(v), abs(fd[k])) for k, v in fd_list[0].items() if v is not None):
+            raise SystemExit(f"datasets disagree on the fixture dynamics: {fd_list}")
+    meta["fixture_dynamics"] = fd_list[0]
     data = model_json(args.backend, args.feature_set, names, x_mean, x_std, y_mean, y_std, res["layers"], meta)
     model = ContactPrior(data)
     metrics = {
@@ -388,11 +401,11 @@ def main() -> None:
         split: {k: metrics[split].get(k) for k in ("n", "nll_nats", "mae_mm", "calibration_xy", "calibration_yaw")}
         for split in ("train", "validation", "dev_seed2026")
     }
-    MODELS.mkdir(parents=True, exist_ok=True)
+    models.mkdir(parents=True, exist_ok=True)
     stem = f"{args.backend}_{args.feature_set}"
-    (MODELS / f"{stem}.json").write_text(json.dumps(data))
-    (MODELS / f"{stem}_metrics.json").write_text(json.dumps(metrics, indent=1))
-    print(f"wrote {MODELS / (stem + '.json')} and {stem}_metrics.json")
+    (models / f"{stem}.json").write_text(json.dumps(data))
+    (models / f"{stem}_metrics.json").write_text(json.dumps(metrics, indent=1))
+    print(f"wrote {models / (stem + '.json')} and {stem}_metrics.json")
     for split in ("train", "validation", "dev_seed2026"):
         m = metrics[split]
         if not m.get("n"):

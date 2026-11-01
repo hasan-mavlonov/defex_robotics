@@ -8,7 +8,8 @@
 ``variants.json`` maps a variant name to {"controller": "adaptive" | "adaptive_learned",
 optional "model_path", "weight"}; the C variant must be named "adaptive" (the paired
 reference). Only W9 seeds are accepted (development 2026/2027, training 3001-3040,
-validation 4001). Output under results/w9_development/<name>/: trials.csv, summary.json
+validation 4001). Output under <root>/<name>/ (root: results/w9_development unless --root
+says otherwise): trials.csv, summary.json
 (the runner's format), paired.json and paired.md (G minus C, trial by trial).
 ``--analyze`` writes paired.json / paired.md for any run directory with a trials.csv
 (e.g. an experiments.robustness run with --controllers adaptive,adaptive_learned).
@@ -170,6 +171,7 @@ def main() -> None:
     ap.add_argument("--name")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--backend", choices=["gantry", "arm"], default="gantry")
+    ap.add_argument("--root", type=Path, default=OUT, help="output root (default results/w9_development)")
     args = ap.parse_args()
     if args.analyze:
         dirs = [d.resolve() for d in args.analyze]
@@ -190,7 +192,7 @@ def main() -> None:
     if "adaptive" not in variants:
         raise SystemExit("variants must include C as 'adaptive' (the paired reference)")
     conds = [c for c in args.conditions.split(",") if c]
-    out = OUT / args.name
+    out = (args.root if args.root.is_absolute() else REPO_ROOT / args.root) / args.name
     out.mkdir(parents=True, exist_ok=True)
     jobs = [(v, spec, c, args.seed, tuple(range(a, min(a + 5, args.trials))))
             for c in conds for v, spec in variants.items() for a in range(0, args.trials, 5)]

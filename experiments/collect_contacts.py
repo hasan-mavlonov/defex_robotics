@@ -11,7 +11,8 @@ a controller.
         --conditions noise_1mm,noise_2mm,mf_noise_1mm --name train --workers 4
     python -m experiments.collect_contacts --backend arm --seeds 3001-3030 ...
 
-Output under results/w9_development/data/<backend>/<name>/: contacts.jsonl.gz (one
+Output under <root>/data/<backend>/<name>/ (root: results/w9_development unless
+--root says otherwise): contacts.jsonl.gz (one
 JSON object per record: identifiers, the record exactly as the controller wrote it,
 ``label``), trials.csv (one row per trial, with ``base_seed``), summary.json (counts,
 fixture dynamics, environment, arguments).
@@ -130,6 +131,7 @@ def main() -> None:
     ap.add_argument("--name", required=True)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--chunk", type=int, default=5)
+    ap.add_argument("--root", default="results/w9_development", help="output root, relative to the repository")
     args = ap.parse_args()
     os.environ["DEFEX_BACKEND"] = args.backend
     seeds = parse_seeds(args.seeds)
@@ -137,7 +139,7 @@ def main() -> None:
     unknown = set(conds) - set(all_conditions())
     if unknown:
         raise SystemExit(f"unknown conditions: {sorted(unknown)}")
-    out = REPO_ROOT / "results" / "w9_development" / "data" / args.backend / args.name
+    out = REPO_ROOT / args.root / "data" / args.backend / args.name
     out.mkdir(parents=True, exist_ok=True)
     jobs = [(args.controller, c, s, tuple(range(a, min(a + args.chunk, args.trials))))
             for s in seeds for c in conds for a in range(0, args.trials, args.chunk)]
@@ -145,14 +147,14 @@ def main() -> None:
     print(f"collect: {len(seeds)} seeds x {len(conds)} conditions x {args.trials} trials = {total} trials "
           f"({args.backend}, {args.workers} workers) -> {out}")
     t0 = time.time()
-    results, records, fd = [], [], None
+    results, records, fd_by_cond = [], [], {}
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        futs = [pool.submit(_job, *j) for j in jobs]
+        futs = {pool.submit(_job, *j): j for j in jobs}
         for n, f in enumerate(as_completed(futs), 1):
             res, rec, fd_ = f.result()
             results += res
             records += rec
-            fd = fd or fd_
+            fd_by_cond.setdefault(futs[f][1], fd_)
             if n % 20 == 0 or n == len(futs):
                 el = time.time() - t0
                 print(f"  {len(results)}/{total} trials, {len(records)} records, {el:.0f} s", flush=True)
@@ -172,7 +174,9 @@ def main() -> None:
         "description": "W9 development data: C's DETECT records with offline labels (not a benchmark)",
         "backend": args.backend, "controller": args.controller, "base_seeds": seeds, "conditions": conds,
         "trials_per_seed_and_condition": args.trials, "n_trials": len(results), "n_records": len(records),
-        "records_by_condition_and_kind": kinds, "fixture_dynamics": fd,
+        # The fixture dynamics of the first condition (the tool's mass differs slightly by connector).
+        "records_by_condition_and_kind": kinds, "fixture_dynamics": fd_by_cond.get(conds[0]),
+        "fixture_dynamics_by_condition": {c: fd_by_cond.get(c) for c in conds},
         "overall": summarize_overall(trial_results), "summary": summarize(trial_results),
         "environment": environment_info(), "wall_time_s": time.time() - t0,
     }, out / "summary.json")

@@ -1,0 +1,180 @@
+{
+  "description": "W9 development data: C's DETECT records with offline labels (not a benchmark)",
+  "backend": "gantry",
+  "controller": "adaptive_learned",
+  "base_seeds": [
+    3033,
+    3034,
+    3035,
+    3036,
+    3037,
+    3038,
+    3039,
+    3040
+  ],
+  "conditions": [
+    "noise_0.5mm"
+  ],
+  "trials_per_seed_and_condition": 10,
+  "n_trials": 80,
+  "n_records": 81,
+  "records_by_condition_and_kind": {
+    "noise_0.5mm": {
+      "seated_candidate": 80,
+      "surface_block": 1
+    }
+  },
+  "fixture_dynamics": {
+    "translational_stiffness_n_per_mm": 10.0,
+    "yaw_stiffness_nm_per_rad": 15.0,
+    "effective_mass_kg": 0.8839999999999999,
+    "command_latency_s": 0.0,
+    "tilt_stiffness_nm_per_rad": 15.0,
+    "following_lag_s": 0.03672428385951624,
+    "rotational_following_lag_s": 0.024383253195720607
+  },
+  "fixture_dynamics_by_condition": {
+    "noise_0.5mm": {
+      "translational_stiffness_n_per_mm": 10.0,
+      "yaw_stiffness_nm_per_rad": 15.0,
+      "effective_mass_kg": 0.8839999999999999,
+      "command_latency_s": 0.0,
+      "tilt_stiffness_nm_per_rad": 15.0,
+      "following_lag_s": 0.03672428385951624,
+      "rotational_following_lag_s": 0.024383253195720607
+    }
+  },
+  "overall": [
+    {
+      "controller": "adaptive_learned",
+      "n": 80,
+      "successes": 80,
+      "success_rate": 1.0,
+      "success_ci_low": 0.954180263735425,
+      "success_ci_high": 1.0,
+      "escapes": 0,
+      "detected_failures": 0,
+      "protective_stops": 0,
+      "false_accepts": 0,
+      "false_rejects": 0,
+      "self_checks": true,
+      "cycle_time_s_success": {
+        "mean": 5.47494999999958,
+        "median": 5.425999999999601,
+        "p95": 5.6815999999994595,
+        "p99": 6.357299999999162,
+        "max": 8.03999999999858
+      },
+      "cycle_time_s_all": {
+        "mean": 5.47494999999958,
+        "median": 5.425999999999601,
+        "p95": 5.6815999999994595,
+        "p99": 6.357299999999162,
+        "max": 8.03999999999858
+      },
+      "throughput_uph_no_reset": 657.5402515091967,
+      "throughput_uph_with_reset": 657.5402515091967,
+      "stop_reset_s": 60.0,
+      "peak_contact_force_n": {
+        "mean": 8.742457328664683,
+        "median": 8.972545052872732,
+        "p95": 11.801247235785693,
+        "p99": 13.31620358224113,
+        "max": 13.529068595389399
+      },
+      "peak_measured_torque_nm": {
+        "mean": 0.2659213293661941,
+        "median": 0.2826337294543182,
+        "p95": 0.2929882789025096,
+        "p99": 0.2974115774110894,
+        "max": 0.2974541361701709
+      },
+      "retries_mean": 0.0125
+    }
+  ],
+  "summary": [
+    {
+      "condition": "noise_0.5mm",
+      "group": "pose_uncertainty",
+      "controller": "adaptive_learned",
+      "n": 80,
+      "successes": 80,
+      "success_rate": 1.0,
+      "success_ci_low": 0.954180263735425,
+      "success_ci_high": 1.0,
+      "cycle_time_s_success": {
+        "mean": 5.47494999999958,
+        "median": 5.425999999999601,
+        "p95": 5.6815999999994595,
+        "p99": 6.357299999999162,
+        "max": 8.03999999999858
+      },
+      "cycle_time_s_all": {
+        "mean": 5.47494999999958,
+        "median": 5.425999999999601,
+        "p95": 5.6815999999994595,
+        "p99": 6.357299999999162,
+        "max": 8.03999999999858
+      },
+      "peak_contact_force_n": {
+        "mean": 8.742457328664683,
+        "median": 8.972545052872732,
+        "p95": 11.801247235785693,
+        "p99": 13.31620358224113,
+        "max": 13.529068595389399
+      },
+      "peak_contact_force_10ms_n": {
+        "mean": 5.821537772087508,
+        "median": 5.789830025005914,
+        "p95": 5.904467751358092,
+        "p99": 6.3361476317626915,
+        "max": 7.919830391382696
+      },
+      "peak_measured_force_n": {
+        "mean": 5.828237837702531,
+        "median": 5.794509018733351,
+        "p95": 5.908707019865533,
+        "p99": 6.360459277915549,
+        "max": 7.922648888913026
+      },
+      "peak_measured_torque_nm": {
+        "mean": 0.2659213293661941,
+        "median": 0.2826337294543182,
+        "p95": 0.2929882789025096,
+        "p99": 0.2974115774110894,
+        "max": 0.2974541361701709
+      },
+      "retries_mean": 0.0125,
+      "retries_max": 1,
+      "trials_with_recovery": 1,
+      "recovery_success_rate": 1.0,
+      "final_depth_mm": {
+        "mean": 15.000033171650571,
+        "median": 15.000036934826783,
+        "p95": 15.000039501788537,
+        "p99": 15.00004189267293,
+        "max": 15.000042428301333
+      },
+      "max_penetration_mm": 0.027655422194898287,
+      "protective_stops": 0,
+      "false_accepts": 0,
+      "false_rejects": 0,
+      "escapes": 0,
+      "throughput_uph_no_reset": 657.5402515091967,
+      "throughput_uph_with_reset": 657.5402515091967,
+      "failure_reasons": {}
+    }
+  ],
+  "environment": {
+    "python": "3.12.11",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "mujoco": "3.17.0",
+    "numpy": "2.5.4",
+    "matplotlib": "3.11.2",
+    "git_commit": "0ace479acc916535d19cd6222e417b026edeaeb9",
+    "git_dirty": false,
+    "cpu_count": 10
+  },
+  "wall_time_s": 7.791811943054199
+}

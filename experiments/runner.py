@@ -66,10 +66,23 @@ def nominal_socket_pose(condition: Condition, fixture: FixtureConfig) -> Pose:
     return Pose(layout.socket_mouth.copy(), np.eye(3))
 
 
+def backend_name() -> str:
+    return os.environ.get("DEFEX_BACKEND", "gantry")
+
+
+def make_backend():
+    """'gantry' (V0.1 fixture) or 'arm' (W5 UR5e); chosen by DEFEX_BACKEND so workers inherit it."""
+    if backend_name() == "arm":
+        from defex.sim.arm_backend import MuJoCoArmBackend
+
+        return MuJoCoArmBackend()
+    return None  # InsertionTask builds the gantry backend
+
+
 def _init_worker() -> None:
     global _TASK
     os.environ.setdefault("OMP_NUM_THREADS", "1")
-    _TASK = InsertionTask()
+    _TASK = InsertionTask(backend=make_backend())
 
 
 def save_trajectory(path: Path, recorder: TrajectoryRecorder, result: TrialResult, scenario) -> None:
@@ -185,6 +198,7 @@ def run_suite(
         "success_criteria": to_dict(SuccessCriteria()),
         "environment": environment_info(),
         "workers": workers,
+        "backend": backend_name(),
         "controller_configs": {c: to_dict(getattr(make_controller(c), "cfg", None)) for c in controllers},
         "compliant_stage": to_dict(CompliantStageConfig()),
     }

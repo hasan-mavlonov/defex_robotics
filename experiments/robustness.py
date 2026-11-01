@@ -16,6 +16,7 @@ commit) and, with ``--record N``, replayable trajectories. Plots are produced by
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -36,9 +37,12 @@ def main() -> None:
     ap.add_argument("--record", type=int, default=0, help="save trajectories for the first N trials of each cell")
     ap.add_argument("--list", action="store_true", help="list the available conditions and exit")
     ap.add_argument("--no-plots", action="store_true")
+    ap.add_argument("--backend", choices=["gantry", "arm"], default="gantry",
+                    help="arm: UR5e serial arm (W5; run scripts/fetch_menagerie.py first)")
     ap.add_argument("--suite", choices=["standard", "heldout"], default="standard",
                     help="heldout: the W2 held-out families (pre-registered runs only)")
     args = ap.parse_args()
+    os.environ["DEFEX_BACKEND"] = args.backend
 
     if args.suite == "heldout" and "--seed" not in sys.argv:
         raise SystemExit("--suite heldout needs an explicit --seed (the default 2026 is the tuning seed)")

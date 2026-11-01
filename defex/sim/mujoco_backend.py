@@ -28,6 +28,8 @@ class _CompiledModel:
 
 
 class MuJoCoBackend:
+    joint_names: tuple[str, ...] = FIXTURE_JOINTS
+
     """Physics backend for the DAIE workcell.
 
     The fixture is commanded with Cartesian TCP setpoints. Because the three wrist
@@ -83,9 +85,9 @@ class MuJoCoBackend:
         self._marker_sp_mocap = m.body("marker_setpoint").mocapid[0]
         self._tcp_site = m.site("tcp").id
         self._ft_site = m.site("ft_site").id
-        self._qadr = np.array([m.joint(j).qposadr[0] for j in FIXTURE_JOINTS])
-        self._vadr = np.array([m.joint(j).dofadr[0] for j in FIXTURE_JOINTS])
-        self._jrange = np.array([m.joint(j).range for j in FIXTURE_JOINTS])
+        self._qadr = np.array([m.joint(j).qposadr[0] for j in self.joint_names])
+        self._vadr = np.array([m.joint(j).dofadr[0] for j in self.joint_names])
+        self._jrange = np.array([m.joint(j).range for j in self.joint_names])
         self._ctrlrange = m.actuator_ctrlrange.copy()
         self._forcerange = m.actuator_forcerange.copy()
         s_f = m.sensor("ft_force")

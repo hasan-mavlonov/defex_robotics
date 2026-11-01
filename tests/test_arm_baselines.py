@@ -156,3 +156,40 @@ def test_hole_found_at_the_measured_position_when_enabled():
         c._spiral_step(obs)
         assert c.state == "INSERT"
         np.testing.assert_allclose(c.xy, expect)
+
+
+def test_arm_tuning_protocol_stages(tmp_path):
+    """The arm protocol of results/v0.2c_arm_baselines/SELECTION_RULE.md: grids, carry-over, conditions."""
+    import csv
+    from types import SimpleNamespace
+
+    import experiments.tune_baselines as tb
+
+    assert len(tb._grid(tb.ARM_SPIRAL_GRID)) == 81 and len(tb._grid(tb.ARM_SPIRAL_FINE)) == 12
+    assert len(tb.ARM_SPIRAL_SPEED) == 12 and len(tb.ARM_CONFIRM_CONDITIONS) == 21
+    assert not any(c.startswith("generalization") or c in ("mf_half_latched", "mf_broken_latch",
+                   "mf_stubbed_terminal", "mf_wrong_polarization") for c in tb.ARM_CONFIRM_CONDITIONS)
+    settings, conds = tb._arm_stage(SimpleNamespace(controller="spiral", stage="coarse", top=3), tmp_path)
+    assert len(settings) == 81 and conds == tb.ARM_COARSE_CONDITIONS
+
+    def write(stage, rows):
+        with (tmp_path / f"tuning_spiral_{stage}.csv").open("w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(rows[0]))
+            w.writeheader()
+            w.writerows(rows)
+
+    write("coarse", [dict(setting=k, **s) for k, s in enumerate(settings[:4])])
+    fine, _ = tb._arm_stage(SimpleNamespace(controller="spiral", stage="fine", top=3), tmp_path)
+    assert len(fine) == 36 and {tuple(f[k] for k in tb.ARM_SPIRAL_GRID) for f in fine} == {
+        tuple(s[k] for k in tb.ARM_SPIRAL_GRID) for s in settings[:3]}
+    write("fine", [dict(setting=k, **s) for k, s in enumerate(fine[:2])])
+    speed, conds = tb._arm_stage(SimpleNamespace(controller="spiral", stage="speed", top=1), tmp_path)
+    assert len(speed) == 12 and conds == tb.ARM_CONFIRM_CONDITIONS
+    assert all(s["max_attempts"] == fine[0]["max_attempts"] for s in speed)
+    write("speed", [dict(setting=k, **s) for k, s in enumerate(speed[:5])])
+    confirm, _ = tb._arm_stage(SimpleNamespace(controller="spiral", stage="confirm", top=3), tmp_path)
+    assert confirm == speed[:3]  # booleans and ints survive the CSV round trip
+    assert isinstance(confirm[1]["hole_at_measured_position"], bool) and isinstance(confirm[0]["max_attempts"], int)
+    # Every tuned key is a field of the stiff-fixture config it is applied to.
+    names = {f.name for f in fields(SpiralSearchStiffFixtureConfig)}
+    assert set(confirm[0]) <= names

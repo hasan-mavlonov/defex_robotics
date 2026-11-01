@@ -822,16 +822,18 @@ class AdaptiveConfig:
     # publishes neither). On dev seed 2026 the "click" is the terminal friction falling from its entry peak
     # to sliding (8 N, inside the click window on every part): all 40 broken latches per backend showed one.
     # click_required False: the click is logged but the verdict rests on the retention pull alone.
-    click_required: bool = True
+    # The three latch-check values below are candidate w60f, picked by
+    # results/v0.2c_integration/review_fixes/verify_selection/SELECTION_RULE.md on seed 4002 (W3: True, 0, 0).
+    click_required: bool = False
     # 0: W3 pull limit (the model's post-snap stroke + pull_test_margin_mm, 0.8 mm; a latch that engages
     # 0.15 mm earlier than the model fails it). > 0: the plug must hold the pull before it has backed out by
     # this fraction of the datasheet terminal wipe (1.75 mm), so its terminals stay mated by the rest.
-    pull_limit_wipe_fraction: float = 0.0
+    pull_limit_wipe_fraction: float = 0.6
     # 0: pull at pull_test_fraction x the rated retention (29 N). > 0: at least this x the datasheet maximum
     # mating force (1.1 x 32 N = 35.2 N, the proof push basis), because a part whose terminals sit at that
     # maximum can hold a 29 N pull on friction alone (dev seed 2026, latch_spread: two bad parts on the arm,
     # terminal force 1.5-1.6 x the model, held 29 N without a latch). Below the retract cap (36 N) and stop (48 N).
-    pull_test_mating_factor: float = 0.0
+    pull_test_mating_factor: float = 1.1
     # v0.2c: defect verdict, gentle retract and polarization guard. Latching parts only (a connector with a
     # mating spec); with defect_verdict False, or on a housing-only connector, none of this runs.
     # Evidence is observation-only, compared with the drawing and the datasheet (ConnectorSpec, ForceBudget).

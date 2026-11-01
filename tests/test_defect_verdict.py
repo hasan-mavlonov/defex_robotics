@@ -167,11 +167,14 @@ def _at_pull(cfg: AdaptiveConfig | None = None) -> AdaptiveInsertionController:
     return c
 
 
+W3 = dict(click_required=True, pull_limit_wipe_fraction=0.0, pull_test_mating_factor=0.0)
+
+
 def test_pull_limit_from_the_model_stroke_or_the_datasheet_wipe():
     m = ConnectorSpec.load("microfit3_4ckt").mating
-    assert _at_pull()._pull_limit == pytest.approx((m.latch_post_snap_stroke_mm + 0.3) * MM)  # W3: 0.8 mm
-    c = _at_pull(replace(AdaptiveConfig(), pull_limit_wipe_fraction=0.6))
-    assert c._pull_limit == pytest.approx(0.6 * m.terminal_wipe_mm * MM)
+    w3 = _at_pull(replace(AdaptiveConfig(), **W3))
+    assert w3._pull_limit == pytest.approx((m.latch_post_snap_stroke_mm + 0.3) * MM)  # W3: 0.8 mm
+    assert _at_pull()._pull_limit == pytest.approx(0.6 * m.terminal_wipe_mm * MM)  # installed (w60f): 1.05 mm
 
 
 @pytest.mark.parametrize("required,phase", [(True, "latched_reseat"), (False, "release")])
@@ -182,9 +185,19 @@ def test_a_held_pull_without_a_click_passes_only_when_the_click_is_not_required(
     assert c.phase == phase
 
 
-def test_pull_force_covers_the_datasheet_maximum_mating_force_when_asked():
+def test_pull_force_covers_the_datasheet_maximum_mating_force():
     m = ConnectorSpec.load("microfit3_4ckt").mating
-    assert _at_pull()._pull_target == pytest.approx(0.5 * m.latch_retention_force_n)  # 29 N
-    c = _at_pull(replace(AdaptiveConfig(), pull_test_mating_factor=1.1))
+    assert _at_pull(replace(AdaptiveConfig(), **W3))._pull_target == pytest.approx(0.5 * m.latch_retention_force_n)
+    c = _at_pull()  # installed: 35.2 N
     assert c._pull_target == pytest.approx(1.1 * m.mating_force_max_n)  # 35.2 N
     assert c._pull_target < c._retract_pull_cap < c.ctx.connector.force_budget.protective_stop_n
+
+
+def test_installed_latch_check_is_the_selected_candidate():
+    import json
+
+    from defex.config import REPO_ROOT
+
+    v = json.loads((REPO_ROOT / "results/v0.2c_integration/review_fixes/variants.json").read_text())["w60f"]
+    c = AdaptiveConfig()
+    assert {k: getattr(c, k) for k in v} == v

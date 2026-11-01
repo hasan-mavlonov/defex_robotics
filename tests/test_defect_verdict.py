@@ -180,3 +180,11 @@ def test_a_held_pull_without_a_click_passes_only_when_the_click_is_not_required(
     assert not c._clicked and c.phase == "pull"
     c._latch_verify_step(_held_obs(1.1, 7.5, -c._pull_target - 1.0))  # held, 0.5 mm back
     assert c.phase == phase
+
+
+def test_pull_force_covers_the_datasheet_maximum_mating_force_when_asked():
+    m = ConnectorSpec.load("microfit3_4ckt").mating
+    assert _at_pull()._pull_target == pytest.approx(0.5 * m.latch_retention_force_n)  # 29 N
+    c = _at_pull(replace(AdaptiveConfig(), pull_test_mating_factor=1.1))
+    assert c._pull_target == pytest.approx(1.1 * m.mating_force_max_n)  # 35.2 N
+    assert c._pull_target < c._retract_pull_cap < c.ctx.connector.force_budget.protective_stop_n

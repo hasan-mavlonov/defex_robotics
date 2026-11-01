@@ -15,7 +15,7 @@ import numpy as np
 
 from experiments.checkpoint_report import escape, false_reject, fmt_p, load, mcnemar, ok, paired, stop, wilson
 
-CANDIDATES = ("w3", "noclick", "w60", "w80", "w60click")  # rule order; w3 is the current code
+CANDIDATES = ("w3", "noclick", "w60", "w80", "w60f", "w80f")  # rule order; w3 is the current code
 REFERENCE = "w3"
 
 

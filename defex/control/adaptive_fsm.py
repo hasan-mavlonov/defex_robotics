@@ -1028,6 +1028,8 @@ class AdaptiveInsertionController(InsertionController):
         clicked, drop = self._click_in_trace(bottom)
         self.log(obs.t, "latch", f"click {'seen' if clicked else 'not seen'}: drop {drop:.1f} N near the snap")
         self._pull_target = self.cfg.pull_test_fraction * m.latch_retention_force_n
+        if self.cfg.pull_test_mating_factor > 0.0:
+            self._pull_target = max(self._pull_target, self.cfg.pull_test_mating_factor * m.mating_force_max_n)
         if self.cfg.pull_limit_wipe_fraction > 0.0:
             self._pull_limit = self.cfg.pull_limit_wipe_fraction * m.terminal_wipe_mm * MM
         else:

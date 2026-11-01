@@ -91,6 +91,30 @@ a passed bad connector costs, which this benchmark does not price.
 * **Simulation only.** The latch model is partly assumed; there is one latching
   connector family and one arm model.
 
+## What we can claim / what we cannot claim yet
+
+**Can claim (simulation, benchmark_v0.2b):**
+
+* C passed none of 1,600 deliberately bad latching parts as good (Wilson 95%
+  upper bound 0.24%); the conventional cells passed between 442 (D) and 1,062 (F).
+* On the gantry with correctly characterized vision, C seats more units than
+  every conventional cell tested (99.1% against 97.0%, p < 1e-6; latching good
+  parts 95.7% against 89.0%).
+* The comparison is paired, pre-registered and regenerable from committed
+  per-trial files.
+
+**Cannot claim yet:**
+
+* That C seats more units than a good conventional cell in general. On the UR5e
+  arm F matches or beats it, and with a camera worse than believed F matches it
+  on the gantry and beats it on the arm.
+* That C is faster or cheaper per good unit. It makes 10-37% fewer good units per
+  hour than F, and the cost of a passed bad unit is not priced.
+* That C never passes a bad unit: 6 in 6,200 good-part trials, 5 from one known
+  bug.
+* Anything on hardware. The latch snap force is assumed, there is one latching
+  connector and one simulated arm, and no rig yet.
+
 ## Earlier result: benchmark_v0.2a, gantry only
 
 This section is the previous pre-registered run (seed 20261031, before latch

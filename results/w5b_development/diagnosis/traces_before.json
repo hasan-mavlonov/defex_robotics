@@ -1,0 +1,479 @@
+{
+ "code": "fe80689 (git archive export, before W5b)",
+ "backend": "arm",
+ "seed": 2026,
+ "trials": [
+  {
+   "condition": "nominal",
+   "index": 0,
+   "success": false,
+   "failure_reason": "protective_stop",
+   "cycle_time_s": 10.010000000000987,
+   "peak_measured_torque_nm": 0.6020516928495819,
+   "yaw_sweep_lead_at_wall_deg": 0.6867638595865023,
+   "yaw_sweep_peak_torque_nm": 1.7588415187470579,
+   "wall_probe_setpoint_travel_mm": [
+    0.843,
+    0.851
+   ],
+   "wall_probe_true_travel_mm": [
+    0.432,
+    0.778
+   ],
+   "seat_conform_s": 0.7999999999995566,
+   "seat_conform_torque_sign_changes": 8,
+   "seat_conform_commanded_p2p_deg": [
+    0.774,
+    0.701
+   ],
+   "seat_conform_true_tilt_p2p_deg": [
+    0.492,
+    0.176
+   ],
+   "events": [
+    [
+     1.802,
+     "attempt",
+     "#1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     5.938,
+     "detect",
+     "seated_candidate [bottomed] depth=15.08 mm Fax=7.1 N Flat=(+0.3,-0.1) N CoP=(-5.75,-4.10) mm at (+0.01,+0.00) mm"
+    ],
+    [
+     6.74,
+     "seat_conform",
+     "tilt aligned to floor by (-0.27,+0.55) deg"
+    ],
+    [
+     8.368,
+     "verify",
+     "wall reactions [2.1, 2.1] N at travel [0.84, 0.85] mm -> PASS"
+    ],
+    [
+     10.21,
+     "protective_stop",
+     "|F|=1.1 N |T|=0.60 N m"
+    ]
+   ]
+  },
+  {
+   "condition": "nominal",
+   "index": 12,
+   "success": false,
+   "failure_reason": "aborted:time_limit",
+   "cycle_time_s": 27.313999999981228,
+   "peak_measured_torque_nm": 0.07218314781466957,
+   "wall_probe_setpoint_travel_mm": [
+    1.352,
+    0.493,
+    1.352,
+    0.493,
+    1.344,
+    0.497
+   ],
+   "wall_probe_true_travel_mm": [
+    0.901,
+    0.599,
+    0.897,
+    0.593,
+    0.904,
+    0.598
+   ],
+   "seat_conform_s": 17.555999999991045,
+   "seat_conform_torque_sign_changes": 22,
+   "seat_conform_commanded_p2p_deg": [
+    0.734,
+    1.027
+   ],
+   "seat_conform_true_tilt_p2p_deg": [
+    0.522,
+    0.536
+   ],
+   "events": [
+    [
+     1.794,
+     "attempt",
+     "#1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     6.006,
+     "detect",
+     "seated_candidate [bottomed] depth=15.36 mm Fax=6.7 N Flat=(+0.2,+0.0) N CoP=(+5.81,+3.87) mm at (+0.01,+0.04) mm"
+    ],
+    [
+     6.808,
+     "seat_conform",
+     "tilt aligned to floor by (+0.34,+0.19) deg"
+    ],
+    [
+     8.566,
+     "verify",
+     "wall reactions [0.4, 2.6] N at travel [1.35, 0.49] mm -> FAIL"
+    ],
+    [
+     9.88,
+     "recover",
+     "retry at same probe"
+    ],
+    [
+     10.054,
+     "attempt",
+     "#2 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     14.39,
+     "detect",
+     "seated_candidate [bottomed] depth=15.36 mm Fax=6.5 N Flat=(+0.1,+0.0) N CoP=(+5.92,+3.93) mm at (+0.01,+0.04) mm"
+    ],
+    [
+     15.19,
+     "seat_conform",
+     "tilt aligned to floor by (+0.35,+0.18) deg"
+    ],
+    [
+     16.932,
+     "verify",
+     "wall reactions [0.4, 2.3] N at travel [1.35, 0.49] mm -> FAIL"
+    ],
+    [
+     18.246,
+     "recover",
+     "retry at same probe"
+    ],
+    [
+     18.422,
+     "attempt",
+     "#3 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     22.762,
+     "detect",
+     "seated_candidate [bottomed] depth=15.36 mm Fax=6.6 N Flat=(+0.1,+0.0) N CoP=(+5.93,+3.89) mm at (+0.01,+0.04) mm"
+    ],
+    [
+     23.564,
+     "seat_conform",
+     "tilt aligned to floor by (+0.33,+0.21) deg"
+    ],
+    [
+     25.314,
+     "verify",
+     "wall reactions [2.4, 2.7] N at travel [1.34, 0.5] mm -> PASS"
+    ],
+    [
+     26.202,
+     "abort",
+     "time_limit"
+    ],
+    [
+     27.514,
+     "finish",
+     "success=False reason=time_limit"
+    ]
+   ]
+  },
+  {
+   "condition": "lateral_3mm",
+   "index": 7,
+   "success": false,
+   "failure_reason": "aborted:time_limit",
+   "cycle_time_s": 26.311999999983563,
+   "peak_measured_torque_nm": 0.07433328677692538,
+   "wall_probe_setpoint_travel_mm": [
+    1.352,
+    0.489,
+    1.352,
+    0.501,
+    1.352,
+    0.501
+   ],
+   "wall_probe_true_travel_mm": [
+    0.891,
+    0.61,
+    0.907,
+    0.619,
+    0.909,
+    0.615
+   ],
+   "seat_conform_s": 17.45599999999134,
+   "seat_conform_torque_sign_changes": 24,
+   "seat_conform_commanded_p2p_deg": [
+    0.578,
+    1.036
+   ],
+   "seat_conform_true_tilt_p2p_deg": [
+    0.249,
+    0.523
+   ],
+   "events": [
+    [
+     1.8,
+     "attempt",
+     "#1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     5.972,
+     "detect",
+     "seated_candidate [bottomed] depth=15.22 mm Fax=6.7 N Flat=(+0.1,+0.2) N CoP=(+6.22,+3.80) mm at (-0.00,+0.04) mm"
+    ],
+    [
+     6.774,
+     "seat_conform",
+     "tilt aligned to floor by (+0.12,+0.19) deg"
+    ],
+    [
+     8.54,
+     "verify",
+     "wall reactions [0.4, 3.1] N at travel [1.35, 0.49] mm -> FAIL"
+    ],
+    [
+     9.842,
+     "recover",
+     "retry at same probe"
+    ],
+    [
+     10.004,
+     "attempt",
+     "#2 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     14.298,
+     "detect",
+     "seated_candidate [bottomed] depth=15.22 mm Fax=6.7 N Flat=(+0.2,+0.2) N CoP=(+6.20,+3.98) mm at (-0.00,+0.04) mm"
+    ],
+    [
+     15.098,
+     "seat_conform",
+     "tilt aligned to floor by (+0.07,+0.22) deg"
+    ],
+    [
+     16.864,
+     "verify",
+     "wall reactions [0.4, 3.1] N at travel [1.35, 0.5] mm -> FAIL"
+    ],
+    [
+     18.168,
+     "recover",
+     "retry at same probe"
+    ],
+    [
+     18.33,
+     "attempt",
+     "#3 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     22.628,
+     "detect",
+     "seated_candidate [bottomed] depth=15.22 mm Fax=6.7 N Flat=(+0.1,+0.2) N CoP=(+6.16,+3.86) mm at (-0.00,+0.04) mm"
+    ],
+    [
+     23.43,
+     "seat_conform",
+     "tilt aligned to floor by (+0.09,+0.22) deg"
+    ],
+    [
+     25.208,
+     "verify",
+     "wall reactions [0.4, 2.4] N at travel [1.35, 0.5] mm -> FAIL"
+    ],
+    [
+     26.202,
+     "abort",
+     "time_limit"
+    ],
+    [
+     26.512,
+     "finish",
+     "success=False reason=time_limit"
+    ]
+   ]
+  },
+  {
+   "condition": "noise_1mm",
+   "index": 5,
+   "success": false,
+   "failure_reason": "protective_stop",
+   "cycle_time_s": 10.808000000001963,
+   "peak_measured_torque_nm": 0.6830237243362347,
+   "yaw_sweep_lead_at_wall_deg": 0.6846814980783336,
+   "yaw_sweep_peak_torque_nm": 2.2682016488973016,
+   "wall_probe_setpoint_travel_mm": [
+    0.553,
+    0.78
+   ],
+   "wall_probe_true_travel_mm": [
+    0.214,
+    0.564
+   ],
+   "seat_conform_s": 0.7999999999995566,
+   "seat_conform_torque_sign_changes": 4,
+   "seat_conform_commanded_p2p_deg": [
+    1.265,
+    1.382
+   ],
+   "seat_conform_true_tilt_p2p_deg": [
+    1.086,
+    1.13
+   ],
+   "events": [
+    [
+     1.764,
+     "attempt",
+     "#1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     6.762,
+     "detect",
+     "seated_candidate [bottomed] depth=14.43 mm Fax=6.5 N Flat=(-0.0,-0.1) N CoP=(+5.98,-4.05) mm at (-0.62,-0.03) mm"
+    ],
+    [
+     7.564,
+     "seat_conform",
+     "tilt aligned to floor by (-0.39,-0.86) deg"
+    ],
+    [
+     8.932,
+     "verify",
+     "wall reactions [2.3, 2.8] N at travel [0.55, 0.78] mm -> PASS"
+    ],
+    [
+     11.008,
+     "protective_stop",
+     "|F|=2.5 N |T|=0.68 N m"
+    ]
+   ]
+  },
+  {
+   "condition": "noise_2mm",
+   "index": 5,
+   "success": false,
+   "failure_reason": "protective_stop",
+   "cycle_time_s": 20.83799999999632,
+   "peak_measured_torque_nm": 0.6266539326841564,
+   "yaw_sweep_lead_at_wall_deg": 0.6830207861489175,
+   "yaw_sweep_peak_torque_nm": 2.3379346988925773,
+   "wall_probe_setpoint_travel_mm": [
+    0.382,
+    0.525
+   ],
+   "wall_probe_true_travel_mm": [
+    0.075,
+    0.272
+   ],
+   "seat_conform_s": 0.7999999999981355,
+   "seat_conform_torque_sign_changes": 2,
+   "seat_conform_commanded_p2p_deg": [
+    1.934,
+    2.326
+   ],
+   "seat_conform_true_tilt_p2p_deg": [
+    2.327,
+    2.751
+   ],
+   "events": [
+    [
+     1.69,
+     "attempt",
+     "#1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     5.012,
+     "conform",
+     "flat, rotation=(+1.61,+2.78) deg"
+    ],
+    [
+     5.012,
+     "touch_calibration",
+     "mouth -0.25 mm below vision estimate"
+    ],
+    [
+     5.012,
+     "detect",
+     "surface_block [stall] depth=0.05 mm Fax=8.1 N Flat=(-0.2,+0.0) N CoP=(-0.46,+1.48) mm at (-0.10,-0.01) mm"
+    ],
+    [
+     5.288,
+     "recover",
+     "localizer -> probe (+0.00,-3.25) mm, P(entry)=0.14"
+    ],
+    [
+     5.646,
+     "attempt",
+     "#2 probe=(+0.00,-3.25) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     7.964,
+     "conform",
+     "tipped, rotation=(-3.40,+1.90) deg"
+    ],
+    [
+     7.964,
+     "touch_calibration",
+     "higher support found: mouth -0.94 mm (was -0.25)"
+    ],
+    [
+     7.964,
+     "detect",
+     "surface_block [stall] depth=0.41 mm Fax=7.9 N Flat=(+0.0,-0.2) N CoP=(-6.24,-3.84) mm at (+0.00,-3.21) mm"
+    ],
+    [
+     8.264,
+     "recover",
+     "localizer -> probe (+2.00,-2.75) mm, P(entry)=0.09"
+    ],
+    [
+     8.548,
+     "attempt",
+     "#3 probe=(+2.00,-2.75) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     11.272,
+     "conform",
+     "flat, rotation=(-3.52,+0.26) deg"
+    ],
+    [
+     11.272,
+     "detect",
+     "surface_block [stall] depth=0.49 mm Fax=7.9 N Flat=(-0.0,+0.1) N CoP=(+3.90,+4.09) mm at (+2.00,-2.75) mm"
+    ],
+    [
+     11.576,
+     "recover",
+     "localizer -> probe (-2.00,-2.75) mm, P(entry)=0.11"
+    ],
+    [
+     11.992,
+     "attempt",
+     "#4 probe=(-2.00,-2.75) mm yaw_corr=+0.0 deg"
+    ],
+    [
+     14.452,
+     "conform",
+     "plug slid into the lead-in: resuming insertion"
+    ],
+    [
+     17.2,
+     "detect",
+     "seated_candidate [bottomed] depth=15.09 mm Fax=6.7 N Flat=(+0.4,-0.1) N CoP=(-5.28,+4.10) mm at (-1.17,-2.02) mm"
+    ],
+    [
+     18.002,
+     "seat_conform",
+     "tilt aligned to floor by (-1.67,+1.26) deg"
+    ],
+    [
+     19.034,
+     "verify",
+     "wall reactions [2.0, 2.2] N at travel [0.38, 0.52] mm -> PASS"
+    ],
+    [
+     21.038,
+     "protective_stop",
+     "|F|=2.6 N |T|=0.63 N m"
+    ]
+   ]
+  }
+ ]
+}

@@ -105,6 +105,11 @@ class InsertionController(ABC):
 # Guarded-motion speed limits from the fixture's dynamics (W5). The reference values are
 # those of the gantry the controllers were tuned on, so both rules are inactive there.
 REFERENCE_EFFECTIVE_MASS_KG = 1.0  # gantry: 0.88 kg along z
+# W5b. C's admittance dampings were tuned against the gantry's 15 N m/rad wrist servos, and its
+# guarded moves with the gantry's servo lag absorbed in their constants. Corrections apply only
+# beyond these values, so they are exact no-ops on the gantry.
+REFERENCE_ROTATIONAL_STIFFNESS_NM_PER_RAD = 15.0  # gantry wrist servos (FixtureConfig.angular_kp_nm_per_rad)
+REFERENCE_FOLLOWING_LAG_S = 0.04  # gantry: 0.037 s on its heaviest axis (x carriage), 0.019-0.024 s elsewhere
 
 
 def budgeted(controller, ctx: ControllerContext, **fields_from_budget: str):
@@ -134,11 +139,33 @@ def contact_speed_scale(ctx: ControllerContext) -> float:
     return min(1.0, (REFERENCE_EFFECTIVE_MASS_KG / fd.effective_mass_kg) ** 0.5)
 
 
+def excess_following_lag(ctx: ControllerContext) -> float:
+    """Servo following lag beyond the reference fixture's (s); 0 on the gantry."""
+    fd = ctx.fixture_dynamics
+    if fd is None:
+        return 0.0
+    return max(0.0, fd.following_lag_s - REFERENCE_FOLLOWING_LAG_S)
+
+
 def max_rotation_speed(ctx: ControllerContext, torque_budget_nm: float) -> float:
-    """rad/s such that stiffness x speed x reaction time stays within the torque budget."""
+    """rad/s such that stiffness x speed x (reaction time + excess lag) stays within the torque budget.
+
+    W5b: a guarded rotation that stops on a wall also unloads the setpoint lead it carried,
+    speed x following lag, into the wall (the W5 rule had the reaction time only).
+    """
     fd = ctx.fixture_dynamics
     if fd is None:
         return float("inf")
     filter_delay = 1.0 / (2.0 * 3.141592653589793 * ctx.vision_accuracy.ft_filter_cutoff_hz)  # first-order F/T filter
     reaction = fd.command_latency_s + filter_delay + ctx.control_period_s
-    return torque_budget_nm / (fd.yaw_stiffness_nm_per_rad * reaction)
+    return torque_budget_nm / (fd.yaw_stiffness_nm_per_rad * (reaction + excess_following_lag(ctx)))
+
+
+def rotational_damping_scale(ctx: ControllerContext) -> tuple[float, float]:
+    """(tilt, yaw) factors for rotational admittance damping that keep the loop gain
+    stiffness / damping at its value on the reference wrist (W5b). (1, 1) on the gantry."""
+    fd = ctx.fixture_dynamics
+    if fd is None:
+        return 1.0, 1.0
+    ref = REFERENCE_ROTATIONAL_STIFFNESS_NM_PER_RAD
+    return max(1.0, fd.tilt_stiffness / ref), max(1.0, fd.yaw_stiffness_nm_per_rad / ref)

@@ -48,7 +48,9 @@ from defex.control.base import (
     InsertionController,
     budgeted,
     contact_speed_scale,
+    excess_following_lag,
     max_rotation_speed,
+    rotational_damping_scale,
 )
 from defex.control.compliance import Admittance, ForceGuidedAxis
 from defex.perception.state_estimator import Observation
@@ -91,6 +93,7 @@ class AdaptiveInsertionController(InsertionController):
         self.adm_rot = Admittance(c.rot_stiffness_nm_per_rad, c.rot_damping_nm_s_per_rad, c.max_rot_compliance_deg * DEG, 3)
         # Zero-spring tilt admittance used to conform the plug face to the top surface.
         self.adm_conf = Admittance(0.0, c.conform_damping_nm_s_per_rad, c.conform_limit_deg * DEG, 3)
+        self._adm_d0 = (self.adm_rot.d, self.adm_conf.d)
 
     # ------------------------------------------------------------------ lifecycle
     def reset(self, ctx: ControllerContext) -> None:
@@ -115,6 +118,28 @@ class AdaptiveInsertionController(InsertionController):
         self._yaw_probe_rate = min(
             c.yaw_probe_speed_deg_s * DEG, max_rotation_speed(ctx, c.rotation_budget_fraction * c.max_torque_nm)
         )
+        # W5b: keep the rotational admittance loop gains (stiffness / damping) at their value on the
+        # reference wrist. Both factors are exactly 1 on the gantry, which keeps its dampings untouched.
+        s_tilt, s_yaw = rotational_damping_scale(ctx)
+        if (s_tilt, s_yaw) == (1.0, 1.0):
+            self.adm_rot.d, self.adm_conf.d = self._adm_d0
+        else:
+            self.adm_rot.d = c.rot_damping_nm_s_per_rad * np.array([s_tilt, s_tilt, s_yaw])
+            self.adm_conf.d = c.conform_damping_nm_s_per_rad * s_tilt
+        # Rate-mode conform on wrists stiffer than the reference (see AdaptiveConfig.rate_conform_*).
+        self._rate_conform = s_tilt > 1.0
+        self._rc_dir: np.ndarray | None = None
+        self._rc_flat = np.zeros(2, dtype=bool)
+        self._rc_done = np.zeros(2, dtype=bool)
+        self._rc_rev_since: list = [None, None]
+        # Setpoint lead a wall probe carries beyond the reference fixture's following lag: the
+        # probe may travel that much further on the setpoint before giving up (0 on the gantry).
+        self._probe_lead = self._probe_speed_mm_s * MM * excess_following_lag(ctx)
+        # Sweep yaw between the rotational limits only where the fixture can do it in time.
+        self._yaw_sweep = self._yaw_probe_rate >= c.yaw_sweep_min_speed_deg_s * DEG
+        self._wall_contacts: list[tuple[float, float, float]] = []  # (measured position along probe, reaction, T_z)
+        self._wall_yaw_left = c.wall_yaw_corrections
+        self._yaw_target = 0.0
         self.S: Pose | None = None
         self.G: Pose | None = None
         self.xy = np.zeros(2)
@@ -398,6 +423,7 @@ class AdaptiveInsertionController(InsertionController):
                 self._conf_hist.clear()
                 self._conf_saturated = False
                 self._conf_depth0 = depth
+                self._rc_dir = None
                 self.phase, self.phase_t = "conform", obs.t
                 return self._cmd(c.force_phase_speed_cap_mm_s)
             hold = c.bottomed_hold_s if self._trigger == "bottomed" else c.detect_hold_s
@@ -407,7 +433,10 @@ class AdaptiveInsertionController(InsertionController):
         if self.phase == "conform":
             F, T = self._wrench(obs)
             self.z -= self.force_axis.velocity(c.conform_force_n, float(F[2])) * dt
-            self.adm_conf.update(T, dt, active=np.array([1.0, 1.0, 0.0]))
+            if self._rate_conform:
+                settled = self._rate_conform_step(obs, F, T, dt, c.rate_conform_speed_deg_s * DEG)
+            else:
+                self.adm_conf.update(T, dt, active=np.array([1.0, 1.0, 0.0]))
             # Lateral and yaw compliance stay active: if conforming tips the plug onto
             # the lead-in, the chamfer reaction is allowed to guide it into the cavity.
             self.adm_lat.update(F[:2], dt)
@@ -423,7 +452,14 @@ class AdaptiveInsertionController(InsertionController):
             elapsed = obs.t - self.phase_t
             rate = norm3(self._conf_hist[-1][1] - self._conf_hist[0][1])
             saturated = norm3(self.adm_conf.x) >= c.conform_saturation_fraction * c.conform_limit_deg * DEG
-            if (elapsed > c.conform_min_s and (rate < c.conform_rate_deg * DEG or saturated)) or elapsed > c.conform_max_s:
+            if self._rate_conform:
+                saturated = not self._rc_flat.all()
+                rate = 0.0 if settled else np.inf
+            max_s = c.conform_max_s
+            if self._rate_conform:  # plus the time to turn through the whole tilt range
+                max_s += c.conform_limit_deg / c.rate_conform_speed_deg_s
+            if (elapsed > c.conform_min_s and (rate < c.conform_rate_deg * DEG or saturated and not self._rate_conform)) \
+                    or elapsed > max_s:
                 self._conf_saturated = saturated
                 self.phase, self.phase_t = "measure", obs.t
                 self._window = []
@@ -481,6 +517,11 @@ class AdaptiveInsertionController(InsertionController):
         self.diagnosis = diag
         if self.phase in ("conform", "measure"):
             conf = self.adm_conf.x.copy()
+            if self._rate_conform and diag.cop is not None:
+                # Rocked across the tip about an axis: the plug is supported on both sides of its centre
+                # along the other axis, where a soft wrist settles with the CoP at the centre. A stiff
+                # wrist cannot rest there (any residual tilt picks an edge), so report the centre.
+                diag.cop = np.where(self._rc_flat[::-1], 0.0, diag.cop)
             state = "tipped" if self._conf_saturated else "flat"
             self.log(obs.t, "conform", f"{state}, rotation=({conf[0] / DEG:+.2f},{conf[1] / DEG:+.2f}) deg")
             if diag.kind == "surface_block" and not self._surface_consistent(diag):
@@ -622,6 +663,7 @@ class AdaptiveInsertionController(InsertionController):
         # flat on the cavity floor, aligning the connector axis with the true socket axis.
         self.adm_conf.reset()
         self._conf_hist.clear()
+        self._rc_dir = None
         self._enter(obs.t, VERIFY, "seat_conform")
         return self._verify_step(obs)
 
@@ -659,9 +701,15 @@ class AdaptiveInsertionController(InsertionController):
     def _latch_verify_step(self, obs: Observation) -> Command:
         c = self.cfg
         dt = self.ctx.control_period_s
-        F, _ = self._wrench(obs)
+        F, T = self._wrench(obs)
         f_ax = float(F[2])
         moved = self._pull_start - self._corrected_depth(obs)
+        if self._rate_conform:
+            # A soft wrist lets the latched plug find its own axis under the pull and the re-seat; a stiff
+            # one pulls along the camera's axis and loads the plug sideways (6 N, 0.6 N m in development).
+            # Give back that compliance in software (dampings scaled for a stable loop on this wrist).
+            self.adm_lat.update(F[:2], dt)
+            self.adm_rot.update(T, dt)
         if self.phase == "pull":
             # Guarded pull: back the setpoint out until the latch pulls back with the test force
             # (axial force negative: the environment holds the plug in), or the plug moves too far.
@@ -694,14 +742,21 @@ class AdaptiveInsertionController(InsertionController):
         F, T = self._wrench(obs)
         if self.phase == "seat_conform":
             self.z -= self.force_axis.velocity(c.insert_force_n, float(F[2])) * dt
-            self.adm_conf.update(T, dt, active=np.array([1.0, 1.0, 0.0]))
+            if self._rate_conform:
+                settled = self._rate_conform_step(obs, F, T, dt, c.rate_seat_conform_speed_deg_s * DEG)
+            else:
+                self.adm_conf.update(T, dt, active=np.array([1.0, 1.0, 0.0]))
             self.adm_lat.update(F[:2], dt)
             self._conf_hist.append((obs.t, self.adm_conf.x.copy()))
             while self._conf_hist and obs.t - self._conf_hist[0][0] > c.conform_window_s:
                 self._conf_hist.popleft()
             elapsed = obs.t - self.phase_t
             rate = norm3(self._conf_hist[-1][1] - self._conf_hist[0][1])
-            if (elapsed > c.seat_conform_min_s and rate < c.conform_rate_deg * DEG) or elapsed > c.seat_conform_max_s:
+            max_s = c.seat_conform_max_s
+            if self._rate_conform:
+                rate = 0.0 if settled else np.inf
+                max_s += c.conform_limit_deg / c.rate_seat_conform_speed_deg_s
+            if (elapsed > c.seat_conform_min_s and rate < c.conform_rate_deg * DEG) or elapsed > max_s:
                 conf = self.adm_conf.x
                 self.log(obs.t, "seat_conform", f"tilt aligned to floor by ({conf[0] / DEG:+.2f},{conf[1] / DEG:+.2f}) deg")
                 self.phase, self.phase_t = "preload", obs.t
@@ -728,7 +783,7 @@ class AdaptiveInsertionController(InsertionController):
                 self._verify_results = []
                 self.phase, self.phase_t = "probe_out", obs.t
             return self._cmd(c.force_phase_speed_cap_mm_s)
-        if self.phase in ("probe_out", "probe_back", "center", "yaw_out", "yaw_back"):
+        if self.phase in ("probe_out", "probe_back", "center", "yaw_out", "yaw_back", "wall_yaw_turn"):
             self._hold_preload(F, dt)
         if self.phase == "probe_out":
             # Guarded lateral probe: advance until the wall pushes back, or give up
@@ -736,8 +791,9 @@ class AdaptiveInsertionController(InsertionController):
             d = self._verify_dirs[len(self._verify_results)]
             reaction = float(-np.dot(F[:2], d))
             travel = float(np.dot(self.adm_lat.x - self._verify_base, d))
-            if reaction >= c.verify_force_n or travel >= self.verify_probe:
+            if reaction >= c.verify_force_n or travel >= self.verify_probe + self._probe_lead:
                 self._verify_results.append((reaction, travel))
+                self._wall_contacts.append((float(np.dot(obs.lateral, d)), reaction, float(T[2])))
                 self.phase, self.phase_t = "probe_back", obs.t
             else:
                 self.adm_lat.x = self.adm_lat.x + d * self._probe_speed_mm_s * MM * dt
@@ -751,6 +807,8 @@ class AdaptiveInsertionController(InsertionController):
             return self._cmd(self._probe_speed_mm_s * c.verify_return_speed_factor)
         if self.phase == "center":
             if self._reached(obs, tol=c.probe_reach_tol_mm * MM):
+                if self._yaw_centering_needed() and not self._yaw_sweep:
+                    return self._wall_yaw_verdict(obs)
                 if self._yaw_centering_needed():
                     self._yaw_base = self.yaw_adj
                     self._yaw_results = []
@@ -758,6 +816,8 @@ class AdaptiveInsertionController(InsertionController):
                 else:
                     return self._succeed(obs)
             return self._cmd(self._probe_speed_mm_s * c.verify_return_speed_factor)
+        if self.phase == "wall_yaw_turn":
+            return self._wall_yaw_turn_step(obs, T, dt)
         if self.phase == "yaw_out":
             sgn = 1.0 if not self._yaw_results else -1.0
             reaction = -float(T[2]) * sgn
@@ -785,6 +845,115 @@ class AdaptiveInsertionController(InsertionController):
                     self.phase, self.phase_t = "yaw_out", obs.t
             return self._cmd(c.slow_phase_speed_cap_mm_s)
         return self._cmd(c.force_phase_speed_cap_mm_s)
+
+    # ------------------------------------------------------------------ rate-mode conform (W5b)
+    def _orientation_lag(self, obs: Observation) -> np.ndarray:
+        """Measured minus commanded orientation (rotation vector, estimated socket axes): the servo lag."""
+        return self.S.R.T @ matrix_to_rotvec(obs.fixture_tcp.R @ obs.setpoint.R.T)
+
+    def _rate_conform_step(self, obs: Observation, F: np.ndarray, T: np.ndarray, dt: float, rate: float) -> bool:
+        """Tilt at ``rate`` towards the measured torque, per axis, until it reverses (the face passed flat:
+        command the measured orientation) or the tilt limit is reached (tipped onto an edge). Returns True
+        once both axes are resolved and the fixture has caught up with the setpoint."""
+        c = self.cfg
+        f_ax = max(float(F[2]), _EPS)
+        lag = self._orientation_lag(obs)
+        if self._rc_dir is None:
+            self._rc_dir = np.sign(T[:2])  # the zero-spring admittance's direction (x' = T / d)
+            self._rc_flat[:] = False
+            self._rc_done[:] = self._rc_dir == 0
+            self._rc_rev_since = [None, None]
+        wall = c.rate_conform_wall_factor * f_ax * float(np.hypot(*self.plug_half))
+        limit = c.conform_limit_deg * DEG
+        loaded = f_ax >= 0.5 * c.conform_force_n
+        for k in (0, 1):
+            if self._rc_done[k]:
+                continue
+            reversed_ = loaded and self._rc_dir[k] * T[k] < -c.rate_conform_flip_lever_mm * MM * f_ax
+            if not reversed_:
+                self._rc_rev_since[k] = None
+            elif self._rc_rev_since[k] is None:
+                self._rc_rev_since[k] = (obs.t, lag[k])
+            if reversed_ and obs.t - self._rc_rev_since[k][0] >= c.rate_conform_flip_hold_s:
+                # Command the orientation at which the torque first reversed (measured, so the servo
+                # lag does not enter), less the turn made since.
+                self.adm_conf.x[k] += self._rc_rev_since[k][1] - self._rc_dir[k] * rate * (obs.t - self._rc_rev_since[k][0])
+                self._rc_done[k] = self._rc_flat[k] = True
+            elif abs(T[k]) > wall:
+                self.adm_conf.x[k] += lag[k]  # held by a wall: stop where the plug is, not where the setpoint led
+                self._rc_done[k] = True
+            elif abs(self.adm_conf.x[k]) >= c.conform_saturation_fraction * limit:
+                self._rc_done[k] = True  # tipped onto an edge: stop turning
+            else:
+                self.adm_conf.x[k] = float(np.clip(self.adm_conf.x[k] + self._rc_dir[k] * rate * dt, -limit, limit))
+        return bool(self._rc_done.all() and norm3(np.append(lag[:2], 0.0)) < c.conform_rate_deg * DEG)
+
+    # ------------------------------------------------------------------ VERIFY, yaw from the walls (W5b)
+    def _wall_half_travel(self, yaw: float) -> float:
+        """Half the free travel between the two y walls for a plug yawed by ``yaw`` (no tilt), from the drawing."""
+        px, py = self.plug_half
+        return self.ctx.connector.cavity_half[1] - px * np.sin(abs(yaw)) - py * np.cos(yaw)
+
+    def _yaw_from_free_travel(self, free: float) -> float:
+        """Inverse of :meth:`_wall_half_travel` for the full free travel (>= 0); tilt also narrows the travel, so an upper bound."""
+        px, py = self.plug_half
+        h = self.ctx.connector.cavity_half[1] - 0.5 * free
+        return max(0.0, float(np.arcsin(min(1.0, h / np.hypot(px, py))) - np.arctan2(py, px)))
+
+    def _wall_yaw_verdict(self, obs: Observation) -> Command:
+        """Yaw check from the two wall contacts just made, for fixtures too stiff to sweep yaw in time.
+
+        The plug's diagonal narrows the free travel between the walls as it yaws, and tilt narrows it
+        further, so a free travel at least that of a plug yawed by the tolerance proves the yaw is
+        within it. Otherwise each wall touched a corner near one end of the plug: the lever arm of the
+        reaction (-T_z / reaction, same sign at both walls) gives the direction of the yaw and the free
+        travel its size. The plug is centred, so turning it back towards the cavity axis is free.
+        """
+        c = self.cfg
+        (pos_a, r_a, tz_a), (pos_b, r_b, tz_b) = self._wall_contacts[-2:]
+        free = pos_a + pos_b  # measured (encoders), not setpoint: the setpoint lead does not enter
+        tol = c.wall_yaw_tolerance_deg * DEG
+        need = self._wall_half_travel(tol)
+        levers = (-tz_a / max(r_a, _EPS), -tz_b / max(r_b, _EPS))
+        detail = (f"half free travel {0.5 * free / MM:.3f} mm (>= {need / MM:.3f} for {c.wall_yaw_tolerance_deg:.1f} "
+                  f"deg), levers ({levers[0] / MM:+.1f},{levers[1] / MM:+.1f}) mm")
+        if 0.5 * free >= need:
+            self.log(obs.t, "wall_yaw", detail + " -> PASS")
+            return self._succeed(obs)
+        px = self.plug_half[0]
+        corner = (min(abs(levers[0]), abs(levers[1])) >= c.wall_yaw_lever_fraction * px
+                  and max(abs(levers[0]), abs(levers[1])) <= c.wall_yaw_lever_max_fraction * px and free > 0.0)
+        if self._wall_yaw_left > 0 and levers[0] * levers[1] > 0 and corner:
+            yaw = float(np.sign(levers[0])) * self._yaw_from_free_travel(free)
+            self._wall_yaw_left -= 1
+            self._yaw_target = self.yaw_adj - yaw
+            self.log(obs.t, "wall_yaw", detail + f" -> turn {-yaw / DEG:+.2f} deg, probe again")
+            self.phase, self.phase_t = "wall_yaw_turn", obs.t
+            return self._cmd(c.slow_phase_speed_cap_mm_s)
+        self.log(obs.t, "wall_yaw", detail + " -> FAIL")
+        return self._verify_failed(obs)
+
+    def _wall_yaw_turn_step(self, obs: Observation, T: np.ndarray, dt: float) -> Command:
+        c = self.cfg
+        err = self._yaw_target - self.yaw_adj
+        if -float(T[2]) * np.sign(err) >= c.yaw_probe_torque_nm:  # a wall resists the turn: wrong estimate
+            self.log(obs.t, "wall_yaw", f"turn blocked at {-float(T[2]):+.3f} N m -> FAIL")
+            self.yaw_adj += float(self._orientation_lag(obs)[2])  # drop the setpoint lead the servo carries
+            return self._verify_failed(obs)
+        step = c.wall_yaw_correct_speed_deg_s * DEG * dt
+        self.yaw_adj += float(np.clip(err, -step, step))
+        if abs(err) <= step and self._reached(obs, tol=c.probe_reach_tol_mm * MM, rot_tol=c.yaw_reach_tol_rad):
+            self._verify_base = self.adm_lat.x.copy()
+            self._verify_results = []
+            self.phase, self.phase_t = "probe_out", obs.t
+        return self._cmd(c.slow_phase_speed_cap_mm_s)
+
+    def _verify_failed(self, obs: Observation) -> Command:
+        self.diagnosis = ContactDiagnosis(
+            "verify_failed", self._corrected_depth(obs), 0.0, np.zeros(2), np.zeros(3), None, obs.lateral.copy(), "verify"
+        )
+        self._enter(obs.t, RECOVER, "retract", "verify_failed")
+        return self._recover_step(obs)
 
     def _yaw_centering_needed(self) -> bool:
         c = self.cfg

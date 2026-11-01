@@ -158,6 +158,7 @@ class MuJoCoArmBackend(MuJoCoBackend):
         J = np.vstack([jp[:, self._vadr], jr[:, self._vadr]])
         kq = np.array([m.actuator_gainprm[a, 0] for a in self._act])
         C = J @ np.diag(1.0 / kq) @ J.T  # Cartesian compliance of the joint springs
+        K = np.linalg.inv(C)  # Cartesian stiffness; its rotation block holds the tip in place
         saved = self.data.qpos[self._qadr].copy()
         self.data.qpos[self._qadr] = self._home_q
         meff = self._tool_effective_mass_z()
@@ -167,6 +168,8 @@ class MuJoCoArmBackend(MuJoCoBackend):
             yaw_stiffness_nm_per_rad=float(1.0 / C[5, 5]),
             effective_mass_kg=meff,
             command_latency_s=self.arm.latency_s,
+            tilt_stiffness_nm_per_rad=float(max(K[3, 3], K[4, 4])),
+            following_lag_s=self._servo_following_lag(self._act),
         )
 
     def _fk_tool(self, q: np.ndarray) -> Pose:

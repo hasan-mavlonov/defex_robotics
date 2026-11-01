@@ -45,6 +45,17 @@ class FixtureDynamics:
     yaw_stiffness_nm_per_rad: float  # about the insertion axis
     effective_mass_kg: float  # apparent mass at the tool along the insertion axis
     command_latency_s: float  # setpoint to actuator
+    # W5b. Stiffer of the two tilt axes, tool tip held in place (as it is by a face or floor
+    # contact). None: not characterized, taken equal to the yaw stiffness.
+    tilt_stiffness_nm_per_rad: float | None = None
+    # W5b. Following error per unit of commanded speed in steady motion (servo damping over
+    # stiffness, slowest axis). A guarded move that stops on a wall stores speed x lag of setpoint
+    # lead, which the servo then pushes into the wall. On hardware: identify from a logged ramp.
+    following_lag_s: float = 0.0
+
+    @property
+    def tilt_stiffness(self) -> float:
+        return self.yaw_stiffness_nm_per_rad if self.tilt_stiffness_nm_per_rad is None else self.tilt_stiffness_nm_per_rad
 
 
 @dataclass(frozen=True)

@@ -639,6 +639,35 @@ class AdaptiveConfig:
     rate_conform_flip_hold_s: float = 0.02
     # Pivot torque cannot exceed axial force x plug half-diagonal; this factor above it means a wall.
     rate_conform_wall_factor: float = 1.5
+    # v0.2c: C on a stiff, lagging arm under poor vision (results/v0.2c_arm_robustness). Each rule is
+    # gated like the W5b rules (stiff_wrist_min_ratio, lagging_servo_min_ratio) or by the W5 contact
+    # speed scale, so all are exact no-ops on every gantry; each has a switch for ablation.
+    # INSERT's phase timeout counts at the speeds the gantry uses: where contact speeds are scaled
+    # down by s < 1 (W5 rule), the same travel takes 1/s as long (UR5e: 6 s -> 15 s). Without it a
+    # plug still descending freely in the cavity timed out and was diagnosed as "no contact".
+    scale_insert_timeout: bool = True
+    # A force or torque trip at the floor on a stiff, lagging wrist is the impact of the servo's
+    # setpoint lead (speed x lag), not a jam: drop the lead (command the measured depth) and diagnose
+    # after the normal hold instead of retracting and repeating the same attempt.
+    settle_floor_impact: bool = True
+    # In-cavity tilt compliance on a stiff wrist. A soft wrist rotates under the torque the walls put
+    # on a tilted plug (gantry: 0.12 N m turns it ~12 deg/s); with dampings scaled for a stable loop
+    # the arm turns ~0.2 deg/s and the plug wedges. Once engaged, turn tilt at
+    # rate_seat_conform_speed_deg_s towards any tilt torque beyond this lever x axial force (same 1 mm
+    # basis as rate_conform_flip_lever_mm: F/T noise is 0.06 mm of lever at 8 N).
+    cavity_tilt_compliance: bool = True
+    cavity_tilt_lever_mm: float = 1.0
+    # Seat conform in the cavity (rate mode): a torque along the turn is the walls pushing the plug
+    # towards the floor's orientation, so it is followed, not treated as a wall that stops the turn;
+    # an axis whose torque is below the lever above x axial force is left alone (its sign is noise).
+    seat_conform_follow_walls: bool = True
+    # A failed verification on a stiff wrist is retried with the orientation and lateral offset the
+    # attempt learned (as after a jam), not at the identical pose (which repeated the same failure).
+    reaim_after_verify_fail: bool = True
+    # The wall-yaw check probes the two walls again (from the centre) when its first pair is
+    # inconsistent with a rigid yawed plug (lever arms of opposite sign): one probe was stopped by
+    # floor friction (seen at mu = 1), not by a wall.
+    wall_yaw_reprobes: int = 1
     # W3 push-click-pull verification for latching connectors
     click_drop_fraction: float = 0.4  # force drop at the snap, as a fraction of the latch peak force
     click_window_after_snap_mm: float = 0.2  # search the trace this far past the expected snap

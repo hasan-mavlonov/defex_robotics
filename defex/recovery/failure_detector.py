@@ -27,8 +27,10 @@ _WINDOW_FILL = 0.98  # window counts as full despite sample-time jitter (numeric
 
 
 class InsertionMonitor:
-    def __init__(self, cfg: AdaptiveConfig) -> None:
+    def __init__(self, cfg: AdaptiveConfig, timeout_s: float | None = None) -> None:
         self.cfg = cfg
+        # Phase timeout; callers whose insertion speeds are scaled down pass a longer one (v0.2c).
+        self.timeout_s = cfg.insert_timeout_s if timeout_s is None else timeout_s
         self._hist: deque[tuple[float, float]] = deque()
         self._t0 = 0.0
 
@@ -66,7 +68,7 @@ class InsertionMonitor:
         prog = self.progress()
         if prog is not None and force[2] > c.stall_force_fraction * f_target and prog < c.stall_progress_mm * MM:
             return "stall"
-        if t - self._t0 > c.insert_timeout_s:
+        if t - self._t0 > self.timeout_s:
             return "insert_timeout"
         return None
 

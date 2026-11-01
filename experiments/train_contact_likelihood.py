@@ -71,7 +71,8 @@ from experiments.train_contact_prior import (  # noqa: E402
     standardize,
 )
 
-OUT = REPO_ROOT / "results" / "v0.2c_learned_prior"
+# Output root; DEFEX_PRIOR_OUT (relative to the repository) redirects it, e.g. for the v0.2c integration retrain.
+OUT = REPO_ROOT / os.environ.get("DEFEX_PRIOR_OUT", "results/v0.2c_learned_prior")
 FIT_SEEDS = frozenset((*range(3001, 3026), *range(3033, 3039)))
 STOP_SEEDS = frozenset((*range(3026, 3031), 3039, 3040))
 DEV_SEEDS = frozenset((2026,))

@@ -105,7 +105,6 @@ class InsertionController(ABC):
 # Guarded-motion speed limits from the fixture's dynamics (W5). The reference values are
 # those of the gantry the controllers were tuned on, so both rules are inactive there.
 REFERENCE_EFFECTIVE_MASS_KG = 1.0  # gantry: 0.88 kg along z
-FT_FILTER_DELAY_S = 1.0 / (2.0 * 3.141592653589793 * 40.0)  # 40 Hz first-order filter
 
 
 def contact_speed_scale(ctx: ControllerContext) -> float:
@@ -121,5 +120,6 @@ def max_rotation_speed(ctx: ControllerContext, torque_budget_nm: float) -> float
     fd = ctx.fixture_dynamics
     if fd is None:
         return float("inf")
-    reaction = fd.command_latency_s + FT_FILTER_DELAY_S + ctx.control_period_s
+    filter_delay = 1.0 / (2.0 * 3.141592653589793 * ctx.vision_accuracy.ft_filter_cutoff_hz)  # first-order F/T filter
+    reaction = fd.command_latency_s + filter_delay + ctx.control_period_s
     return torque_budget_nm / (fd.yaw_stiffness_nm_per_rad * reaction)

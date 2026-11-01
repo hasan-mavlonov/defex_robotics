@@ -530,8 +530,8 @@ class AdaptiveConfig:
     # When VERIFY re-centres yaw between the rotational limits:
     # "sigma_gate" (V0.1): only if the characterized vision yaw sigma exceeds yaw_center_gate_deg;
     # "gate_or_corrected": also if C changed the yaw itself; "always": every cycle.
-    yaw_center_policy: str = "always"
-    rotation_budget_fraction: float = 0.8  # of max_torque_nm, for torque overshoot while probing yaw (W5)  # W4 default; V0.1 used "sigma_gate" (see results/w4_development)
+    yaw_center_policy: str = "always"  # W4 default; V0.1 used "sigma_gate" (see results/w4_development)
+    rotation_budget_fraction: float = 0.8  # of max_torque_nm, for torque overshoot while probing yaw (W5)
     # VERIFY
     verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance
     seat_conform_min_s: float = 0.08

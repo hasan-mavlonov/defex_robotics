@@ -12,7 +12,8 @@ from defex.utils.transforms import Pose, matrix_to_rotvec, rotvec_to_matrix
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTROLLER_SIDE = ("control", "recovery", "perception")
-SIM_TRUTH_ATTRS = {"ground_truth", "true_payload", "joint_positions", "contact_wrench"}
+SIM_TRUTH_ATTRS = {"ground_truth", "true_payload", "joint_positions", "contact_wrench", "GroundTruth"}
+FORBIDDEN_MODULES = ("mujoco", "defex.sim.mujoco_backend", "defex.sim.arm_backend", "defex.hardware")
 
 
 def test_motion_generator_respects_limits(rng):
@@ -87,8 +88,8 @@ def test_controller_code_cannot_reach_the_simulator():
                 names = [a.name for a in node.names]
                 assert "GroundTruth" not in names, path
             for mod in mods:
-                assert not mod.startswith("mujoco"), path
-                assert "mujoco_backend" not in mod, path
+                assert not mod.startswith(FORBIDDEN_MODULES), (path, mod)
+                assert "mujoco_backend" not in mod and "arm_backend" not in mod, (path, mod)
 
 
 def test_harness_identifies_the_payload_instead_of_reading_the_simulator():

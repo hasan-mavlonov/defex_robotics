@@ -102,6 +102,9 @@ class AdaptiveInsertionController(InsertionController):
         self._v_free = c.free_insert_speed_mm_s * MM * s
         self._v_near_bottom = c.near_bottom_speed_mm_s * MM * s
         self.force_axis = ForceGuidedAxis(c.force_gain_mm_s_per_n * MM, self._v_insert, c.max_back_off_speed_mm_s * MM)
+        # Wall probes are guarded contact moves too. Kept as a separate factor so the
+        # gantry (factor 1.0) computes exactly what it did before W5.
+        self._probe_speed_mm_s = c.verify_probe_speed_mm_s * s
         self._yaw_probe_rate = min(
             c.yaw_probe_speed_deg_s * DEG, max_rotation_speed(ctx, c.rotation_budget_fraction * c.max_torque_nm)
         )
@@ -662,15 +665,15 @@ class AdaptiveInsertionController(InsertionController):
                 self._verify_results.append((reaction, travel))
                 self.phase, self.phase_t = "probe_back", obs.t
             else:
-                self.adm_lat.x = self.adm_lat.x + d * c.verify_probe_speed_mm_s * MM * dt
-            return self._cmd(c.verify_probe_speed_mm_s * c.verify_return_speed_factor)
+                self.adm_lat.x = self.adm_lat.x + d * self._probe_speed_mm_s * MM * dt
+            return self._cmd(self._probe_speed_mm_s * c.verify_return_speed_factor)
         if self.phase == "probe_back":
             self.adm_lat.x = self._verify_base.copy()
             if self._reached(obs, tol=c.probe_reach_tol_mm * MM):
                 if len(self._verify_results) == len(self._verify_dirs):
                     return self._lateral_verdict(obs)
                 self.phase, self.phase_t = "probe_out", obs.t
-            return self._cmd(c.verify_probe_speed_mm_s * c.verify_return_speed_factor)
+            return self._cmd(self._probe_speed_mm_s * c.verify_return_speed_factor)
         if self.phase == "center":
             if self._reached(obs, tol=c.probe_reach_tol_mm * MM):
                 if self._yaw_centering_needed():
@@ -679,7 +682,7 @@ class AdaptiveInsertionController(InsertionController):
                     self.phase, self.phase_t = "yaw_out", obs.t
                 else:
                     return self._succeed(obs)
-            return self._cmd(c.verify_probe_speed_mm_s * c.verify_return_speed_factor)
+            return self._cmd(self._probe_speed_mm_s * c.verify_return_speed_factor)
         if self.phase == "yaw_out":
             sgn = 1.0 if not self._yaw_results else -1.0
             reaction = -float(T[2]) * sgn
@@ -742,7 +745,7 @@ class AdaptiveInsertionController(InsertionController):
         cy = 0.5 * (travels[0] - travels[1])
         self.adm_lat.x = self._verify_base + np.array([0.0, cy])
         self.phase, self.phase_t = "center", obs.t
-        return self._cmd(c.verify_probe_speed_mm_s * c.verify_return_speed_factor)
+        return self._cmd(self._probe_speed_mm_s * c.verify_return_speed_factor)
 
     def _succeed(self, obs: Observation) -> Command:
         self._enter(obs.t, SUCCESS)

@@ -47,6 +47,10 @@ class FTSensorDriver(Protocol):
     def read(self) -> FTSample: ...
 
 
+class FTSensorFault(RuntimeError):
+    """The sensor reported a fault or saturation; the reading must not reach a controller."""
+
+
 class MotionDriver(Protocol):
     @property
     def home_tcp_pose(self) -> Pose: ...
@@ -66,6 +70,10 @@ class MotionDriver(Protocol):
 
     def joint_positions(self) -> np.ndarray: ...
 
+    def stop(self) -> None:
+        """Stop motion now (called on any exception in the control loop)."""
+        ...
+
 
 # ----------------------------------------------------------------------------- ATI Net F/T
 RDT_PORT = 49152
@@ -78,11 +86,20 @@ RDT_RECORD = struct.Struct(">IIIiiiiii")
 
 @dataclass
 class NetFTDriver:
-    """ATI Net F/T over UDP RDT. Polls one record per read (command 2, count 1)."""
+    """ATI Net F/T over UDP RDT. Polls one record per read (command 2, count 1).
+
+    ``convention`` must be set from a bench check (TEST_PROTOCOL.md, section 4):
+    press up on the tool by hand and confirm the estimated external force points up.
+    "load_on_sensor": the sensor reports the load the tool applies to it (negated
+    here); "wrist_on_tool": it reports the force the wrist applies to the tool, the
+    simulator's convention (passed through). A wrong setting reverses every
+    contact force the controllers see, so there is no default.
+    """
 
     host: str
     counts_per_force: float  # from the sensor's calibration (e.g. 1,000,000 counts per N)
     counts_per_torque: float  # counts per N m
+    convention: str  # "load_on_sensor" or "wrist_on_tool": no default, see above
     port: int = RDT_PORT
     timeout_s: float = 0.05
     _sock: socket.socket | None = field(default=None, init=False, repr=False)
@@ -95,14 +112,35 @@ class NetFTDriver:
             self._sock.settimeout(self.timeout_s)
         return self._sock
 
+    def __post_init__(self) -> None:
+        if self.convention not in ("load_on_sensor", "wrist_on_tool"):
+            raise ValueError("convention must be 'load_on_sensor' or 'wrist_on_tool' (bench-checked)")
+
+    def _drain(self, s: socket.socket) -> None:
+        """Discard records that arrived late, so a timeout cannot shift every later sample."""
+        s.setblocking(False)
+        try:
+            while True:
+                s.recvfrom(RDT_RECORD.size)
+        except (BlockingIOError, OSError):
+            pass
+        finally:
+            s.settimeout(self.timeout_s)
+
     def read(self) -> FTSample:
         s = self._socket()
+        self._drain(s)
         s.sendto(RDT_REQUEST.pack(RDT_HEADER, RDT_CMD_START_REALTIME, 1), (self.host, self.port))
         data, _ = s.recvfrom(RDT_RECORD.size)
         rdt_seq, ft_seq, status, *ft = RDT_RECORD.unpack(data[: RDT_RECORD.size])
+        if status != 0:
+            raise FTSensorFault(f"Net F/T status 0x{status:08x} (fault or saturation)")
+        if self.last_sequence and rdt_seq <= self.last_sequence:
+            raise FTSensorFault(f"Net F/T sequence went backwards ({self.last_sequence} -> {rdt_seq})")
         self.last_status, self.last_sequence = status, rdt_seq
-        f = np.array(ft[:3], dtype=float) / self.counts_per_force
-        t = np.array(ft[3:], dtype=float) / self.counts_per_torque
+        sign = -1.0 if self.convention == "load_on_sensor" else 1.0
+        f = sign * np.array(ft[:3], dtype=float) / self.counts_per_force
+        t = sign * np.array(ft[3:], dtype=float) / self.counts_per_torque
         return FTSample(time.monotonic(), f, t)
 
     def close(self) -> None:
@@ -160,6 +198,10 @@ class URRTDEMotionDriver:
     def joint_positions(self) -> np.ndarray:
         return np.array(self._recv.getActualQ())
 
+    def stop(self) -> None:
+        self._ctrl.servoStop()
+        self._ctrl.stopScript()
+
 
 # ----------------------------------------------------------------------------- mocks for CI
 @dataclass
@@ -206,6 +248,10 @@ class MockMotionStage:
 
     def joint_positions(self) -> np.ndarray:
         return np.concatenate([self.pose.p - self.home.p, np.zeros(3)])
+
+    def stop(self) -> None:
+        self.setpoint = self.pose
+        self.stopped = True
 
 
 @dataclass

@@ -28,8 +28,6 @@ class _CompiledModel:
 
 
 class MuJoCoBackend:
-    joint_names: tuple[str, ...] = FIXTURE_JOINTS
-
     """Physics backend for the DAIE workcell.
 
     The fixture is commanded with Cartesian TCP setpoints. Because the three wrist
@@ -37,6 +35,8 @@ class MuJoCoBackend:
     slide positions equal the TCP displacement from home and the hinge angles are
     the Z-Y'-X'' Euler angles of the TCP orientation.
     """
+
+    joint_names: tuple[str, ...] = FIXTURE_JOINTS
 
     def __init__(self, sim: SimConfig | None = None, fixture: FixtureConfig | None = None) -> None:
         self.sim_cfg = sim or SimConfig()

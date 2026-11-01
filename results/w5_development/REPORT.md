@@ -7,13 +7,17 @@ commit by `scripts/fetch_menagerie.py`; not in git). The workcell's socket,
 only the fixture changes. Joint servos are Menagerie's PD actuators (series-
 elastic joints: 2000 N m/rad shoulder/elbow, 500 N m/rad wrist), gravity is
 compensated in the joints as the UR controller does, setpoints go through
-damped least-squares IK at 500 Hz with 6 ms command latency. Payload
+damped least-squares IK at 500 Hz with 6 ms command latency (the first version
+delayed commands by 4 ms because of an off-by-one in the buffer; fixed in review
+and pinned by a check of when a command first reaches the actuators). Payload
 identification on the arm: 0.12 g and 0.16 mm error. Run with
 `python -m experiments.robustness --backend arm ...`.
 
 ## Unchanged controllers on the arm (seed 2026, 5 conditions x 20 trials)
 
-Conditions: nominal, lateral_3mm, noise_1mm, noise_2mm, friction_1.
+Conditions: nominal, lateral_3mm, noise_1mm, noise_2mm, friction_1. Data:
+`data/arm_unchanged_controllers` (copied from the development run, which used
+an uncommitted working tree at the W5 backend commit).
 
 | Controller | Success | Bad units passed | Protective stops | Median cycle (s) |
 |---|---|---|---|---|
@@ -65,18 +69,24 @@ C caps yaw probing so that stiffness x speed x reaction time stays within 80% of
 its torque limit. Both rules are inactive on the gantry: 120 development trials
 of C and F are identical to the W6 branch in every field.
 
-Re-run on the arm (same 100 development trials per controller):
+Re-run on the arm after review fixes (6 ms latency, wall probes also scaled;
+same 100 development trials per controller; data: `data/arm_after_review`,
+committed code):
 
-| Controller | before | after |
+| Controller | unchanged controllers | with fixture dynamics |
 |---|---|---|
 | A fixed | 25% | 25% |
 | B vision | 63% | 63% |
 | E vision + RCC | 76% | 76% |
 | D spiral | 4% | **84%** (7 bad units) |
 | F spiral + RCC | 2% | **85%** (9 bad units) |
-| C adaptive | 1% | **13%** |
+| C adaptive | 1% | **40%** (43 protective stops) |
 
-C is still not usable on the arm. Two problems remain, both in VERIFY:
+(The first version of this report gave C 13% with the 4 ms latency bug and
+unscaled wall probes, from an unsaved run.)
+
+C is still not usable on the arm. Two problems remain, both in VERIFY (seen in
+the first run; to be re-checked on the saved run):
 
 1. Yaw probing still trips the 0.6 N m stop in some trials even at the capped
    rate (0.72 N m in nominal trial 0), so stiffness x speed x delay does not fully

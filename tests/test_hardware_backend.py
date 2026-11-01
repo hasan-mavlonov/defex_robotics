@@ -1,17 +1,17 @@
 """W7: the unchanged harness runs on HardwareBackend (mocks in CI), and the Net F/T driver speaks RDT."""
 
 import socket
-import struct
 import threading
 from dataclasses import replace
 
 import numpy as np
+import pytest
 
-from defex.config import MM, ConnectorSpec, SensorNoiseConfig
+from defex.config import MM, SensorNoiseConfig
 from defex.control.registry import make_controller
 from defex.hardware.backend import HardwareBackend, hardware_noise
-from defex.hardware.drivers import RDT_RECORD, RDT_REQUEST, MockFTSensor, MockMotionStage, NetFTDriver
-from defex.tasks.calibration import identification_error
+from defex.hardware.drivers import RDT_RECORD, RDT_REQUEST, FTSensorFault, MockFTSensor, MockMotionStage, NetFTDriver
+from defex.sim.backend import FixtureDynamics
 from defex.tasks.conditions import conditions_by_name
 from defex.tasks.insertion import InsertionTask
 from defex.tasks.scenarios import sample_scenario
@@ -26,7 +26,7 @@ def _mock_task(floor_depth_mm: float) -> tuple[InsertionTask, HardwareBackend]:
     stage = MockMotionStage(HOME, floor_z=MOUTH.p[2] - floor_depth_mm * MM)
     ft = MockFTSensor(stage, payload_mass_kg=0.034, payload_com_in_sensor=np.array([0.0, 0.0, -0.009]),
                       sensor_in_tcp=SENSOR)
-    be = HardwareBackend(stage, ft, SENSOR, MOUTH)
+    be = HardwareBackend(stage, ft, SENSOR, MOUTH, FixtureDynamics(10.0, 15.0, 0.9, 0.0))
     task = InsertionTask(backend=be)
     task.identification_noise = hardware_noise(SensorNoiseConfig())
     return task, be
@@ -52,26 +52,57 @@ def test_adaptive_never_accepts_a_socket_without_walls():
     task, _ = _mock_task(floor_depth_mm=15.0)
     res = task.run(make_controller("adaptive"), _scenario(task))
     assert res.declared_success is not True, [e for e in res.events if e[1] in ("verify", "finish")]
+    verdicts = [d for _, k, d in res.events if k == "verify"]
+    assert verdicts and all(v.endswith("FAIL") for v in verdicts), verdicts  # rejected by the wall probes
 
 
-def test_netft_driver_decodes_rdt_records():
+def _fake_netft(records):
     srv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     srv.bind(("127.0.0.1", 0))
-    port = srv.getsockname()[1]
-    counts = (1_000_000, 1_000_000)
 
     def serve():
-        data, addr = srv.recvfrom(64)
-        header, cmd, n = RDT_REQUEST.unpack(data)
-        assert (header, cmd, n) == (0x1234, 2, 1)
-        ft = [int(v * counts[0]) for v in (1.5, -2.0, 10.25)] + [int(v * counts[1]) for v in (0.01, -0.02, 0.003)]
-        srv.sendto(RDT_RECORD.pack(7, 9, 0, *ft), addr)
+        for rec in records:
+            data, addr = srv.recvfrom(64)
+            assert RDT_REQUEST.unpack(data) == (0x1234, 2, 1)
+            srv.sendto(RDT_RECORD.pack(*rec), addr)
 
     th = threading.Thread(target=serve, daemon=True)
     th.start()
-    drv = NetFTDriver("127.0.0.1", counts_per_force=counts[0], counts_per_torque=counts[1], port=port, timeout_s=2.0)
-    s = drv.read()
+    return srv, srv.getsockname()[1], th
+
+
+def test_netft_driver_decodes_rdt_records_and_applies_the_sign_convention():
+    cpf = cpt = 1_000_000
+    ft = [int(v * cpf) for v in (1.5, -2.0, 10.25)] + [int(v * cpt) for v in (0.01, -0.02, 0.003)]
+    srv, port, th = _fake_netft([(7, 9, 0, *ft), (8, 10, 0, *ft)])
+    wrist = NetFTDriver("127.0.0.1", cpf, cpt, "wrist_on_tool", port=port, timeout_s=2.0)
+    s = wrist.read()
+    assert np.allclose(s.force, [1.5, -2.0, 10.25]) and np.allclose(s.torque, [0.01, -0.02, 0.003])
+    load = NetFTDriver("127.0.0.1", cpf, cpt, "load_on_sensor", port=port, timeout_s=2.0)
+    s2 = load.read()
+    assert np.allclose(s2.force, [-1.5, 2.0, -10.25])
     th.join(2.0)
     srv.close()
-    assert np.allclose(s.force, [1.5, -2.0, 10.25]) and np.allclose(s.torque, [0.01, -0.02, 0.003])
-    assert drv.last_sequence == 7 and drv.last_status == 0
+    with pytest.raises(ValueError):
+        NetFTDriver("127.0.0.1", cpf, cpt, "unknown")
+
+
+def test_netft_driver_rejects_fault_records():
+    srv, port, th = _fake_netft([(1, 1, 0x80000000, 0, 0, 0, 0, 0, 0)])
+    drv = NetFTDriver("127.0.0.1", 1e6, 1e6, "wrist_on_tool", port=port, timeout_s=2.0)
+    with pytest.raises(FTSensorFault):
+        drv.read()
+    th.join(2.0)
+    srv.close()
+
+
+def test_hardware_backend_stops_motion_on_a_sensor_fault():
+    class Faulty:
+        def read(self):
+            raise FTSensorFault("saturated")
+
+    stage = MockMotionStage(HOME, floor_z=0.0)
+    be = HardwareBackend(stage, Faulty(), SENSOR, MOUTH, FixtureDynamics(10.0, 15.0, 0.9, 0.0))
+    with pytest.raises(FTSensorFault):
+        be.read_sensors()
+    assert getattr(stage, "stopped", False)

@@ -12,6 +12,12 @@ differs on hardware:
   trial by the inspection and pull test in the protocol, logged separately.
 * Run hardware trials with zero synthetic F/T and encoder noise
   (:func:`hardware_noise`): the real sensors already have theirs.
+* Any exception inside the control loop stops the motion system before it
+  propagates (sensor fault, timeout, driver error).
+* ``fixture_dynamics`` must be given (measured or from the robot's data): without
+  it the controllers' contact-speed and yaw-rate limits would switch off.
+* The measured "ground truth" force is not tared and the connector pose uses the
+  nominal grasp; only the post-trial inspection decides seating on hardware.
 """
 
 from __future__ import annotations
@@ -22,7 +28,7 @@ import numpy as np
 
 from defex.config import SensorNoiseConfig
 from defex.hardware.drivers import FTSensorDriver, MotionDriver
-from defex.sim.backend import GroundTruth, PayloadModel, RawSensorData, SceneParams
+from defex.sim.backend import FixtureDynamics, GroundTruth, PayloadModel, RawSensorData, SceneParams
 from defex.utils.transforms import Pose, norm3
 
 
@@ -40,8 +46,11 @@ def hardware_noise(condition_noise: SensorNoiseConfig) -> SensorNoiseConfig:
 
 
 class HardwareBackend:
-    def __init__(self, motion: MotionDriver, ft: FTSensorDriver, sensor_in_tcp: Pose, nominal_socket_pose: Pose) -> None:
+    def __init__(self, motion: MotionDriver, ft: FTSensorDriver, sensor_in_tcp: Pose, nominal_socket_pose: Pose,
+                 fixture_dynamics: FixtureDynamics) -> None:
         self.motion = motion
+        self._dynamics = fixture_dynamics
+        self._last_sample = None
         self.ft = ft
         self._sensor_in_tcp = sensor_in_tcp
         self._nominal_socket = nominal_socket_pose
@@ -67,6 +76,17 @@ class HardwareBackend:
         return self._sensor_in_tcp
 
     @property
+    def fixture_dynamics(self) -> FixtureDynamics:
+        return self._dynamics
+
+    def _guarded(self, fn, *args):
+        try:
+            return fn(*args)
+        except BaseException:
+            self.motion.stop()
+            raise
+
+    @property
     def true_payload(self) -> PayloadModel:
         raise NotImplementedError("hardware has no true payload; the harness identifies it from F/T readings")
 
@@ -81,13 +101,14 @@ class HardwareBackend:
         self._last = None
 
     def set_tcp_setpoint(self, pose: Pose) -> None:
-        self.motion.set_tcp_setpoint(pose)
+        self._guarded(self.motion.set_tcp_setpoint, pose)
 
     def step(self, duration: float) -> None:
-        self.motion.wait_period(duration)
+        self._guarded(self.motion.wait_period, duration)
 
     def read_sensors(self) -> RawSensorData:
-        s = self.ft.read()
+        s = self._guarded(self.ft.read)
+        self._last_sample = s
         return RawSensorData(
             t=self.motion.time,
             joint_pos=self.motion.joint_positions(),
@@ -98,7 +119,9 @@ class HardwareBackend:
 
     def ground_truth(self) -> GroundTruth:
         tcp = self.motion.read_tcp_pose()
-        s = self.ft.read()
+        # Reuse the controller's sample: one sensor round trip per tick, and scoring sees
+        # the same reading the controller acted on.
+        s = self._last_sample if self._last_sample is not None else self._guarded(self.ft.read)
         sensor = tcp @ self._sensor_in_tcp
         f_world = -(sensor.R @ s.force)
         if self.reporting_payload is not None:

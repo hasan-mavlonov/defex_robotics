@@ -46,6 +46,13 @@ check).
 
 ## 4. Calibration moves (before each session)
 
+- **F/T sign check (first, every new sensor or driver setting):** with the tool
+  in free space and tared, press up on the plug tip by hand. The harness's
+  estimated external force must point up (positive along the insertion axis
+  away from the socket). If it points down, the `NetFTDriver` `convention` is
+  wrong: every contact force would be reversed and the force loop would push
+  harder on contact. Do not run any controller until this check passes.
+
 - Payload identification: the harness's nine-pose routine
   (`defex.tasks.calibration.identify_payload`).
 - Contact calibration: five moves of `defex.calibration.contact_fit.CalibrationMove`

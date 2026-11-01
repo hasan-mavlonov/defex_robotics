@@ -217,7 +217,8 @@ class MuJoCoArmBackend(MuJoCoBackend):
         self._q_cmd = self._home_q.copy()
         d.ctrl[self._act] = self._home_q
         n = max(1, int(round(self.arm.latency_s / self.sim_cfg.control_period_s)))
-        self._delay: deque[np.ndarray] = deque([self._home_q.copy()] * n, maxlen=n)
+        # Append-then-read-oldest: a buffer of n + 1 delays each command by exactly n periods.
+        self._delay: deque[np.ndarray] = deque([self._home_q.copy()] * (n + 1), maxlen=n + 1)
         self._ctrl_clipped = False
         self._socket_pose_true = Pose(sp.p.copy(), sp.R.copy())
         mujoco.mj_forward(m, d)
@@ -252,6 +253,9 @@ class MuJoCoArmBackend(MuJoCoBackend):
         return gt
 
     def set_joint_positions_kinematic(self, q: np.ndarray) -> None:
+        self._q_cmd = np.asarray(q, dtype=float).copy()
+        self._delay = deque([self._q_cmd.copy()] * self._delay.maxlen, maxlen=self._delay.maxlen)
+        self.data.ctrl[self._act] = self._q_cmd
         self.data.qpos[self._qadr] = q
         self.data.qvel[:] = 0.0
         mujoco.mj_forward(self.model, self.data)

@@ -72,11 +72,14 @@ class MuJoCoBackend:
         # Friction coefficient of every connector/socket contact pair.
         m.pair_friction[:, 0] = params.friction
         m.pair_friction[:, 1] = params.friction
-        # In-hand grasp offset of the connector relative to the fixture TCP.
-        m.body_pos[self._connector_body] = params.grasp_offset.p
-        m.body_quat[self._connector_body] = params.grasp_offset.quat()
+        self._set_grasp(params.grasp_offset)
         self._setup_mating(params)
         self.reset()
+
+    def _set_grasp(self, grasp_offset: Pose) -> None:
+        """In-hand grasp offset of the connector relative to the fixture TCP."""
+        self.model.body_pos[self._connector_body] = grasp_offset.p
+        self.model.body_quat[self._connector_body] = grasp_offset.quat()
 
     def _setup_mating(self, params: SceneParams) -> None:
         """Terminal and latch forces for connectors that model them (W3); None keeps V0.1 physics."""
@@ -90,6 +93,11 @@ class MuJoCoBackend:
     def _index_model(self) -> None:
         m = self.model
         self._connector_body = m.body("connector").id
+        # The model is cached per connector and wrist and reused across trials, and load() writes
+        # each trial's grasp offset into it. Put the nominal grasp back before anything below
+        # derives from the model (payload, fixture dynamics), so they do not depend on which
+        # trial last used this model in the worker; load() sets the trial's own grasp after.
+        self._set_grasp(Pose.identity())
         self._tool_body = m.body("tool").id
         self._socket_mocap = m.body("socket").mocapid[0]
         self._marker_est_mocap = m.body("marker_estimate").mocapid[0]

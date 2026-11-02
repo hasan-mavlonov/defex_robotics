@@ -1,8 +1,12 @@
 # Ten hard questions, with answers (draft for Hasan)
 
 Short answers you can give yourself, each with the file that backs it. Numbers
-are from benchmark_v0.2c (seed 20261116, results at c3884c6, code 45f8b06)
-unless marked. Simulation only.
+are from benchmark_v0.2c (seed 20261116, results at c3884c6, code 45f8b06,
+Micro-Fit insert target 30 N) unless marked. Simulation only. The v0.2d code
+(35.2 N insert target, H and I pull retry, tilt check, controller J) has not been
+benchmarked yet.
+
+<!-- v0.2d: fill after benchmark_v0.2d -->
 
 ## 1. "How does it compare with spiral search?"
 
@@ -22,9 +26,10 @@ good units per hour than C on seven of eight suites (standard: gantry 1,101
 against 606, arm 596 against 373), and seats as many or more latching parts.
 What C buys is fewer mis-seated connectors leaving the cell, mostly when the
 camera error is large. Whether that is worth the lower throughput depends on
-what a mis-seated connector costs the customer, which we have not priced. C's
-lead on parts at the edge of the datasheet comes mostly from a stall push a
-spiral cell could add (question 4). `results/benchmark_v0.2c/REPORT.md`.
+what a mis-seated connector costs the customer, which we have not priced. In
+benchmark_v0.2c, C's lead on parts at the edge of the datasheet came mostly from
+a stall push a spiral cell could add; the v0.2d code gives the spiral cells the
+same 35.2 N push (question 4). `results/benchmark_v0.2c/REPORT.md`.
 
 ## 3. "Why should I trust MuJoCo contact?"
 
@@ -44,12 +49,16 @@ plug stops short and the pull test moves it. C rejects a bad part in a median
 8.4 s (gantry) and 12.8 s (arm), down from about 26 s at Checkpoint 2
 (`results/benchmark_v0.2c/TABLES.md`, latching).
 
-Edge of the datasheet: at the maximum terminal friction, the conventional cells
-seat none of 100 parts and C all 100, on both machines. That is because they
-push at the connector file's 30 N insert target, below the datasheet's 32 N
-maximum mating force, while C pushes at 35.2 N when a plug stalls. A spiral cell
-with that push has not been tested; the fair answer is that this is a setting,
-not proof of the method (`REPORT.md`, "latch_spread: what the gap is").
+Edge of the datasheet: in benchmark_v0.2c, at the maximum terminal friction, the
+conventional cells seated none of 100 parts and C all 100, on both machines. That
+is because they pushed at the connector file's 30 N insert target, below the
+datasheet's 32 N maximum mating force, while C pushes at 35.2 N when a plug
+stalls. A spiral cell with that push was not in the run; the fair answer is that
+this is a setting, not proof of the method (`REPORT.md`, "latch_spread: what the
+gap is"). The v0.2d code sets the insert target to 35.2 N for every controller,
+and after a failed pull H and I push again and pull once more
+(`results/v0.2d_force_budget/REPORT.md`, `results/v0.2d_pull_retry/REPORT.md`);
+benchmark_v0.2d has not run.
 
 ## 5. "Why not learning?"
 
@@ -106,9 +115,11 @@ measured.
 Not in benchmark_v0.2c: 0 of 7,400 good-part trials and 0 of 2,200 deliberately
 bad parts. At Checkpoint 2 it passed 6 in 6,200 good-part trials, five from a bug
 in the arm's yaw check at 0.2 mm clearance, now fixed
-(`results/v0.2c_verify_fixes/REPORT.md`). One known hole remains: VERIFY does not
-check tilt. G passed one plug at 3.21 degrees of tilt in this run, and C passed
+(`results/v0.2c_verify_fixes/REPORT.md`). One known hole remained: VERIFY did not
+check tilt. G passed one plug at 3.21 degrees of tilt in that run, and C passed
 one just over 3 degrees at Checkpoint 2 (`results/benchmark_v0.2c/AUDIT_TABLES.md`).
+The v0.2d code adds a tilt check to the latching VERIFY, which C and G share; the
+housing-only VERIFY still has none (`results/v0.2d_tilt_check/REPORT.md`).
 
 ## 10. "What would you need to prove it on hardware, and what does it cost?"
 

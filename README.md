@@ -19,12 +19,17 @@ benchmark_v0.2a ([`results/benchmark_v0.2a`](results/benchmark_v0.2a)), V0.1
 measurement. The physics behavior is pinned by the test suite (see
 [Validation](#validation)). This is a research prototype: it has not been
 validated on hardware (see [Limitations](#assumptions-and-limitations)).
+The method sections below describe the v0.2d code, which differs from the code
+benchmark_v0.2c ran (see [The controllers](#the-controllers)); benchmark_v0.2d
+has not run yet.
+
+<!-- v0.2d: fill after benchmark_v0.2d -->
 
 ## Results: benchmark_v0.2c, two machines, conventional cells with the same pull test
 
 Pre-registered ([`PREREGISTRATION.md`](results/benchmark_v0.2c/PREREGISTRATION.md),
 code frozen at 45f8b06): seed 20261116, gantry and UR5e arm, nine controllers,
-four suites, 86,400 paired trials. Full report:
+four suites, 86,400 paired trials, Micro-Fit insert target 30 N. Full report:
 [`results/benchmark_v0.2c/REPORT.md`](results/benchmark_v0.2c/REPORT.md); every
 table is regenerated from the per-trial rows by
 `python -m experiments.checkpoint_report results/benchmark_v0.2c` and
@@ -69,11 +74,12 @@ parts (gantry 100.0% against 83.0%, arm 99.5% against 86.8%; p < 1e-6).
   this is C's verification.
 * **Its latch_spread lead is mostly one rule the baselines lack.** When a plug
   stalls short, C pushes at 1.1 x the datasheet's maximum mating force (35.2 N).
-  D, F, H and I push at the connector file's 30 N insert target, below the
-  datasheet's 32 N maximum, and seat none of the 100 parts at maximum terminal
-  friction on either machine. Without that condition C still leads (500 against
-  473 of 500 on the gantry, 497 against 474 on the arm), but a conventional cell
-  with the same push has not been tested.
+  In benchmark_v0.2c, D, F, H and I pushed at the connector file's 30 N insert
+  target, below the datasheet's 32 N maximum, and seated none of the 100 parts at
+  maximum terminal friction on either machine. Without that condition C still
+  leads (500 against 473 of 500 on the gantry, 497 against 474 on the arm), but a
+  conventional cell with the same push was not in this run. The v0.2d code sets
+  the insert target to 35.2 N for every controller.
 
 **C is slower on every suite.** Good units per hour, C against F (I in
 brackets): standard, gantry 606 against 1,101 (1,101) and arm 373 against 596
@@ -96,7 +102,8 @@ per hour than C on seven of eight suites.
 
 **The learned prior (G)** beats C on six of eight suites (p < 0.05), with no
 measurable gain on latch_spread, and passed one bad unit: an arm latching plug
-at 3.21 degrees of tilt. Tilt is not checked by VERIFY on either machine.
+at 3.21 degrees of tilt. In benchmark_v0.2c, VERIFY did not check tilt on either
+machine; the v0.2d code adds a tilt check to the latching VERIFY.
 
 **Simulation only.** The latch model and the spread around it are assumed;
 there is one latching connector family, one arm model, and no rig yet.
@@ -187,6 +194,8 @@ gantry baselines were never tuned with the latching connector: re-tuned, F seats
 
 ## What we can claim / what we cannot claim yet
 
+<!-- v0.2d: fill after benchmark_v0.2d -->
+
 **Can claim (simulation, benchmark_v0.2c):**
 
 * C passed none of 7,400 good-part trials as good when the connector was not
@@ -205,9 +214,11 @@ gantry baselines were never tuned with the latching connector: re-tuned, F seats
   test, H and I passed 0 of 2,200 bad parts, as C did.
 * That C seats more latching parts. F and I seat more good latching parts than C
   on both machines, and match it when the camera is worse than believed.
-* That C handles part-to-part variation better. Its latch_spread lead comes
-  mostly from pushing above the datasheet's maximum mating force when a plug
-  stalls; a conventional cell with that rule has not been tested.
+* That C handles part-to-part variation better. In benchmark_v0.2c its
+  latch_spread lead came mostly from pushing above the datasheet's maximum mating
+  force when a plug stalls, against the conventional cells' 30 N insert target; a
+  conventional cell with that push was not in the run. The v0.2d code gives every
+  controller the 35.2 N insert target; benchmark_v0.2d has not run.
 * That C is faster or cheaper per good unit. It makes 2-45% fewer good units per
   hour than I on seven of eight suites, and the cost of a passed bad unit is not
   priced.
@@ -471,23 +482,27 @@ trial is scored on ground truth. A trial succeeds only if all of these hold:
 * depth at least 14.5 mm (15 mm minus 0.5 mm), lateral offset within clearance +
   0.15 mm on each socket axis, tilt and yaw within 3 degrees, tip speed below
   2 mm/s;
-* no protective stop: measured force above 30 N or torque above 0.6 N m stops the
-  cell immediately, for every controller, like a cobot protective stop;
-* no damage: the 10 ms average contact force never exceeded 45 N;
+* no protective stop: measured force above 30 N (Micro-Fit: 48 N) or torque above
+  0.6 N m stops the cell immediately, for every controller, like a cobot
+  protective stop;
+* no damage: the 10 ms average contact force never exceeded 45 N (Micro-Fit:
+  58 N);
 * no interpenetration deeper than 0.2 mm (a validity bound on the physics), no
   workspace limit, and completion within 30 s;
 * the controller did not declare failure.
 
-C, D and F declare success or failure, so they can produce a false accept
-(declares success, not seated) or a false reject (declares failure while seated);
-both are counted. A, B and E never declare and are scored on ground truth alone.
+C, D, F, G, H, I and J declare success or failure, so they can produce a false
+accept (declares success, not seated) or a false reject (declares failure while
+seated); both are counted. A, B and E never declare and are scored on ground truth alone.
 Their failures that do not trip the protective stop leave the cell unnoticed and
 count as bad units passed, as do false accepts.
 
 ### Physical assumptions
 
 All values live in [`defex/config.py`](defex/config.py) and
-[`assets/connectors/rect_12x8.json`](assets/connectors/rect_12x8.json). The basis
+[`assets/connectors/rect_12x8.json`](assets/connectors/rect_12x8.json), the
+Micro-Fit's force budget in
+[`assets/connectors/microfit3_4ckt.json`](assets/connectors/microfit3_4ckt.json). The basis
 column says where each number comes from; "assumed" means a plausible engineering
 value that has not been measured on real parts.
 
@@ -505,8 +520,9 @@ value that has not been measured on real parts.
 | Motion limits | 50 mm/s, 45 deg/s, 500 mm/s^2, 600 deg/s^2 | assumed conservative precision-assembly speeds |
 | Vision | 0.3 mm x/y/z, 0.5 deg yaw, 0.3 deg tilt (1 sigma), swept to 2 mm | assumed calibrated cell camera; the sweep covers poor calibration and placement error |
 | Wrist F/T | 0.03 N and 0.5 N mm noise, 0.3 N bias, 40 Hz low-pass | assumed small six-axis sensor (ATI Mini40 class, noise on the conservative side) |
-| Protective stop | 30 N or 0.6 N m measured | assumed cobot-style cell limit |
-| Damage | 45 N contact force sustained over 10 ms | assumed conservative limit for a small plastic housing on a PCB |
+| Protective stop | 30 N or 0.6 N m measured; Micro-Fit 48 N or 0.6 N m | assumed cobot-style cell limit; Micro-Fit 1.5 x the datasheet's 32 N maximum mating force |
+| Damage | 45 N contact force sustained over 10 ms; Micro-Fit 58 N | assumed conservative limit for a small plastic housing on a PCB; Micro-Fit: the datasheet's minimum latch strength |
+| Micro-Fit insert target and abort | 35.2 N and 40 N, every controller (30 N insert target in benchmark_v0.2c) | 1.1 x and 1.25 x the datasheet's 32 N maximum mating force; the margins are assumed |
 | Success tolerances | depth within 0.5 mm, lateral within clearance + 0.15 mm, tilt and yaw within 3 deg | assumed seating specification |
 
 ## The controllers
@@ -516,6 +532,11 @@ The taught program: transit to 5 mm above the nominal socket at 40 mm/s, descend
 8 mm/s to 0.5 mm past the nominal seat (preload), dwell 0.3 s. It uses neither
 vision nor force. If the socket moved more than the 1.3 mm capture range, the plug
 lands on the top face and the stiff servo pushes until the protective stop trips.
+On a connector with a force budget (the Micro-Fit), A, B and E push past the seat
+by the overtravel at which the fixture's stiffness gives the insert target:
+35.2 N / 10 N/mm on the gantry; on the arm, since v0.2d, the stiffness along the
+push, 10.8 N/mm, instead of the arm's weakest direction, 8.0 N/mm
+([`results/v0.2d_axial_stiffness`](results/v0.2d_axial_stiffness/REPORT.md)).
 
 **B: vision position correction** (same file). The same program aimed at the
 vision-estimated socket pose (position, yaw and tilt) and corrected for the
@@ -546,12 +567,14 @@ stateDiagram-v2
 APPROACH moves above the vision-estimated socket and aligns the connector axis and
 yaw with the estimate. ALIGN moves to the current probe position, settles, and
 tares the wrench in free space. INSERT descends under force control (speed
-proportional to the error from a 6 N axial target, capped at 6 mm/s) with lateral
+proportional to the error from a 6 N axial target, capped at 10 mm/s) with lateral
 and yaw admittance active on contact, and tilt admittance once the plug is
 confidently inside the cavity. A monitor watches progress (less than 0.15 mm of
 depth gained in 0.4 s while the axial force exceeds 70% of the target counts as a
 stall) and limits (20 N total force, 10 N lateral, 0.35 N m), all well below the
-cell's 30 N protective stop.
+cell's 30 N protective stop. These are the housing-only connector's values; on
+the Micro-Fit the axial target is the connector's 35.2 N insert target and the
+force limit its 40 N abort, below its 48 N stop.
 
 DETECT holds briefly and classifies the contact from its wrench signature: on the
 top face, partially inserted and jammed, or seated. Because the depth estimate is
@@ -594,6 +617,16 @@ also locate the cavity center, and C centers the plug between them. When the
 vision yaw is uncertain (sigma above 1 degree) it also finds both rotational
 limits and centers the yaw between them.
 
+On a latching connector VERIFY is the latch check: a retention pull at 1.1 x the
+datasheet's 32 N maximum mating force, which the plug must hold before it has
+backed out 0.6 x the 1.75 mm terminal wipe. Since v0.2d it starts with a tilt
+check: VERIFY fails when the measured plug axis is more than 2.5 degrees off C's
+socket-axis estimate and the centre of pressure of the bottoming wrench lies
+beyond 0.875 of the plug's half-width, which a plug latched wedged at the
+cavity's tilt limit produces
+([`results/v0.2d_tilt_check`](results/v0.2d_tilt_check/REPORT.md)). A failed check
+takes the normal failed-VERIFY path. The housing-only VERIFY has no tilt check.
+
 **D: spiral search** ([`defex/control/spiral_search.py`](defex/control/spiral_search.py)).
 The conventional force-controlled routine cobot vendors ship (Flexiv Adaptive
 Assembly SearchHole and InsertComp, Robotiq's Insertion node). It approaches the
@@ -621,12 +654,19 @@ log. For benchmark_v0.2c they were tuned for the arm
 ([`results/v0.2c_arm_baselines`](results/v0.2c_arm_baselines/REPORT.md)) and re-tuned on
 the gantry with the latching connector
 ([`results/v0.2c_gantry_baselines`](results/v0.2c_gantry_baselines/REPORT.md)),
-each by a selection rule committed before its runs.
+each by a selection rule committed before its runs. Those tunings used the 30 N
+insert target; they were not repeated at 35.2 N.
 
 **H and I: D and F with C's retention pull** ([`defex/control/spiral_search.py`](defex/control/spiral_search.py)).
 After a latching insertion they run the same pull as C (1.1 x the datasheet's
-32 N maximum mating force, movement limit 0.6 x the 1.75 mm terminal wipe). On
-the housing-only connector they are identical to D and F.
+32 N maximum mating force, movement limit 0.6 x the 1.75 mm terminal wipe). Since
+v0.2d, after a failed pull they push again and pull once more, built as C's proof
+push: the force loop at the 35.2 N insert target, capped at 2 mm/s, with INSERT's
+force and torque limits; the second pull starts once 0.8 x the target has been
+held for 0.4 s without the plug advancing more than 0.1 mm, or after 6 s. One
+retry, then reject ([`results/v0.2d_pull_retry`](results/v0.2d_pull_retry/REPORT.md)).
+In benchmark_v0.2c they rejected at the first failed pull. The retry was designed
+with knowledge of C. On the housing-only connector they are identical to D and F.
 
 **G: C with a learned contact prior** ([`defex/control/adaptive_learned.py`](defex/control/adaptive_learned.py),
 [`defex/recovery/learned_prior.py`](defex/recovery/learned_prior.py)). After each
@@ -638,6 +678,22 @@ trained on C's own contacts on seeds 3001-3030 and selected on seed 4001
 ([`results/w9_development`](results/w9_development/REPORT.md),
 [`results/checkpoint2_prep`](results/checkpoint2_prep/REPORT.md)). G loads only a
 model whose stored fixture dynamics match the machine; otherwise it runs as C.
+G shares C's VERIFY, including the tilt check.
+
+**J: F with C's VERIFY, not a fair baseline (v0.2d)** ([`defex/control/spiral_verify.py`](defex/control/spiral_verify.py)).
+F's insertion, unchanged up to the tick at which F would declare the connector
+seated; from there C's own VERIFY with C's settings. C's VERIFY gets only what F
+measured (F's estimates, tare, setpoint and face contact), plus the RCC stage's
+deflection, F/k from the F/T reading and the stage's datasheet stiffness. The
+tilt check cannot fail at J's first latch check, because no bottoming wrench is
+in C's sample window at the hand-over. After a failed check and C's retract, J
+hands back to F, which searches again within F's attempt budget; this response
+was picked by a rule committed before the dev runs
+([`results/v0.2d_j_verify`](results/v0.2d_j_verify/REPORT.md)) and picked again
+on the v0.2d code ([`results/v0.2d_j_repick`](results/v0.2d_j_repick/REPORT.md)).
+J contains Defex's VERIFY, so it is not a conventional cell and is not among the
+fair baselines D, E, F, H and I (`FAIR` in
+[`experiments/checkpoint_report.py`](experiments/checkpoint_report.py)).
 
 **On the arm.** C's speed and loop-gain rules scale with the measured wrist tilt
 stiffness and servo following lag (W5, W5b); they switch on only for fixtures at
@@ -812,7 +868,7 @@ defex/
   config.py               all parameters as typed dataclasses with unit suffixes
   sim/                    simulator interface, MuJoCo backend, scene generator
   perception/             sensor noise models, state estimator (no ground truth)
-  control/                motion generator, admittance, controllers A/B/C, registry
+  control/                motion generator, admittance, controllers A-J, registry
   recovery/               failure monitor, contact diagnosis, hole localizer
   tasks/                  conditions, paired scenario sampling, trial harness + scoring
   logging/                trial records, summaries, Wilson intervals, CSV/JSON
@@ -919,11 +975,18 @@ The V0.2 plan (brief of 2026-10-26) runs in workstreams, one branch each:
 11. v0.2c, done: wall-yaw fix, defect verdict, datasheet-based latch check,
     arm tuning of D, E and F, gantry re-tuning with latching parts, H and I,
     benchmark_v0.2c (this README's results).
+12. v0.2d, development done: Micro-Fit insert target 35.2 N for every
+    controller, arm overtravel along the push, one pull retry for H and I, tilt
+    check in the latching VERIFY, controller J; benchmark_v0.2d (seed 20261123,
+    A-J) has not run.
 
-Open after benchmark_v0.2c: the connector file's 30 N insert target is below
+Open after benchmark_v0.2c: the connector file's 30 N insert target was below
 the datasheet's 32 N maximum mating force; a conventional cell with C's
-stall push (H and I plus that push) is untested; VERIFY does not check tilt.
-Each is development work for a further run on a fresh seed.
+stall push (H and I plus that push) was untested; VERIFY did not check tilt.
+v0.2d addresses each in development (35.2 N insert target; H and I push again
+and pull once more after a failed pull; a tilt check in the latching VERIFY,
+none for the housing-only connector). benchmark_v0.2d will test them on a fresh
+seed.
 
 ## Porting to another simulator
 

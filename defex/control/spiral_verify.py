@@ -60,7 +60,8 @@ class CompliantSpiralSearchVerifyController(CompliantSpiralSearchController):
     name = "spiral_rcc_verify"
     label = "J: F + C's verify"
     # Picked by results/v0.2d_j_verify/SELECTION_RULE.md on dev seed 2026 (more good parts seated, no bad unit
-    # passed by either candidate).
+    # passed by either candidate); re-picked on the integrated v0.2d code (results/v0.2d_j_repick, dev 2026:
+    # 1295 against 1282 of 1360 seated, 0 bad units for both).
     on_verify_fail: str | None = "research"
     rcc_terms = True
 

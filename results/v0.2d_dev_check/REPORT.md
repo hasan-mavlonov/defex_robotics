@@ -23,7 +23,7 @@ Good parts seated (good-part escapes), per machine and suite:
   arm p = 0.039); a fair baseline matches C in the other six cells. G helps only on gantry
   heldout (p = 0.021). J below C on gantry standard (p = 0.002), matches C elsewhere; J
   passes fewer bad units than I on standard and heldout on both machines.
-- Deliberately bad parts passed: C, G, H, I, J 0 of 280 per machine. Without a pull: D, F
+- Deliberately bad parts passed: C, G, H, I, J 0 of 140 per machine (280 in all). Without a pull: D, F
   (and A, B, E) pass most of them.
 - J's one bad unit: gantry `noise_2mm` trial 11, the same unit as in `v0.2d_j_verify`
   (F's seat reading 11.0 mm, tilted; the housing-only VERIFY has no depth gate or tilt check).

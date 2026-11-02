@@ -1160,20 +1160,47 @@ class AdaptiveInsertionController(InsertionController):
         """
         cos = float(np.dot(self.R_corr[:, 2], obs.rel_pose.R[:, 2]))
         tilt = float(np.arccos(np.clip(cos, -1.0, 1.0)))
-        recent = list(self._recent)[len(self._recent) // self.cfg.detect_discard_divisor:]
-        if not recent:
+        wrench = self._tilt_window()
+        if wrench is None:
             return tilt, 0.0  # no wrench yet: no evidence that the walls hold the plug
-        F = np.mean([o.force for o in recent], axis=0) - self.bias_f
-        T = np.mean([o.torque for o in recent], axis=0) - self.bias_t
+        F, T = wrench
         cop = np.array([-T[1], T[0]]) / max(float(F[2]), _EPS)
         return tilt, float(np.max(np.abs(cop) / np.asarray(self.plug_half)))
+
+    def _tilt_window(self) -> tuple[np.ndarray, np.ndarray] | None:
+        """Mean bias-corrected (force, torque) of the recent samples less their first third; None without samples."""
+        recent = list(self._recent)[len(self._recent) // self.cfg.detect_discard_divisor:]
+        if not recent:
+            return None
+        return (np.mean([o.force for o in recent], axis=0) - self.bias_f,
+                np.mean([o.torque for o in recent], axis=0) - self.bias_t)
+
+    def _tilt_force_floor(self) -> float:
+        """Axial force (N) below which the tilt check gives no verdict (AdaptiveConfig.tilt_check_force_guard).
+
+        C leaves up to cavity_tilt_lever_mm x the axial force of tilt torque on an engaged plug (the in-cavity tilt
+        compliance's dead band) while it pushes at the insert target. A window at a lower force that still carries
+        that torque reads it as a CoP of lever x target / force; the floor is where that alone reaches the edge
+        bound (Micro-Fit: 1 mm x 35.2 N / (0.875 x 3.425 mm) = 11.7 N)."""
+        c = self.cfg
+        return c.cavity_tilt_lever_mm * c.insert_force_n / (c.tilt_check_edge_fraction * min(self.plug_half) / MM)
 
     def _tilt_verdict(self, obs: Observation) -> bool:
         """False when the plug is turned off the socket axis and held there by the walls (AdaptiveConfig.tilt_check).
 
         Within the attempt that failed it, the plug has not left the cavity: while it is still turned beyond the
-        bound it fails again, whatever the wall load (a re-seat after a held retract unloads the walls)."""
+        bound it fails again, whatever the wall load (a re-seat after a held retract unloads the walls).
+
+        With the force guard, a window whose mean axial force is under _tilt_force_floor (or that has no samples)
+        gives no verdict: True, and nothing else changes, as with the check switched off."""
         c = self.cfg
+        if c.tilt_check_force_guard:
+            wrench = self._tilt_window()
+            f_ax = float(wrench[0][2]) if wrench is not None else 0.0
+            floor = self._tilt_force_floor()
+            if f_ax < floor:
+                self.log(obs.t, "tilt", f"window at {f_ax:.1f} N, under the {floor:.1f} N floor -> no verdict")
+                return True
         tilt, edge = self._tilt_evidence(obs)
         held = edge > c.tilt_check_edge_fraction or self._tilt_failed_attempt == self.attempts
         ok = tilt <= c.tilt_check_deg * DEG or not held

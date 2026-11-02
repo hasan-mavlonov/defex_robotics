@@ -116,7 +116,7 @@ def test_h_and_i_are_d_and_f_with_cs_retention_pull():
         for cb, cp in ((b.cfg, p.cfg), (b.stiff_fixture_cfg, p.stiff_fixture_cfg)):
             diff = {k for k, v in asdict(cp).items() if asdict(cb)[k] != v}
             assert diff <= {"retention_pull", "pull_test_mating_factor", "pull_limit_wipe_fraction", "pull_retries",
-                            "repush_hold_s", "repush_speed_mm_s"}
+                            "repush_hold_s", "repush_speed_mm_s", "repush_advance_mm"}
             assert cp.retention_pull
             assert cp.pull_test_mating_factor == a.pull_test_mating_factor
             assert cp.pull_limit_wipe_fraction == a.pull_limit_wipe_fraction
@@ -124,6 +124,7 @@ def test_h_and_i_are_d_and_f_with_cs_retention_pull():
             picked = 1  # SELECTION_RULE version 3: dev candidate, on in every cell
             assert cb.pull_retries == 0 and cp.pull_retries == picked
             assert cp.repush_hold_s == a.proof_push_s and cp.repush_speed_mm_s == a.proof_push_speed_mm_s
+            assert cp.repush_advance_mm == a.proof_advance_mm
 
 
 J_NAMES = ("spiral_rcc_verify", "spiral_rcc_verify_reject", "spiral_rcc_verify_research", "spiral_rcc_verify_reject_no_rcc")

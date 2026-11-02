@@ -51,3 +51,25 @@ Validation, run once, on a fresh seed, **4004** (no run under `results/` has use
 it): latching and latch_spread, 20 trials, both machines, the pick registered, and
 retry off at 34520aa for every cell where the retry is on. The pick stands per cell
 if (1) holds and seated on >= off; otherwise the retry is turned off there.
+
+---
+
+# Selection rule, version 4
+
+Version 3's dev runs (`dev3/`, at 0ba51c0) showed that on the arm the re-push reached
+0.8 x the target (peaks 31-33 N), then the plug started moving through the terminal
+peak, the force fell to about 23 N, and the 0.4 s hold ran out with the plug still
+in the terminal zone (6.7-7.3 mm), so the second pull failed. C's proof push does
+not stop there: if the plug advances, C goes on inserting (`proof_advance_mm`). The
+version-3 pick is not used.
+
+Version 4 (this commit) adds that rule: an advance of more than
+`AdaptiveConfig.proof_advance_mm` (0.1 mm) after the hold started restarts the hold.
+Seed-2026 smoke trials (10 per condition, `mf_terminal_max` and
+`mf_terminal_max_broken_latch`, both machines, H and I) were looked at before this
+commit: all good parts seated, no broken-latch part passed.
+
+Written and committed before its dev runs. Same candidates, criteria and comparator as
+version 3; on = `results/v0.2d_pull_retry/dev4` (retry on in all four cells).
+Validation once on seed **4004**, as in version 3. The dev seeds 2026 and 2027 have
+now been used for four versions of this decision; seed 4004 is the check on that.

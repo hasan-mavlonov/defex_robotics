@@ -375,7 +375,7 @@ class SpiralSearchController(InsertionController):
                     if self._pull_retries_left <= 0:
                         return self._fail(obs, "retention_failed")
                     self._pull_retries_left -= 1
-                    self._repush_t_force, self._repush_peak = None, 0.0
+                    self._repush_t_force, self._repush_peak, self._repush_depth0 = None, 0.0, 0.0
                     self.log(obs.t, "retry", f"pull failed: push again at {c.insert_force_n:.1f} N and pull once more")
                     self._pull_phase, self._phase_t = "repush", obs.t
                     return self._cmd(10.0)
@@ -387,8 +387,10 @@ class SpiralSearchController(InsertionController):
                 return self._fail(obs, reason)
             self.z -= min(self.insert_axis.velocity(c.insert_force_n, f_ax), c.repush_speed_mm_s * MM) * dt
             self._repush_peak = max(self._repush_peak, f_ax)
+            if self._repush_t_force is not None and obs.depth - self._repush_depth0 > c.repush_advance_mm * MM:
+                self._repush_t_force = None  # the plug is still going in (C: "not a hard stop"): keep pushing
             if f_ax >= 0.8 * c.insert_force_n and self._repush_t_force is None:
-                self._repush_t_force = obs.t
+                self._repush_t_force, self._repush_depth0 = obs.t, float(obs.depth)
             held = self._repush_t_force is not None and obs.t - self._repush_t_force >= c.repush_hold_s
             if held or obs.t - self._phase_t > 2.0 * c.pull_test_max_s:
                 self.log(obs.t, "verify", f"re-push {'held' if held else 'timed out'}, peak {self._repush_peak:.1f} N, "
@@ -433,7 +435,8 @@ def _with_retention_pull(cfg: SpiralSearchConfig, retries: int = 0) -> SpiralSea
     a = AdaptiveConfig()
     return replace(cfg, retention_pull=True, pull_test_mating_factor=a.pull_test_mating_factor,
                    pull_limit_wipe_fraction=a.pull_limit_wipe_fraction, pull_retries=retries,
-                   repush_hold_s=a.proof_push_s, repush_speed_mm_s=a.proof_push_speed_mm_s)
+                   repush_hold_s=a.proof_push_s, repush_speed_mm_s=a.proof_push_speed_mm_s,
+                   repush_advance_mm=a.proof_advance_mm)
 
 
 class SpiralSearchPullController(SpiralSearchController):

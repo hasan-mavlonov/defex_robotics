@@ -428,11 +428,14 @@ class CompliantSpiralSearchController(SpiralSearchController):
         super().__init__(cfg or CompliantSpiralSearchConfig(), stiff_fixture_cfg or CompliantSpiralSearchStiffFixtureConfig())
 
 
-def _with_retention_pull(cfg: SpiralSearchConfig) -> SpiralSearchConfig:
-    """C's installed latch check on a spiral cell: the same pull force and movement limit (datasheet-based)."""
+def _with_retention_pull(cfg: SpiralSearchConfig, retries: int = 0) -> SpiralSearchConfig:
+    """C's installed latch check on a spiral cell: the same pull force and movement limit (datasheet-based).
+
+    v0.2d: ``retries`` re-pushes after a failed pull, picked per controller and machine by
+    results/v0.2d_pull_retry/SELECTION_RULE.md: on only for I on the gantry."""
     a = AdaptiveConfig()
     return replace(cfg, retention_pull=True, pull_test_mating_factor=a.pull_test_mating_factor,
-                   pull_limit_wipe_fraction=a.pull_limit_wipe_fraction, pull_retries=1,
+                   pull_limit_wipe_fraction=a.pull_limit_wipe_fraction, pull_retries=retries,
                    repush_hold_s=a.proof_push_s, repush_speed_mm_s=a.proof_push_speed_mm_s)
 
 
@@ -456,5 +459,5 @@ class CompliantSpiralSearchPullController(CompliantSpiralSearchController):
 
     def __init__(self) -> None:
         super().__init__()
-        self.cfg = _with_retention_pull(self.cfg)
-        self.stiff_fixture_cfg = _with_retention_pull(self.stiff_fixture_cfg)
+        self.cfg = _with_retention_pull(self.cfg, retries=1)  # gantry
+        self.stiff_fixture_cfg = _with_retention_pull(self.stiff_fixture_cfg)  # arm

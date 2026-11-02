@@ -121,7 +121,8 @@ def test_h_and_i_are_d_and_f_with_cs_retention_pull():
             assert cp.pull_test_mating_factor == a.pull_test_mating_factor
             assert cp.pull_limit_wipe_fraction == a.pull_limit_wipe_fraction
             # v0.2d: one re-push and second pull after a failed pull, with C's proof-push hold and speed cap
-            assert cb.pull_retries == 0 and cp.pull_retries == 1
+            picked = 1 if pulled == "spiral_rcc_pull" and cp is p.cfg else 0  # SELECTION_RULE: I on the gantry only
+            assert cb.pull_retries == 0 and cp.pull_retries == picked
             assert cp.repush_hold_s == a.proof_push_s and cp.repush_speed_mm_s == a.proof_push_speed_mm_s
 
 

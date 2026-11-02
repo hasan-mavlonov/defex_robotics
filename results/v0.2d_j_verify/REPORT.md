@@ -6,9 +6,9 @@ answer, from dev seeds 2026 and 2027 (both machines, all four suites, 20 trials 
 condition): C's escapes, close to C's throughput, not F's. J passed 1 bad unit in
 2,720 good-part trials (C 0, I 80, F 146) and 0 of 560 deliberately bad parts. It
 made 420 good units per hour against C's 400, I's 560 and F's 645. VERIFY adds about
-2.4 s per cycle on the gantry and 3.2 s on the arm, most of the gap between C and F.
-J seats fewer good parts than C (93.2% against 96.1%, p = 0.00043) and more than I
-(90.3%, p < 1e-6). Every number is in [`TABLES.md`](TABLES.md)
+2.4 s per cycle on the gantry and 3.4 s on the arm (median good cycle, pooled over the
+suites), most of the gap between C and F. J seats fewer good parts than C (93.2% against
+96.1%, p = 2.9e-9) and more than I (90.3%, p < 1e-6). Every number is in [`TABLES.md`](TABLES.md)
 (`python -m experiments.v02d_j_tables results/v0.2d_j_verify --pick spiral_rcc_verify_research`).
 Commands: [`run.sh`](run.sh).
 
@@ -101,10 +101,16 @@ hour. Latching suites also give deliberately bad parts passed.
 | totals: seated / bad units / bad parts / units/h | 96.1%, 0, 0/560, 400 | 90.3%, 146, 379/560, 645 | 90.3%, 80, 0/560, 560 | 93.2%, 1, 0/560, 420 |
 
 - False rejects: 0 for every controller. Protective stops: C 12, F 2, I 2, J 2.
-- Paired J vs C: seated J-only / C-only 80 / 132 (p = 0.00043); bad units 1 / 0
-  (p = 1). J is significantly below C on gantry standard (p = 0.00022) and on
-  latch_spread on both machines.
-- Paired J vs I: seated 164 / 60 (p < 1e-6); bad units 1 / 88 (p < 1e-6).
+- Paired J vs C: seated J-only / C-only 48 / 126 (p = 2.9e-9); bad units 1 / 0
+  (p = 1). J is significantly below C on gantry standard (0 / 20, p = 1.9e-6), on
+  latch_spread on both machines and on arm standard (p = 0.049).
+- Paired J vs I: seated 111 / 31 (p = 9.2e-12); bad units 1 / 80, discordant 0 / 79
+  (p < 1e-6).
+- Correction (after a review on 2026-11-01): the first version of this report gave
+  80 / 132 (p = 0.00043), 164 / 60 and 1 / 88. `experiments/v02d_j_tables.py` paired
+  trials on condition and trial index only, so pooled rows paired seed-2026 trials with
+  seed-2027 trials and gantry with arm. It now pairs within run and machine; the tables
+  were regenerated. Per-seed, per-machine rows and totals were not affected.
 
 VERIFY's cost (median good cycle, F -> J -> C): gantry standard 2.43 -> 4.77 -> 5.30 s;
 gantry heldout 3.25 -> 5.85 -> 6.15; arm standard 4.77 -> 8.00 -> 8.16; arm heldout

@@ -109,8 +109,8 @@ Rule outcome: **J(b) re-search** (more good parts seated).
 | arm, heldout | I | 100 | 76 / 77 | 5 / 6 | 1 | 0 / 9 | 0 / 9 | 0.0039 | n/a | |  |
 | arm, latch_spread | C | 120 | 116 / 119 | 1 / 4 | 0.38 | 0 / 0 | 0 / 0 | 1 | 0 / 0 of 60 | 0 / 0 | 1 |
 | arm, latch_spread | I | 120 | 116 / 120 | 0 / 4 | 0.12 | 0 / 0 | 0 / 0 | 1 | 0 / 0 of 60 | 0 / 0 | 1 |
-| both, all | C | 1360 | 1282 / 1290 | 36 / 44 | 0.43 | 0 / 0 | 0 / 0 | 1 | 0 / 0 of 280 | 0 / 0 | 1 |
-| both, all | I | 1360 | 1282 / 1276 | 38 / 32 | 0.55 | 0 / 38 | 0 / 38 | <1e-6 | 0 / 0 of 280 | 0 / 0 | 1 |
+| both, all | C | 1360 | 1282 / 1307 | 26 / 51 | 0.0059 | 0 / 0 | 0 / 0 | 1 | 0 / 0 of 280 | 0 / 0 | 1 |
+| both, all | I | 1360 | 1282 / 1281 | 30 / 29 | 1 | 0 / 38 | 0 / 38 | <1e-6 | 0 / 0 of 280 | 0 / 0 | 1 |
 
 ### Paired, J(b) re-search against C and I (seeds pooled)
 
@@ -132,8 +132,8 @@ Rule outcome: **J(b) re-search** (more good parts seated).
 | arm, heldout | I | 100 | 76 / 77 | 5 / 6 | 1 | 0 / 9 | 0 / 9 | 0.0039 | n/a | |  |
 | arm, latch_spread | C | 120 | 120 / 119 | 1 / 0 | 1 | 0 / 0 | 0 / 0 | 1 | 0 / 0 of 60 | 0 / 0 | 1 |
 | arm, latch_spread | I | 120 | 120 / 120 | 0 / 0 | 1 | 0 / 0 | 0 / 0 | 1 | 0 / 0 of 60 | 0 / 0 | 1 |
-| both, all | C | 1360 | 1295 / 1290 | 36 / 31 | 0.63 | 0 / 0 | 0 / 0 | 1 | 0 / 0 of 280 | 0 / 0 | 1 |
-| both, all | I | 1360 | 1295 / 1276 | 38 / 19 | 0.016 | 0 / 38 | 0 / 38 | <1e-6 | 0 / 0 of 280 | 0 / 0 | 1 |
+| both, all | C | 1360 | 1295 / 1307 | 26 / 38 | 0.17 | 0 / 0 | 0 / 0 | 1 | 0 / 0 of 280 | 0 / 0 | 1 |
+| both, all | I | 1360 | 1295 / 1281 | 30 / 16 | 0.054 | 0 / 38 | 0 / 38 | <1e-6 | 0 / 0 of 280 | 0 / 0 | 1 |
 
 ### Bad units passed on good-part trials, by the criterion they fail (seeds pooled)
 

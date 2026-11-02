@@ -26,9 +26,14 @@ keeps `on_verify_fail = "research"`; only its comment changed (3ea570b).
 - (b)'s gain is still on `latch_spread`: gantry 111 -> 120 of 120, arm 116 -> 120 of 120
   (dev 2026). At 35.2 N, F's own insertion reaches the floor more often, so the gain is
   smaller than at 30 N (gantry 38, arm 13 trials on two seeds then).
-- On dev 2026, J(b) against C: 1295 against 1290 seated of 1360 (36 / 31 discordant,
-  p = 0.63); 0 bad units each. J(b) against I: 1295 against 1276 (38 / 19, p = 0.016);
-  bad units 0 against 38 (p < 1e-6). Bad parts passed: 0 of 280 for C, I and J.
+- On dev 2026, J(b) against C: 1295 against 1307 seated of 1360 (26 / 38 discordant,
+  p = 0.17); 0 bad units each. J(b) against I: 1295 against 1281 (30 / 16, p = 0.054, not
+  significant); bad units 0 against 38 (p < 1e-6). Bad parts passed: 0 of 280 for C, I and J.
+- Correction (review, 2026-11-01): the first version gave 1290, 36 / 31, p = 0.63 against C
+  and 1276, 38 / 19, p = 0.016 against I. `experiments/v02d_j_tables.py` paired the pooled
+  "both" rows across machines (gantry J with arm C or I). It now pairs within run and
+  machine; TABLES.md was regenerated. The selection rule reads per-candidate totals and was
+  not affected.
 - Below C on gantry `standard`: 390 against 400 of 400 (p = 0.002). Equal to I on both
   machines' `latching` and `latch_spread`.
 - Cycle: J 7.55 s median against C 7.87 s and I 4.77 s; good units per hour 427 against
@@ -38,11 +43,20 @@ keeps `on_verify_fail = "research"`; only its comment changed (3ea570b).
 
 ## Checks
 
+- After a review, J's hand-over resets C's sample window, diagnosis and fold at every hand-over
+  (a1fc73e; before, a second hand-over could inherit them). J then equals J(b) on all 1,640 dev
+  2026 trials, 0 field differences (`equiv/COMPARE.txt`, at 829650a).
+
 - Up to F's "seated", J's events equal F's on all 3,033 trials per candidate where F declared seated
   (both seeds); on the 247 where F did not, J's row equals F's.
 - Tilt check: 1 FAIL among the 3,425 tilt verdicts logged in these runs (C and J), on a
-  bad part (`mf_terminal_max_broken_latch`). As disclosed in the rule: C's sample window
-  is empty at J's hand-over, so the check cannot fail at J's first latch check.
+  bad part (`mf_terminal_max_broken_latch`). C's sample window is empty at J's hand-over, so
+  the check cannot fail at J's first latch check. It is live on later latch checks in a
+  hand-over (after a proof push or held re-seat), not only "within an attempt it has already
+  failed" as SELECTION_RULE.md says; on J it has never measured more than 0.69 deg, because F
+  aims along the camera axis and the RCC stage is modelled stiff in tilt, so the measured plug
+  axis differs from the commanded one only by servo error (review of a1fc73e's parent, data from
+  these folders and the dev check).
 
 ## Uncertain
 

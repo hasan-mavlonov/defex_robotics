@@ -113,7 +113,7 @@ all PASS.
 - Escapes are rare: 8 on 16,000 dev trials, 1 on 3,200 arm validation trials. The
   check removed none on 4003.
 - A wrong flat-face fold, or a CoP just under the bound, defeats it. An edge-only rule
-  would act on about 5 times more good parts (selection data, not a tested candidate).
+  would act on about 3 times more good-part trials (61 against 19; 9 times on seated good parts, 36 against 4; selection data, not a tested candidate).
 - It flags in-spec plugs at the wall limit (2.4-2.9 deg).
 - Retracting a wedged plug can trip the 0.6 N m stop.
 - The collector missed latch checks after a held re-seat in 92 gantry selection

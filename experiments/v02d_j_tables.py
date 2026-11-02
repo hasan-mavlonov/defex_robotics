@@ -45,7 +45,8 @@ def load_run(folder: Path) -> dict[tuple[str, str], list[dict]]:
             p = folder / f"{m}_{s}" / "trials.csv"
             if p.exists():
                 with p.open() as fh:
-                    out[(m, s)] = list(csv.DictReader(fh))
+                    # tagged so that pooled runs and machines pair only like with like (paired_rows)
+                    out[(m, s)] = [dict(r, _run=folder.name, _machine=m) for r in csv.DictReader(fh)]
     return out
 
 
@@ -132,10 +133,16 @@ def selection(run: dict, label: str) -> list[str]:
     return out
 
 
+def _pair_key(r: dict, controller: str) -> tuple:
+    return (r["_run"], r["_machine"], controller, r["condition"], r["trial_index"])
+
+
 def paired_rows(rows: list[dict], a: str, b: str, keep) -> list[tuple[dict, dict]]:
-    idx = {(r["controller"], r["condition"], r["trial_index"]): r for r in rows}
-    return [(r, idx[(b, r["condition"], r["trial_index"])]) for r in rows
-            if r["controller"] == a and keep(r) and (b, r["condition"], r["trial_index"]) in idx]
+    """Pairs (a's trial, b's trial) of the same run, machine, condition and trial index."""
+    idx = {_pair_key(r, r["controller"]): r for r in rows}
+    assert len(idx) == len(rows), "duplicate trial keys"
+    return [(r, idx[_pair_key(r, b)]) for r in rows
+            if r["controller"] == a and keep(r) and _pair_key(r, b) in idx]
 
 
 def paired_table(runs: dict[str, dict], j: str, title: str) -> list[str]:

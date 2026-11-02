@@ -33,7 +33,7 @@ B and E read the overtravel, and only on a connector with a force budget. Test:
 
 Protective stops on good parts, E: latching 71 -> 46, latch_spread 87 -> 34; B: 91 -> 52
 and 152 -> 47. E is back to its v0.2c count on both suites (74 and 206). C and I
-(which do not read the overtravel) are field-identical on all 1,040 trials each.
+(which do not read the overtravel) are field-identical on all 640 trials each (280 latching, 360 latch_spread).
 
 Deliberately bad parts passed (no pull test in A, B, E): E latching 28 -> 83 of 160,
 latch_spread 51 -> 104 of 120; B 23 -> 72 and 30 -> 94. With the push no longer cut

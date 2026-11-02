@@ -1,10 +1,11 @@
 # v0.2d force budget: insert target from the datasheet
 
 Development work on seeds 2026 and 2027 only, gantry and UR5e arm, all nine
-controllers (A-I). Every number below is in [`TABLES.md`](TABLES.md)
+controllers (A-I). Most numbers below are in [`TABLES.md`](TABLES.md)
 (`python -m experiments.v02d_force_budget_tables results/v0.2d_force_budget`) or
 [`EQUIVALENCE.txt`](EQUIVALENCE.txt), both built from the per-trial files in
-`before/` and `after/` by [`run.sh`](run.sh) `tables`. Before: commit b94b971
+`before/` and `after/` by [`run.sh`](run.sh) `tables`; the rest (abort and stop counts, single-trial
+forces and times) come from the same `trials.csv` and `events.json.gz` files. Before: commit b94b971
 (the benchmark_v0.2c code). After: commit 34520aa (the fix). Every `config.json`
 shows `git_dirty: false`.
 

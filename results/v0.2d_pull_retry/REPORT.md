@@ -26,9 +26,9 @@ reject. Test:
 
 | Version | Re-push ended on | What the dev runs showed | Status |
 |---|---|---|---|
-| v1 ([`v1/`](v1/TABLES.md), 02ece67) | hold, or 3 s after contact | gantry gains; arm none, H passed 2 broken-latch parts | dropped |
-| v2 ([`dev/`](dev/TABLES.md), 5a02674) | hold, a stall, or 6 s | pick "I on the gantry only", confirmed on seed 4003 | **withdrawn**: the fairness review found the stall exit had no force gate; H's re-pushes and I's on the arm ended at 9-16 N, and the arm H bad-part passes (16) came from second pulls after those weak re-pushes |
-| v3 ([`dev3/`](dev3/TABLES.md), 0ba51c0) | hold or 6 s, capped, force limits | gantry gains, no new stops; arm none: the hold ran out while the plug was still moving through the terminal peak | not used |
+| v1 ([`v1/`](v1/TABLES.md), code 02ece67, run at fd77f86, which adds only run.sh) | hold, or 3 s after contact | gantry gains; arm none, H passed 2 broken-latch parts | dropped |
+| v2 ([`dev/`](dev/TABLES.md), code 5a02674, run at 460924c, which adds only the tables script) | hold, a stall, or 6 s | pick "I on the gantry only", confirmed on seed 4003 | **withdrawn**: the fairness review found the stall exit had no force gate; H's re-pushes and I's on the arm ended at 9-16 N, and the arm H bad-part passes (16) came from second pulls after those weak re-pushes |
+| v3 ([`dev3/`](dev3/TABLES.md), 0ba51c0) | hold or 6 s, capped, force limits | gantry gains, no new stops; arm no gain, and arm H passed 2 bad parts (0 -> 2): the hold ran out while the plug was still moving through the terminal peak | not used |
 | v4 ([`dev4/`](dev4/TABLES.md), 1f1ca4a) | as v3, an advance restarts the hold | gains on all four cells, no new bad parts or stops | **installed** |
 
 Each version's rule was committed before that version's dev runs

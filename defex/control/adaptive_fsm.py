@@ -245,6 +245,7 @@ class AdaptiveInsertionController(InsertionController):
         self._capture: dict = {}
         self._proof_t_force: float | None = None
         self._proof_depth0 = 0.0
+        self._tilt_failed_attempt = -1
         if self._verdict:
             m = spec.mating
             self._proof_force = c.proof_push_factor * m.mating_force_max_n
@@ -1028,6 +1029,8 @@ class AdaptiveInsertionController(InsertionController):
         return best >= self.cfg.click_drop_fraction * m.latch_peak_force_n, best
 
     def _begin_latch_verify(self, obs: Observation) -> Command:
+        if self.cfg.tilt_check and not self._tilt_verdict(obs):
+            return self._verify_failed(obs)
         m = self.ctx.connector.mating
         bottom = self._corrected_depth(obs)
         clicked, drop = self._click_in_trace(bottom)
@@ -1145,6 +1148,40 @@ class AdaptiveInsertionController(InsertionController):
         px, py = self.plug_half
         m = self.cfg.surface_cop_margin_mm * MM
         return bool(abs(diag.cop[0]) <= px + m and abs(diag.cop[1]) <= py + m)
+
+    # ------------------------------------------------------------------ v0.2d: tilt check (latching VERIFY)
+    def _tilt_evidence(self, obs: Observation) -> tuple[float, float]:
+        """(Measured plug axis against C's socket-axis estimate, rad; largest |CoP| / plug half-width).
+
+        The socket-axis estimate is the camera's with the tilts of flat top-face conforms folded in (R_corr);
+        the plug axis is the encoder pose with the in-hand estimate. The CoP is that of the wrench averaged
+        over the recent samples less their first third, as DETECT averages its window (at the start of the
+        latch check: the push at the bottom).
+        """
+        cos = float(np.dot(self.R_corr[:, 2], obs.rel_pose.R[:, 2]))
+        tilt = float(np.arccos(np.clip(cos, -1.0, 1.0)))
+        recent = list(self._recent)[len(self._recent) // self.cfg.detect_discard_divisor:]
+        if not recent:
+            return tilt, 0.0  # no wrench yet: no evidence that the walls hold the plug
+        F = np.mean([o.force for o in recent], axis=0) - self.bias_f
+        T = np.mean([o.torque for o in recent], axis=0) - self.bias_t
+        cop = np.array([-T[1], T[0]]) / max(float(F[2]), _EPS)
+        return tilt, float(np.max(np.abs(cop) / np.asarray(self.plug_half)))
+
+    def _tilt_verdict(self, obs: Observation) -> bool:
+        """False when the plug is turned off the socket axis and held there by the walls (AdaptiveConfig.tilt_check).
+
+        Within the attempt that failed it, the plug has not left the cavity: while it is still turned beyond the
+        bound it fails again, whatever the wall load (a re-seat after a held retract unloads the walls)."""
+        c = self.cfg
+        tilt, edge = self._tilt_evidence(obs)
+        held = edge > c.tilt_check_edge_fraction or self._tilt_failed_attempt == self.attempts
+        ok = tilt <= c.tilt_check_deg * DEG or not held
+        if not ok:
+            self._tilt_failed_attempt = self.attempts
+        self.log(obs.t, "tilt", f"plug axis {tilt / DEG:.2f} deg off the socket estimate, CoP at {edge:.2f} of the "
+                                f"half-width -> {'PASS' if ok else 'FAIL'}")
+        return ok
 
     def _bottom_proof_step(self, obs: Observation, f_ax: float, dt: float) -> Command:
         """On a bottom after an earlier slide-out: hold it at the proof force before the click and pull."""

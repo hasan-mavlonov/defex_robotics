@@ -36,7 +36,7 @@ def _cases(backend: str, n: int = 2) -> list[tuple[str, int, dict]]:
 
 
 def _all_off() -> AdaptiveConfig:
-    return replace(AdaptiveConfig(), **json.loads((RF / "variants.json").read_text())["cp2"])
+    return replace(AdaptiveConfig(), tilt_check=False, **json.loads((RF / "variants.json").read_text())["cp2"])
 
 
 def _checkpoint2_budget(sc):

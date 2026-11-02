@@ -1,6 +1,6 @@
 # v0.2d pull retry: H and I before (no retry) and after (one retry)
 
-Before: `results/v0.2d_force_budget/after` (34520aa). After: `results/v0.2d_pull_retry`. Seeds 2026 and 2027 pooled, 20 trials per condition and seed.
+Before: `results/v0.2d_force_budget/after` (34520aa). After: `results/v0.2d_pull_retry/v1`. Seeds 2026 and 2027 pooled, 20 trials per condition and seed.
 
 | Machine, suite | Ctrl | Rows differ | Good seated before -> after | Lost / gained (p) | Bad units on good parts | Bad parts passed | Stops good + bad | Median good cycle (s) | Good units/h (60 s/stop) |
 |---|---|---|---|---|---|---|---|---|---|

@@ -2,11 +2,19 @@
 
 Short answers you can give yourself, each with the file that backs it. Numbers
 are from benchmark_v0.2c (seed 20261116, results at c3884c6, code 45f8b06,
-Micro-Fit insert target 30 N) unless marked. Simulation only. The v0.2d code
-(35.2 N insert target, H and I pull retry, tilt check, controller J) has not been
-benchmarked yet.
+Micro-Fit insert target 30 N) unless marked. Simulation only.
 
-<!-- v0.2d: fill after benchmark_v0.2d -->
+**benchmark_v0.2d first** (seed 20261123, code 42df5c8, 96,000 trials, 35.2 N
+insert target for every controller, H and I re-push after a failed pull, J = F's
+insertion plus C's verification; `results/benchmark_v0.2d/REPORT.md`). Where it
+changes an answer below, the answer says so. In one paragraph: C leads every
+conventional cell on the standard suite on both machines and on gantry
+mis-characterized vision (p = 0.044); F seats more gantry latching good parts than
+C (98.5% against 96.5%, p = 0.012); a conventional cell matches C on the other four
+suites, including latch_spread on both machines; C, H and I pass 0 of 2,200 bad
+parts; C passes 0 of 7,400 good-part trials that were not seated, H 118 and I 161;
+C makes fewer good units per hour than I on every suite. J passes 3 and seats as
+many latching parts as I, and fewer standard parts than C.
 
 ## 1. "How does it compare with spiral search?"
 
@@ -57,8 +65,11 @@ stalls. A spiral cell with that push was not in the run; the fair answer is that
 this is a setting, not proof of the method (`REPORT.md`, "latch_spread: what the
 gap is"). The v0.2d code sets the insert target to 35.2 N for every controller,
 and after a failed pull H and I push again and pull once more
-(`results/v0.2d_force_budget/REPORT.md`, `results/v0.2d_pull_retry/REPORT.md`);
-benchmark_v0.2d has not run.
+(`results/v0.2d_force_budget/REPORT.md`, `results/v0.2d_pull_retry/REPORT.md`).
+In benchmark_v0.2d, at the maximum terminal friction, H seated 99 and 100 of 100,
+I, J and C 100 of 100 on each machine; D and F seated 84-96 but also passed 4-24
+short plugs as good (`results/benchmark_v0.2d/TABLES.md`, latch_spread). The gap
+was the setting.
 
 ## 5. "Why not learning?"
 
@@ -84,12 +95,13 @@ it must be measured on the rig. `results/benchmark_v0.2c/TABLES.md`,
 
 No. Every reported run is pre-registered with a fresh seed, frozen code and
 decision rules written before the first trial (`PREREGISTRATION.md` in each
-benchmark folder). Development used seeds 2026, 2027, 3001-3040, 4001, 4002 and
-3032. Two things to say before someone else does: the fixes in v0.2c were
+benchmark folder). Development and validation used seeds 2026, 2027, 3001-3040
+and 4001-4005; each benchmark has its own seed, unused before it. Two things to say before someone else does: the fixes in v0.2c were
 motivated by what Checkpoint 2 found, and the `latch_spread` suite was added
 after development showed C ahead there. That is why both were tested on a new
 seed, and why the run also gave the baselines the pull test. The rules force us
-to publish losses: C below F and I on latching parts is in the README headline.
+to publish losses: C below F on gantry latching parts is in the README headline
+(benchmark_v0.2d), as C below F and I was in benchmark_v0.2c.
 
 ## 8. "Does C cheat by knowing things a real cell would not?"
 

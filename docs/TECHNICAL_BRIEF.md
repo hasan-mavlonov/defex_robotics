@@ -6,7 +6,30 @@ from; unless stated otherwise that is a benchmark_v0.2c file: results committed
 at c3884c6, code frozen at 45f8b06, pre-registered at b479e17, seed 20261116,
 Micro-Fit insert target 30 N.
 
-<!-- v0.2d: fill after benchmark_v0.2d -->
+**benchmark_v0.2d** (seed 20261123, code 42df5c8, pre-registered at 966a5f5,
+96,000 trials, insert target 35.2 N for every controller;
+[`REPORT.md`](../results/benchmark_v0.2d/REPORT.md)) changes three results.
+
+| Machine, suite | C | Best of D, E, F, H, I | p | Verdict |
+|---|---|---|---|---|
+| gantry, standard | 99.2% | F/I 96.3% | < 1e-6 | C ahead |
+| gantry, latching good parts | 96.5% | F 98.5% | 0.012 | C below |
+| gantry, mis-characterized vision | 87.6% | F/I 83.4% | 0.044 | C ahead |
+| gantry, latch_spread good parts | 100.0% | I 99.8% | 1 | matches |
+| arm, standard | 97.8% | F/I 96.1% | 4.5e-5 | C ahead |
+| arm, latching good parts | 94.3% | F 93.7% | 0.64 | matches |
+| arm, mis-characterized vision | 79.0% | F/I 79.4% | 0.92 | matches |
+| arm, latch_spread good parts | 99.8% | H 99.7% | 1 | matches |
+
+C's latch_spread lead is gone: with the same 35.2 N push and a re-push after a
+failed pull, H and I seat as many varied parts as C. Bad parts passed: C, H and
+I 0 of 2,200 each. Good-part trials passed as good when not seated: C 0 of 7,400,
+H 118, I 161. C makes fewer good units per hour than I on every suite (gantry
+standard 608 against 1,128). J, F's insertion followed by C's verification,
+passed 3 such units, seats as many latching parts as I and fewer standard parts
+than C (`HEADLINE_TABLES.md`). No multiple-comparison correction; the two
+verdicts at 0.01 <= p < 0.05 are being re-checked on seed 20261124 with the same
+code.
 
 ## What was tested
 
@@ -31,8 +54,7 @@ connector, by selection rules committed before the runs
 [`v0.2c_gantry_baselines`](../results/v0.2c_gantry_baselines/REPORT.md)). G is C
 plus a learned contact prior.
 
-The v0.2d code changes the method; benchmark_v0.2d (seed 20261123, A-J) has not
-run. The Micro-Fit's insert target is 35.2 N (1.1 x the datasheet's 32 N maximum
+The v0.2d code, which benchmark_v0.2d ran, changes the method. The Micro-Fit's insert target is 35.2 N (1.1 x the datasheet's 32 N maximum
 mating force) for every controller, up from 30 N; abort 40 N, protective stop 48 N
 and damage 58 N are unchanged
 ([`v0.2d_force_budget`](../results/v0.2d_force_budget/REPORT.md)). A, B and E's
@@ -121,21 +143,24 @@ latching suite.
 
 ## What this supports
 
-<!-- v0.2d: fill after benchmark_v0.2d -->
-
 - In simulation, C did not call a mis-seated connector good in 7,400 good-part
-  trials (upper bound 0.05%); the best conventional cell with a pull test did so
-  in 135.
+  trials (upper bound 0.05%), in benchmark_v0.2c and again in benchmark_v0.2d;
+  the conventional cells with a pull test did so 118 (H) and 161 (I) times in
+  benchmark_v0.2d.
 - C seats more housing-only connectors under standard conditions than the
-  conventional cells tested, on both machines.
+  conventional cells tested, on both machines, in both benchmarks.
 
 ## What this does not support yet
 
 - That C rejects bad parts better than a conventional cell with a pull test.
 - That C seats more latching parts, or handles part-to-part variation better,
-  than a conventional cell given the same pull and the same stall push.
+  than a conventional cell given the same pull and the same push: in
+  benchmark_v0.2d F beats C on gantry latching good parts and a conventional cell
+  matches C on latch_spread on both machines.
 - That C is cheaper per good unit. It is slower, and the cost of a mis-seated
   connector is not priced here.
+- That C or J is the better product. J keeps most of C's protection against
+  mis-seated units at about C's cycle; this run does not decide between them.
 - Any hardware number. There is no rig yet; the latch model and its spread are
   assumed, and the arm is one simulated model whose servos may lag more than a
   real UR5e. Rig options and a test protocol are in

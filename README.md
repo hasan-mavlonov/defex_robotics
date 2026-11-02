@@ -11,21 +11,86 @@ verifies the result before it declares success.
 
 Everything here runs in MuJoCo with a real socket cavity, bounded actuators and
 noisy sensors, on two machines: a gantry fixture and a UR5e arm (MuJoCo
-Menagerie). Every benchmark number in this README comes from the files in
+Menagerie). The first results section comes from
+[`results/benchmark_v0.2d`](results/benchmark_v0.2d). Every other benchmark number
+in this README comes from the files in
 [`results/benchmark_v0.2c`](results/benchmark_v0.2c) unless it is marked as
-benchmark_v0.2b ([`results/benchmark_v0.2b`](results/benchmark_v0.2b)),
+benchmark_v0.2d, benchmark_v0.2b ([`results/benchmark_v0.2b`](results/benchmark_v0.2b)),
 benchmark_v0.2a ([`results/benchmark_v0.2a`](results/benchmark_v0.2a)), V0.1
 ([`results/benchmark_v0.1`](results/benchmark_v0.1)) or a development
 measurement. The physics behavior is pinned by the test suite (see
 [Validation](#validation)). This is a research prototype: it has not been
 validated on hardware (see [Limitations](#assumptions-and-limitations)).
-The method sections below describe the v0.2d code, which differs from the code
-benchmark_v0.2c ran (see [The controllers](#the-controllers)); benchmark_v0.2d
-has not run yet.
+The method sections below describe the v0.2d code, which benchmark_v0.2d ran and
+which differs from the code benchmark_v0.2c ran (see
+[The controllers](#the-controllers)).
 
-<!-- v0.2d: fill after benchmark_v0.2d -->
+## Results: benchmark_v0.2d, two machines, same push and pull for every cell
 
-## Results: benchmark_v0.2c, two machines, conventional cells with the same pull test
+Pre-registered ([`PREREGISTRATION.md`](results/benchmark_v0.2d/PREREGISTRATION.md),
+code frozen at 42df5c8): seed 20261123, gantry and UR5e arm, ten controllers,
+four suites, 96,000 paired trials, Micro-Fit insert target 35.2 N for every
+controller. Full report:
+[`results/benchmark_v0.2d/REPORT.md`](results/benchmark_v0.2d/REPORT.md); the
+tables are regenerated from the per-trial rows by the four commands in the
+pre-registration. New in this run: every controller pushes to 35.2 N
+(1.1 x the datasheet's 32 N maximum mating force); H and I re-push and pull
+again after a failed pull; C and G check plug tilt in the latch check; and
+**J** is F's insertion followed by C's verification (not a conventional cell).
+
+**Headline, as the pre-registered rules require.**
+
+* **On gantry latching good parts, F seats more than C**: 98.5% against 96.5%
+  (McNemar p = 0.012).
+* **A conventional cell matches C on four of eight suites**: arm latching
+  (F 93.7% against C 94.3%, p = 0.64), arm mis-characterized vision (F 79.4%
+  against 79.0%, p = 0.92), and latch_spread good parts on both machines
+  (gantry I 99.8% against 100.0%, arm H 99.7% against 99.8%, p = 1). C's
+  latch_spread lead from benchmark_v0.2c is gone once every cell pushes to
+  35.2 N and H and I re-push.
+* **With the same pull test, the conventional cells pass no bad parts either.**
+  C, H and I each passed 0 of 2,200 deliberately bad latching parts (Wilson 95%
+  upper bound 0.17%).
+
+C leads every conventional cell on the standard suite (gantry 99.2% against
+96.3%, p < 1e-6; arm 97.8% against 96.1%, p = 4.5e-5) and on gantry
+mis-characterized vision (87.6% against 83.4%, p = 0.044; no correction for
+multiple comparisons).
+
+**What is left of C's lead: it does not pass mis-seated connectors that a depth
+check accepts.** Across all 7,400 good-part trials C passed none as good (upper
+bound 0.05%); H passed 118 and I 161, all on the housing-only connector, mostly
+tilted or short plugs under 2 mm of camera error (C against H and against I,
+p <= 7.6e-6 on each of the four housing-only suites). J, which runs C's
+verification after F's insertion, passed 3 and seats as many latching parts as
+I; it seats fewer than C on the standard suite (gantry 98.0% against 99.2%,
+p = 0.00012; arm 97.0% against 97.8%, p = 0.03).
+
+**C is slower on every suite.** Good units per hour, C against F (I, J in
+brackets): standard, gantry 608 against 1,128 (1,128, 655) and arm 386 against
+593 (593, 381); latching good parts, gantry 438 against 854 (494, 494) and arm
+289 against 474 (313, 311). Median successful cycle on the standard suite:
+gantry 5.30 s against 2.43 s, arm 8.14 s against 4.77 s.
+
+| Machine, suite | C | Best of D, E, F, H, I | p | Bad units passed, C / I / J | Good units/h, C / I / J |
+|---|---|---|---|---|---|
+| gantry, standard | 99.2% | F/I 96.3% | < 1e-6 | 0 / 48 / 1 of 2,000 | 608 / 1,128 / 655 |
+| gantry, latching good parts | 96.5% | F 98.5% | 0.012 | 0 / 0 / 0 of 600 | 438 / 494 / 494 |
+| gantry, mis-characterized vision | 87.6% | F/I 83.4% | 0.044 | 0 / 39 / 2 of 500 | 341 / 478 / 382 |
+| gantry, latch_spread good parts | 100.0% | I 99.8% | 1 | 0 / 0 / 0 of 600 | 533 / 609 / 629 |
+| arm, standard | 97.8% | F/I 96.1% | 4.5e-5 | 0 / 43 / 0 of 2,000 | 386 / 593 / 381 |
+| arm, latching good parts | 94.3% | F 93.7% | 0.64 | 0 / 0 / 0 of 600 | 289 / 313 / 311 |
+| arm, mis-characterized vision | 79.0% | F/I 79.4% | 0.92 | 0 / 31 / 0 of 500 | 208 / 310 / 218 |
+| arm, latch_spread good parts | 99.8% | H 99.7% | 1 | 0 / 0 / 0 of 600 | 350 / 399 / 397 |
+
+Good units per hour count 0 s per protective stop. With 60 s per stop see
+[`HEADLINE_TABLES.md`](results/benchmark_v0.2d/HEADLINE_TABLES.md). G (C plus a
+learned contact prior) beats C on four suites (p < 0.05) and passed no bad unit.
+A second seed with the same code (`results/benchmark_v0.2d_rep`, seed 20261124)
+was pre-registered to check which of these verdicts hold. Simulation only.
+
+
+## Earlier result: benchmark_v0.2c, two machines, conventional cells with the same pull test
 
 Pre-registered ([`PREREGISTRATION.md`](results/benchmark_v0.2c/PREREGISTRATION.md),
 code frozen at 45f8b06): seed 20261116, gantry and UR5e arm, nine controllers,
@@ -194,34 +259,33 @@ gantry baselines were never tuned with the latching connector: re-tuned, F seats
 
 ## What we can claim / what we cannot claim yet
 
-<!-- v0.2d: fill after benchmark_v0.2d -->
-
-**Can claim (simulation, benchmark_v0.2c):**
+**Can claim (simulation, benchmark_v0.2d, seed 20261123):**
 
 * C passed none of 7,400 good-part trials as good when the connector was not
-  seated (Wilson 95% upper bound 0.05%). The strongest conventional cell with a
-  pull test, I, passed 135, mostly tilted or short plugs under camera error that
-  its depth check accepts.
+  seated (Wilson 95% upper bound 0.05%). The conventional cells with a pull test
+  passed 118 (H) and 161 (I), mostly tilted or short plugs under camera error that
+  their depth check accepts; the difference is significant on each housing-only
+  suite on both machines.
 * Under the standard conditions C seats more housing-only connectors than every
-  conventional cell tested, on both machines (gantry 99.0% against 96.6%, arm
-  97.6% against 96.4%).
+  conventional cell tested, on both machines (gantry 99.2% against 96.3%, arm
+  97.8% against 96.1%).
 * The comparison is paired, pre-registered and regenerable from committed
-  per-trial files.
+  per-trial files. benchmark_v0.2c (seed 20261116) gave the same two results.
 
 **Cannot claim yet:**
 
 * That C rejects bad parts better than a conventional cell. With the same pull
   test, H and I passed 0 of 2,200 bad parts, as C did.
-* That C seats more latching parts. F and I seat more good latching parts than C
-  on both machines, and match it when the camera is worse than believed.
-* That C handles part-to-part variation better. In benchmark_v0.2c its
-  latch_spread lead came mostly from pushing above the datasheet's maximum mating
-  force when a plug stalls, against the conventional cells' 30 N insert target; a
-  conventional cell with that push was not in the run. The v0.2d code gives every
-  controller the 35.2 N insert target; benchmark_v0.2d has not run.
-* That C is faster or cheaper per good unit. It makes 2-45% fewer good units per
-  hour than I on seven of eight suites, and the cost of a passed bad unit is not
-  priced.
+* That C seats more latching parts. F seats more good latching parts than C on
+  the gantry (98.5% against 96.5%, p = 0.012) and matches it on the arm.
+* That C handles part-to-part variation better. With every controller pushing to
+  35.2 N and H and I re-pushing after a failed pull, a conventional cell matches C
+  on latch_spread good parts on both machines.
+* That C copes better when the camera is worse than believed. F matches C on the
+  arm; on the gantry C leads at p = 0.044, with no correction for the number of
+  tests.
+* That C is faster or cheaper per good unit. It makes fewer good units per hour
+  than I on every suite, and the cost of a passed bad unit is not priced.
 * Anything on hardware. The latch snap force is assumed, there is one latching
   connector and one simulated arm, and no rig yet.
 
@@ -462,8 +526,9 @@ integrator would know in advance: the connector's drawing dimensions, the
 programmed (nominal) socket pose, the fixture limits, and the vision system's
 characterized accuracy (its noise sigma and bias magnitude, never the error
 itself). C uses the accuracy figure to size its search prior and its approach
-height. Each condition hands it the correct figure, so the benchmark does not test
-a camera whose accuracy has been mis-characterized.
+height. The standard and latching conditions hand it the correct figure; the
+mis-characterized-vision suite (`heldout`) hands it a figure better than the
+camera's real accuracy.
 
 Ground truth (true poses, contact forces, penetration, contact count) lives in a
 separate `GroundTruth` type that only the scoring code reads. The separation is
@@ -780,7 +845,7 @@ The project targets the existing `.venv` on the Mac mini (Python 3.12, MuJoCo
 source .venv/bin/activate
 pip install -e ".[dev,video]"     # mujoco, numpy, matplotlib; pytest; imageio + ffmpeg for MP4
 
-pytest -q                         # 40 tests (physics, geometry, sensing, controllers)
+pytest -q                         # 193 tests (physics, geometry, sensing, controllers, reports)
 pytest -q -m "not slow"           # skip the closed-loop controller tests
 python -m experiments.baseline    # one-minute check: all controllers at 100% on easy conditions
 ```
@@ -877,7 +942,7 @@ experiments/              baseline check, robustness benchmark, evaluation + plo
 demos/                    live viewer, video recorder, replay, investor video
   media/                  rendered investor video and its README still
 simulations/              generated workcell MJCF, original prototype, viewer script
-tests/                    40 tests: geometry, physics, sensing, controllers, metrics
+tests/                    193 tests: geometry, physics, sensing, controllers, metrics
 results/benchmark_v0.1/   the reported benchmark: trials.csv, summary.json/.csv, report.md,
                           plots/, events.json.gz, trajectories/ (replayable),
                           earlier_runs/ (superseded reports)
@@ -978,7 +1043,7 @@ The V0.2 plan (brief of 2026-10-26) runs in workstreams, one branch each:
 12. v0.2d, development done: Micro-Fit insert target 35.2 N for every
     controller, arm overtravel along the push, one pull retry for H and I, tilt
     check in the latching VERIFY, controller J; benchmark_v0.2d (seed 20261123,
-    A-J) has not run.
+    A-J, this README's first results section); replication on seed 20261124.
 
 Open after benchmark_v0.2c: the connector file's 30 N insert target was below
 the datasheet's 32 N maximum mating force; a conventional cell with C's

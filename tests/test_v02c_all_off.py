@@ -39,6 +39,12 @@ def _all_off() -> AdaptiveConfig:
     return replace(AdaptiveConfig(), **json.loads((RF / "variants.json").read_text())["cp2"])
 
 
+def _checkpoint2_budget(sc):
+    """Checkpoint 2 ran with the Micro-Fit's old 30 N insert target (35.2 N since v0.2d)."""
+    fb = replace(sc.connector.force_budget, insert_target_n=30.0)
+    return replace(sc, connector=replace(sc.connector, force_budget=fb))
+
+
 def _task(backend: str, monkeypatch):
     from defex.sim.arm_backend import menagerie_available
     from experiments import runner
@@ -59,6 +65,6 @@ def test_all_v02c_switches_off_reproduce_checkpoint2(backend, monkeypatch):
     task = _task(backend, monkeypatch)
     for cond, i, ref in cases:
         c = latching_conditions_by_name()[cond]
-        sc = sample_scenario(c, i, 2026, nominal_socket_pose(c, task.fixture))
+        sc = _checkpoint2_budget(sample_scenario(c, i, 2026, nominal_socket_pose(c, task.fixture)))
         r = task.run(AdaptiveInsertionController(_all_off()), sc).to_row()
         assert {f: str(r[f]) for f in FIELDS} == {f: ref[f] for f in FIELDS}, (cond, i)

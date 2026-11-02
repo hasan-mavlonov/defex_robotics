@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from defex.config import MM, ConnectorSpec
+from defex.config import CONNECTOR_ASSET_DIR, MM, AdaptiveConfig, ConnectorSpec
 from defex.sim.backend import SceneParams
 from defex.sim.mating import MatingForce
 from defex.sim.mujoco_backend import MuJoCoBackend
@@ -34,6 +34,19 @@ def test_model_forces_respect_the_datasheet_limits():
     peak = max(mf.terminal_force(d) + mf.latch_ramp_force(d) for d in depths)
     assert peak <= SPEC.mating.mating_force_max_n  # 32 N max for 4 circuits
     assert mf.slide_t >= SPEC.mating.unmating_force_min_n  # 9.6 N min withdrawal
+
+
+BUDGETED = [s for s in map(ConnectorSpec.load, sorted(CONNECTOR_ASSET_DIR.glob("*.json"))) if s.force_budget]
+
+
+@pytest.mark.parametrize("spec", BUDGETED, ids=lambda s: s.name)
+def test_insert_target_reaches_the_datasheet_maximum_mating_force(spec):
+    """v0.2d: every controller pushes at the insert target, so a part at the datasheet maximum must be able to seat."""
+    fb, m = spec.force_budget, spec.mating
+    assert m is not None
+    assert fb.insert_target_n >= m.mating_force_max_n
+    assert fb.insert_target_n == pytest.approx(AdaptiveConfig().proof_push_factor * m.mating_force_max_n)
+    assert fb.insert_target_n < fb.abort_n < fb.protective_stop_n < fb.damage_n
 
 
 def _press_and_pull(defect=None, pull_n=29.0, overtravel_mm=3.0):

@@ -77,7 +77,7 @@ class MatingSpec:
 class ForceBudget:
     """Per-connector force thresholds, replacing the fixed 6/20/30/45 N of V0.1 (W3)."""
 
-    insert_target_n: float
+    insert_target_n: float  # every controller pushes at this; at least the datasheet maximum mating force (v0.2d)
     abort_n: float
     protective_stop_n: float
     damage_n: float
@@ -869,8 +869,9 @@ class AdaptiveConfig:
     hard_stop_repeats: int = 2  # identical hard stops in the cavity (re-aimed or moved between them)
     lead_in_sigma_k: float = 3.0  # in the cavity: depth beyond the drawing's lead-in by this many depth sigmas
     # Proof push for stops where the drawing puts the terminals (seat - wipe, less a margin): a good part may
-    # need up to the datasheet maximum mating force, more than the 30 N insertion target, so the stop counts as
-    # hard only if it holds at that maximum plus a margin. 1.1 x 32 N = 35 N: below abort (40 N) and stop (48 N).
+    # need up to the datasheet maximum mating force, so the stop counts as hard only if it holds at that maximum
+    # plus a margin. 1.1 x 32 N = 35.2 N: below abort (40 N) and stop (48 N). Since v0.2d the Micro-Fit's insert
+    # target is the same 35.2 N (it was 30 N, below the datasheet maximum).
     proof_push_factor: float = 1.1  # x MatingSpec.mating_force_max_n; margin for the latch ramp (not rated)
     proof_push_s: float = 0.4  # hold at the proof force (the force loop settles in ~0.1 s)
     proof_push_speed_mm_s: float = 2.0  # speed cap: an end stop met at 2 mm/s adds a few N, at 10 mm/s ~20 N

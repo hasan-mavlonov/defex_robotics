@@ -17,3 +17,7 @@ for B in gantry arm; do
     done
   done
 done
+# Retry off on seed 4003 (validation comparator, gantry I only), at 34520aa in a separate worktree:
+#   for S in latching latch_spread; do python -m experiments.robustness --backend gantry --suite $S --seed 4003 \
+#     --trials 20 --controllers spiral_rcc_pull --workers 3 --no-plots --name val4003_off/gantry_${S}_s4003; done
+# then copy results/val4003_off into results/v0.2d_pull_retry/val4003_off.

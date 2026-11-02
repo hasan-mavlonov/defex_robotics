@@ -121,7 +121,7 @@ def test_h_and_i_are_d_and_f_with_cs_retention_pull():
             assert cp.pull_test_mating_factor == a.pull_test_mating_factor
             assert cp.pull_limit_wipe_fraction == a.pull_limit_wipe_fraction
             # v0.2d: one re-push and second pull after a failed pull, with C's proof-push hold and speed cap
-            picked = 1  # SELECTION_RULE version 3: dev candidate, on in every cell
+            picked = 1  # SELECTION_RULE version 4 pick: on in every cell
             assert cb.pull_retries == 0 and cp.pull_retries == picked
             assert cp.repush_hold_s == a.proof_push_s and cp.repush_speed_mm_s == a.proof_push_speed_mm_s
             assert cp.repush_advance_mm == a.proof_advance_mm

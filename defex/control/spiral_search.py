@@ -431,7 +431,7 @@ def _with_retention_pull(cfg: SpiralSearchConfig, retries: int = 0) -> SpiralSea
     """C's installed latch check on a spiral cell: the same pull force and movement limit (datasheet-based).
 
     v0.2d: ``retries`` re-pushes after a failed pull, picked per controller and machine by
-    results/v0.2d_pull_retry/SELECTION_RULE.md (version 3: dev candidate, on everywhere)."""
+    results/v0.2d_pull_retry/SELECTION_RULE.md (version 4): on for H and I on both machines."""
     a = AdaptiveConfig()
     return replace(cfg, retention_pull=True, pull_test_mating_factor=a.pull_test_mating_factor,
                    pull_limit_wipe_fraction=a.pull_limit_wipe_fraction, pull_retries=retries,

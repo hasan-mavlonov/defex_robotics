@@ -1,0 +1,99 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.11, pytest-9.2.0, pluggy-1.7.0 -- /Users/husanmavlonov/projects/defex_robotics/.venv/bin/python
+rootdir: /private/tmp/claude-501/-Users-husanmavlonov/2427a78b-fce8-475a-9ad9-65cc418293e3/scratchpad/defex_966a5f5
+configfile: pyproject.toml
+collecting ... collected 3 items
+
+tests/test_backend_reset.py::test_derived_quantities_ignore_the_previous_trials_grasp[gantry] FAILED [ 33%]
+tests/test_backend_reset.py::test_derived_quantities_ignore_the_previous_trials_grasp[arm] FAILED [ 66%]
+tests/test_backend_reset.py::test_arm_trial_row_is_the_same_fresh_or_after_other_trials FAILED [100%]
+
+=================================== FAILURES ===================================
+_______ test_derived_quantities_ignore_the_previous_trials_grasp[gantry] _______
+
+which = 'gantry'
+
+    @pytest.mark.parametrize("which", ["gantry", pytest.param("arm", marks=needs_arm)])
+    def test_derived_quantities_ignore_the_previous_trials_grasp(which):
+        nominal, gripped, rigid = _scenes()
+        fresh = _make(which)
+        fresh.load(nominal)
+        used = _make(which)
+        used.load(gripped)  # leaves the grasp offset in the cached RCC model
+        used.load(rigid)  # model switch
+        used.load(nominal)  # switch back: payload and dynamics are derived again
+>       assert used.fixture_dynamics == fresh.fixture_dynamics
+E       AssertionError: assert FixtureDynami...3736805509465) == FixtureDynami...3736805509465)
+E         
+E         Omitting 6 identical items, use -vv to show
+E         Differing attributes:
+E         ['effective_mass_kg']
+E         
+E         Drill down into differing attribute effective_mass_kg:
+E           effective_mass_kg: 0.8839999862943175 != 0.8839999999999999
+
+tests/test_backend_reset.py:48: AssertionError
+________ test_derived_quantities_ignore_the_previous_trials_grasp[arm] _________
+
+which = 'arm'
+
+    @pytest.mark.parametrize("which", ["gantry", pytest.param("arm", marks=needs_arm)])
+    def test_derived_quantities_ignore_the_previous_trials_grasp(which):
+        nominal, gripped, rigid = _scenes()
+        fresh = _make(which)
+        fresh.load(nominal)
+        used = _make(which)
+        used.load(gripped)  # leaves the grasp offset in the cached RCC model
+        used.load(rigid)  # model switch
+        used.load(nominal)  # switch back: payload and dynamics are derived again
+>       assert used.fixture_dynamics == fresh.fixture_dynamics
+E       AssertionError: assert FixtureDynami...ing_lag_s=0.2) == FixtureDynami...ing_lag_s=0.2)
+E         
+E         Omitting 6 identical items, use -vv to show
+E         Differing attributes:
+E         ['effective_mass_kg']
+E         
+E         Drill down into differing attribute effective_mass_kg:
+E           effective_mass_kg: 6.320808466203506 != 6.320843419144047
+
+tests/test_backend_reset.py:48: AssertionError
+__________ test_arm_trial_row_is_the_same_fresh_or_after_other_trials __________
+
+    @needs_arm
+    @pytest.mark.slow
+    def test_arm_trial_row_is_the_same_fresh_or_after_other_trials():
+        from defex.control.registry import make_controller
+        from defex.sim.arm_backend import MuJoCoArmBackend
+        from defex.tasks.insertion import InsertionTask
+        from experiments.runner import nominal_socket_pose
+    
+        cond = conditions_by_name()["generalization_combined"]
+    
+        def run(task, ctrl, i):
+            sc = sample_scenario(cond, i, 2027, nominal_socket_pose(cond, task.fixture))
+            row = task.run(make_controller(ctrl), sc).to_row()
+            row.pop("wall_time_s")
+            return row
+    
+        fresh = run(InsertionTask(backend=MuJoCoArmBackend()), "spiral_rcc", 0)
+        task = InsertionTask(backend=MuJoCoArmBackend())
+        run(task, "spiral_rcc", 1)  # grasp error of trial 1 left in the RCC model
+        run(task, "spiral_pull", 1)  # rigid wrist: model switch
+>       assert run(task, "spiral_rcc", 0) == fresh
+E       AssertionError: assert {'controller'...ndex': 0, ...} == {'controller'...ndex': 0, ...}
+E         
+E         Omitting 27 identical items, use -vv to show
+E         Differing items:
+E         {'max_penetration_mm': 0.03837992745991256} != {'max_penetration_mm': 0.03838019163275254}
+E         {'final_yaw_deg': 1.764584485081629} != {'final_yaw_deg': 1.7645845295445803}
+E         {'peak_contact_force_n': 11.857064955552904} != {'peak_contact_force_n': 11.857242029935614}
+E         {'final_depth_mm': 14.891511730054741} != {'final_depth_mm': 14.891511623999587}...
+E         
+E         ...Full output truncated, use '-vv' to show
+
+tests/test_backend_reset.py:76: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_backend_reset.py::test_derived_quantities_ignore_the_previous_trials_grasp[gantry]
+FAILED tests/test_backend_reset.py::test_derived_quantities_ignore_the_previous_trials_grasp[arm]
+FAILED tests/test_backend_reset.py::test_arm_trial_row_is_the_same_fresh_or_after_other_trials
+============================== 3 failed in 5.27s ===============================

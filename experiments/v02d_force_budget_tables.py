@@ -9,8 +9,9 @@ pairs each trial before and after on (base seed, condition, trial index) and poo
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -40,9 +41,11 @@ def phase(root: Path, name: str, backend: str, suite: str) -> tuple[dict, list[s
         cfg = json.loads((folder / "config.json").read_text())
         env = cfg["environment"]
         seed = cfg["base_seed"]
+        events = json.loads(gzip.decompress((folder / "events.json.gz").read_bytes()))
         meta.append(f"`{folder.relative_to(root.parent)}` (seed {seed}, commit {env['git_commit'][:7]}, "
                     f"dirty {env['git_dirty']})")
         for r in load(folder):
+            r["_events"] = events[f"{r['condition']}|{r['controller']}|{r['trial_index']}"]
             rows[(r["controller"], seed, r["condition"], r["trial_index"])] = r
     return rows, meta
 
@@ -72,8 +75,10 @@ def summary(rs: list[dict], damage_n: float) -> dict:
         "over45": str(sum(f10(r) > SAFETY_DAMAGE_N for r in rs)),
         "max10": f"{max(f10(r) for r in rs):.1f}",
         "maxmeas": f"{max(float(r['peak_measured_force_n']) for r in rs):.1f}",
+        "meas58": str(sum(float(r["peak_measured_force_n"]) > damage_n for r in rs)),
         "cycle": f"{np.median(ct):.2f}" if ct else "n/a",
         "uph": f"{uph(g, STOP_RESET_S):.0f}",
+        "bad_time": f"{np.mean([float(r['cycle_time_s']) + STOP_RESET_S * stop(r) for r in b]):.1f}",
     }
 
 
@@ -81,8 +86,9 @@ COLUMNS = [("seated", "Good parts seated"), ("bad_passed", "Bad parts passed"),
            ("esc_good", "Bad units passed on good parts"), ("false_rej", "False rejects"),
            ("stops", "Protective stops (good + bad parts)"), ("damage", "Damage events"),
            ("over45", "Trials > 45 N (10 ms contact)"), ("max10", "Max 10 ms contact (N)"),
-           ("maxmeas", "Max measured F/T (N)"), ("cycle", "Median good cycle (s)"),
-           ("uph", "Good units/h (60 s per stop)")]
+           ("maxmeas", "Max measured F/T (N)"),
+           ("meas58", "Trials with measured F/T > 58 N"), ("cycle", "Median good cycle (s)"),
+           ("uph", "Good units/h (60 s per stop)"), ("bad_time", "Mean cell time per bad part (s, 60 s per stop)")]
 
 
 def main_table(before: dict, after: dict, damage_n: float) -> list[str]:
@@ -136,6 +142,39 @@ def c_against(rows: dict, other: str) -> list[str]:
     return out
 
 
+def against_c(before: dict, after: dict) -> list[str]:
+    out = ["| Controller | Before: C / other seated | C-only / other-only (p) | After: C / other seated | "
+           "C-only / other-only (p) |", "|---|---|---|---|---|"]
+    for other in ("spiral", "correction_rcc", "spiral_rcc", "spiral_pull", "spiral_rcc_pull", "adaptive_learned"):
+        cells = []
+        for rows in (before, after):
+            keys = [k for k in rows if k[0] == "adaptive" and good(rows[k]) and (other,) + k[1:] in rows]
+            co = sum(ok(rows[k]) and not ok(rows[(other,) + k[1:]]) for k in keys)
+            oo = sum(ok(rows[(other,) + k[1:]]) and not ok(rows[k]) for k in keys)
+            cells += [f"{sum(ok(rows[k]) for k in keys)} / {sum(ok(rows[(other,) + k[1:]]) for k in keys)} of {len(keys)}",
+                      f"{co} / {oo} ({fmt_p(mcnemar(co, oo))})"]
+        out.append(f"| {LETTER[other]} {other} | " + " | ".join(cells) + " |")
+    return out
+
+
+def detail(r: dict, kind: str) -> str:
+    return "; ".join(e[2] for e in r["_events"] if e[1] == kind) or "-"
+
+
+def failures(rows: dict, others=("spiral_pull", "spiral_rcc_pull")) -> list[str]:
+    out = ["| Controller | Seed | Condition | Trial | Failure reason | Seat declared (event) | Pull (event) | "
+           "Final depth (mm) | C on the same trial | C: failed latch checks, proof pushes |",
+           "|---|---|---|---|---|---|---|---|---|---|"]
+    for k in sorted(k for k in rows if k[0] in others and good(rows[k]) and not ok(rows[k])):
+        r, c = rows[k], rows[("adaptive",) + k[1:]]
+        fails = sum(e[1] == "verify" and "FAIL" in e[2] for e in c["_events"])
+        pushes = sum(e[1] == "proof_push" and "push at" in e[2] for e in c["_events"])
+        out.append(f"| {LETTER[k[0]]} | {k[1]} | {k[2]} | {k[3]} | {r['failure_reason']} | {detail(r, 'seated')} | "
+                   f"{detail(r, 'verify')} | {float(r['final_depth_mm']):.2f} | "
+                   f"{'seated' if ok(c) else c['failure_reason']} | {fails}, {pushes} |")
+    return out
+
+
 def fmt(c: Counter) -> str:
     return ", ".join(f"{k} {v}" for k, v in c.most_common()) or "-"
 
@@ -167,8 +206,11 @@ def main() -> None:
              "Bad units passed = failed and neither stopped nor declared failed. False rejects = seated in ground "
              "truth but declared failed. Damage events = 10 ms contact peak above the budget's damage force. "
              f"Trials > 45 N counts trials whose 10 ms contact peak exceeds {SAFETY_DAMAGE_N:g} N "
-             "(SafetyConfig.damage_contact_force_n; the Micro-Fit's budget replaces it with 58 N). Median cycle "
-             f"and good units per hour over good-part trials, {STOP_RESET_S:.0f} s per protective stop. "
+             "(SafetyConfig.damage_contact_force_n; the Micro-Fit's budget replaces it with 58 N). The ground-truth "
+             "contact force covers MuJoCo housing contacts only; the measured F/T also carries the terminal, latch "
+             "and obstruction forces of defex/sim/mating.py, which the damage measure does not see. Median cycle "
+             f"and good units per hour over good-part trials, {STOP_RESET_S:.0f} s per protective stop; the last "
+             "column is the mean cycle per deliberately bad part with the same stop charge. "
              "Lost / gained: good-part trials that succeeded only before / only after, exact McNemar."]
     for backend in BACKENDS:
         for suite in SUITES:
@@ -191,6 +233,10 @@ def main() -> None:
                           "all failures |", "|---|---|---|---|---|---|"]
                 for other in ("spiral_pull", "spiral_rcc_pull"):
                     lines += [f"| **{LETTER[other]} {other}** | | | | | |"] + c_against(rows, other)
+            lines += ["", "C against each fair baseline and G, good parts, paired:", ""] + against_c(before, after)
+            if suite == "latch_spread":
+                lines += ["", "Every good-part failure of H and I after the fix (C's outcome on the same trial):", ""]
+                lines += failures(after)
             ch = changed(before, after, "adaptive")
             lines += ["", f"C's trials whose outcome changed (success, bad unit passed or protective stop): {len(ch)}",
                       ""]

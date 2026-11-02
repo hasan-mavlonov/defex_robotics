@@ -1153,13 +1153,15 @@ class AdaptiveInsertionController(InsertionController):
         over the recent samples less their first third, as DETECT averages its window (at the start of the
         latch check: the push at the bottom).
         """
+        cos = float(np.dot(self.R_corr[:, 2], obs.rel_pose.R[:, 2]))
+        tilt = float(np.arccos(np.clip(cos, -1.0, 1.0)))
         recent = list(self._recent)[len(self._recent) // self.cfg.detect_discard_divisor:]
+        if not recent:
+            return tilt, 0.0  # no wrench yet: no evidence that the walls hold the plug
         F = np.mean([o.force for o in recent], axis=0) - self.bias_f
         T = np.mean([o.torque for o in recent], axis=0) - self.bias_t
         cop = np.array([-T[1], T[0]]) / max(float(F[2]), _EPS)
-        edge = float(np.max(np.abs(cop) / np.asarray(self.plug_half)))
-        cos = float(np.dot(self.R_corr[:, 2], obs.rel_pose.R[:, 2]))
-        return float(np.arccos(np.clip(cos, -1.0, 1.0))), edge
+        return tilt, float(np.max(np.abs(cop) / np.asarray(self.plug_half)))
 
     def _tilt_verdict(self, obs: Observation) -> bool:
         """False when the plug is turned off the socket axis and held there by the walls (AdaptiveConfig.tilt_check).

@@ -72,16 +72,26 @@ def test_evidence_averages_the_recent_wrench_less_its_first_third():
     ((0.0, 1.9, 0.0), (0.0, 4.0), True),  # just inside the tilt bound
 ])
 def test_verdict_needs_both_tilt_and_wall_held_cop(tilt, cop, ok):
-    c = _ctrl()
+    c = _ctrl(tilt_check_deg=2.0)
     o = _obs(tilt_rv_deg=tilt, cop_mm=cop)
     _fill(c, o)
     assert c._tilt_verdict(o) is ok
     assert c.events[-1].kind == "tilt" and c.events[-1].detail.endswith("PASS" if ok else "FAIL")
 
 
-def test_off_by_default_the_latch_check_runs_as_before():
-    c = _ctrl()
-    assert not c.cfg.tilt_check
+def test_installed_setting_and_switch():
+    cfg = AdaptiveConfig()
+    assert cfg.tilt_check and cfg.tilt_check_deg == 2.5 and cfg.tilt_check_edge_fraction == 0.875
+    import json
+
+    from defex.config import REPO_ROOT
+
+    picked = json.loads((REPO_ROOT / "results/v0.2d_tilt_check/variants.json").read_text())["tilt_k2"]
+    assert all(getattr(cfg, k) == v for k, v in picked.items())
+
+
+def test_with_the_switch_off_the_latch_check_runs_as_before():
+    c = _ctrl(tilt_check=False)
     o = _obs(tilt_rv_deg=(-2.4, 2.4, 0.0), cop_mm=(3.2, 0.0))
     _fill(c, o)
     c._trace = []
@@ -91,7 +101,7 @@ def test_off_by_default_the_latch_check_runs_as_before():
 
 
 def test_failed_tilt_check_takes_the_normal_verify_failure_path():
-    c = _ctrl(tilt_check=True)
+    c = _ctrl(tilt_check=True, tilt_check_deg=2.0)
     o = _obs(tilt_rv_deg=(-2.4, 2.4, 0.0), cop_mm=(3.2, 0.0))
     _fill(c, o)
     c._trace = []
@@ -142,15 +152,15 @@ def test_training_seed_tilt_escape_is_rejected_on_the_arm():
     task = InsertionTask(backend=backend)
     cond = latching_conditions_by_name()["mf_noise_1mm"]
     scenario = sample_scenario(cond, 17, 3004, nominal_socket_pose(cond, task.fixture))
-    base = task.run(AdaptiveInsertionController(), scenario)
+    base = task.run(AdaptiveInsertionController(replace(AdaptiveConfig(), tilt_check=False)), scenario)
     assert base.failure_reason == "false_accept" and base.final_tilt_deg > 3.0
-    checked = task.run(AdaptiveInsertionController(replace(AdaptiveConfig(), tilt_check=True)), scenario)
+    checked = task.run(AdaptiveInsertionController(), scenario)
     assert checked.declared_success is False and checked.failure_reason == "aborted:stuck_during_retract"
     assert any(k == "tilt" and d.endswith("FAIL") for _, k, d in checked.events)
 
 
 def test_a_failed_check_holds_for_the_rest_of_the_attempt_while_the_plug_stays_turned():
-    c = _ctrl(tilt_check=True)
+    c = _ctrl(tilt_check=True, tilt_check_deg=2.0)
     c.attempts = 3
     wedged = _obs(tilt_rv_deg=(-2.4, 2.4, 0.0), cop_mm=(3.2, 0.0))
     _fill(c, wedged)

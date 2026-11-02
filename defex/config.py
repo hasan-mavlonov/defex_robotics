@@ -907,9 +907,10 @@ class AdaptiveConfig:
     # estimate, and the walls, not the floor, carry its push: the centre of pressure of the bottoming wrench lies
     # near or past the plug's edge, where a floor contact cannot put it because the terminal and latch forces act at
     # the centre (seated good parts: 0.58 of the half-width, training seeds 3001-3030). VERIFY fails, as any failed
-    # check does, when both exceed these bounds. Off unless the selection rule installs it.
-    tilt_check: bool = False
-    tilt_check_deg: float = 2.0  # measured plug axis against C's socket-axis estimate (camera + flat-face folds)
+    # check does, when both exceed these bounds. Candidate tilt_k2, picked on dev seeds by the committed rule
+    # (results/v0.2d_tilt_check/SELECTION_RULE.md: 8 -> 3 tilt escapes, 3 good parts lost) and GO on seed 4003.
+    tilt_check: bool = True
+    tilt_check_deg: float = 2.5  # measured plug axis against C's socket-axis estimate (camera + flat-face folds)
     tilt_check_edge_fraction: float = 0.875  # largest |CoP| / plug half-width of the bottoming wrench
     # VERIFY
     verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance

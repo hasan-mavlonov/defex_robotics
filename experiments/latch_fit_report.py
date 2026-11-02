@@ -32,15 +32,32 @@ def _engaged(move: LoggedMove, fit: LatchFit, k: int) -> np.ndarray:
 
 
 def band_stats(move: LoggedMove, fit: LatchFit, k: int) -> dict:
-    sel = _engaged(move, fit, k)
-    f, pred = move.fz_n[sel], fit.predict(move, k)[sel]
-    band = np.maximum(BAND_REL * np.abs(f), BAND_FLOOR_N)
-    inside = np.abs(pred - f) <= band
+    """Share of the part's curve inside +/-15% of the logged force (0.5 N floor).
+
+    Counted per 0.01 mm depth bin (median residual and force per bin, push and pull
+    separately), so the long dwell at the floor does not outweigh the curve, and
+    without the floor contact (the last 0.02 mm before the fitted seat and beyond),
+    which is a property of the rig and the stop, not of the part.
+    """
+    sel = _engaged(move, fit, k) & (move.depth_mm < fit.seat_mm[k] - 0.02)
+    i = move.turnaround()
+    pred_all = fit.predict(move, k)
+    idx = np.arange(move.depth_mm.size)
+    fs, rs = [], []
+    for seg in (sel & (idx <= i), sel & (idx > i)):
+        key = np.floor(move.depth_mm[seg] / 0.01).astype(int)
+        f_seg, r_seg = move.fz_n[seg], pred_all[seg] - move.fz_n[seg]
+        for b in np.unique(key):
+            fs.append(np.median(f_seg[key == b]))
+            rs.append(np.median(r_seg[key == b]))
+    f, r = np.array(fs), np.array(rs)
+    inside = np.abs(r) <= np.maximum(BAND_REL * np.abs(f), BAND_FLOOR_N)
     i = move.turnaround()
     push = sel & (np.arange(sel.size) <= i) & (move.depth_mm < fit.seat_mm[k] - 0.02)
     peak_log = float(move.fz_n[push].max()) if push.any() else float("nan")
     peak_fit = float(fit.predict(move, k)[push].max()) if push.any() else float("nan")
-    return {"within_band_fraction": float(inside.mean()), "samples": int(sel.sum()),
+    return {"within_band_fraction": float(inside.mean()), "bins": int(f.size),
+            "max_abs_residual_n": float(np.abs(r).max()),
             "peak_logged_n": peak_log, "peak_fitted_n": peak_fit, "peak_rel_error": (peak_fit - peak_log) / peak_log}
 
 

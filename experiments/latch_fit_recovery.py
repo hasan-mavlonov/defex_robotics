@@ -180,19 +180,30 @@ def worked_example(spec: ConnectorSpec, out: Path) -> dict:
     wdir = out / "worked"
     wdir.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(SEED + 1)
-    m, _ = simulate_logged_move(spec, PushPull(speed_mm_s=1.0), None, depth_offset_mm=float(rng.uniform(-0.5, 0.5)),
+    offset = float(rng.uniform(-0.5, 0.5))
+    m, _ = simulate_logged_move(spec, PushPull(speed_mm_s=1.0), None, depth_offset_mm=offset,
                                 seed=int(rng.integers(2**31)))
     m.write_csv(wdir / "datasheet_curve.csv")
-    # Rounded corners: the same log with the force smoothed over 0.1 mm of depth (Gaussian, sigma 0.05 mm), a
-    # stand-in for a real part whose curve is not piecewise linear. Outside the model family.
+    # Rounded corners: the part's curve smoothed over depth (Gaussian, sigma 0.05 mm), a stand-in for a real part
+    # whose curve is not piecewise linear (outside the model family). Built on a 0.01 mm grid of the true model,
+    # push and pull separately, and added to the log as (smoothed - sharp), away from the floor contact.
+
+    truth = truth_params(spec, PartVariation())
+    seat_log = spec.socket.depth_mm + offset
     d = m.depth_mm
-    sm = np.empty_like(m.fz_n)
     i = m.turnaround()
-    for sl in (slice(0, i + 1), slice(i + 1, None)):
-        dd, ff = d[sl], m.fz_n[sl]
-        for k in range(dd.size):
-            w = np.exp(-0.5 * ((dd - dd[k]) / 0.05) ** 2)
-            sm[sl][k] = np.sum(w * ff) / np.sum(w)
+    pull = np.arange(d.size) > i
+    d_turn = float(np.median(d[max(0, i - 5):i + 6]))
+    grid = np.arange(d.min() - 0.3, d_turn + 0.01, 0.01)
+    k = np.arange(-20, 21) * 0.01
+    g = np.exp(-0.5 * (k / 0.05) ** 2)
+    g /= g.sum()
+    sm = m.fz_n.copy()
+    for seg in (~pull, pull):
+        sharp = model_force(grid, np.full(grid.size, bool(seg[-1])), d_turn, truth, seat_log, True, 0.0)
+        soft = np.convolve(np.pad(sharp, 20, mode="edge"), g, mode="valid")
+        use = seg & (d < seat_log - 0.1)
+        sm[use] += np.interp(d[use], grid, soft - sharp)
     LoggedMove(m.t_s, d, sm).write_csv(wdir / "rounded_curve.csv")
     res = {}
     for name in ("datasheet_curve", "rounded_curve"):
@@ -210,10 +221,19 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--out", default="results/v0.2f_latch_fit")
     ap.add_argument("--designs", default=",".join(DESIGNS))
+    ap.add_argument("--only-worked", action="store_true", help="recompute only the worked example in summary.json")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     spec = ConnectorSpec.load(SPEC_NAME)
+    if a.only_worked:
+        s = json.loads((out / "summary.json").read_text())
+        s["worked_example"] = worked_example(spec, out)
+        s["worked_example_git_commit"] = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True,
+                                                        text=True).stdout.strip()
+        (out / "summary.json").write_text(json.dumps(s, indent=1, default=float))
+        print(json.dumps({k: {a: v[a] for a in v if a != "params"} for k, v in s["worked_example"].items()}, default=float))
+        return
     sets = part_sets()
     jobs = [(d, ps) for d in a.designs.split(",") for ps in sets]
     t0 = time.time()
@@ -236,7 +256,8 @@ def main() -> None:
                          "max_abs_error": max(abs(r["error"]) for r in rs)}
         verdict[design] = {"params": per, "pass": all(v["pass"] for v in per.values())}
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
-    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "defex", "experiments", "tests"],
+    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--untracked-files=no", "--", "defex", "experiments",
+                                 "tests"],
                                 capture_output=True, text=True).stdout.strip())
     summary = {"git_commit": commit, "git_dirty": dirty, "seed": SEED, "designs": DESIGNS,
                "tolerance": asdict(TOL), "sets": [{**asdict(s), "variation": asdict(s.variation)} for s in sets],

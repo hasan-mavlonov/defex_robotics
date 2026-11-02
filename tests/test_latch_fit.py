@@ -108,3 +108,16 @@ def test_pull_ends_at_the_first_rebound():
 def test_latch_fit_does_not_import_mujoco():
     code = "import sys, defex.calibration.latch_fit; assert 'mujoco' not in sys.modules"
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+@pytest.mark.slow
+def test_fit_recovers_the_nominal_part_from_a_mujoco_push_and_pull():
+    from experiments.latch_fit_sim import PushPull, simulate_logged_move
+
+    move, extras = simulate_logged_move(SPEC, PushPull(), depth_offset_mm=0.2, seed=2027)
+    assert extras["latched"] and not extras["broken"]
+    fit = fit_latch(SPEC, [move], starts=8, seed=2027)
+    truth, tol = _truth(None), Tolerance(floors={"mm": 0.03, "n": 0.5, "snap_drop": 0.15})
+    for name in fit.free:
+        assert abs(fit.params[name] - truth[name]) <= tol.allowed(name, truth[name]), (name, fit.params[name])
+    assert abs(fit.seat_mm[0] - (SEAT + 0.2)) < 0.03

@@ -248,6 +248,10 @@ class SensorNoiseConfig:
     ft_force_bias_n: float = 0.3  # per-trial bias; removed by taring
     ft_torque_bias_nm: float = 0.003
     ft_filter_cutoff_hz: float = 40.0
+    # heldout2 (v0.2f): zero drift after taring, linear in time, fixed random direction per
+    # trial (thermal drift, cable drag). 0 = none (every earlier condition).
+    ft_drift_force_n_per_s: float = 0.0
+    ft_drift_torque_nm_per_s: float = 0.0
     # Joint encoders, expressed at the TCP.
     encoder_pos_sigma_mm: float = 0.002
     encoder_rot_sigma_deg: float = 0.002
@@ -357,6 +361,18 @@ class DisturbanceSpec:
     grasp_lateral_mm: float = 0.0
     grasp_axial_mm: float = 0.0
     grasp_tilt_deg: float = 0.0
+    # heldout2 (v0.2f): errors no sensor reports. Each is a fixed magnitude with a random
+    # sign or direction, drawn after every other value, so conditions without them keep
+    # their exact draws.
+    # Socket rotated relative to what the camera measures (the camera locates the board,
+    # the receptacle sits tilted or rotated on it): tilt about a random horizontal axis of
+    # the socket frame, yaw about the socket axis.
+    unseen_tilt_deg: float = 0.0
+    unseen_yaw_deg: float = 0.0
+    # In-hand error the in-hand estimate does not see, along the grasp's own free directions
+    # (slip along y, rotation about the finger normal x).
+    grasp_unseen_lateral_mm: float = 0.0
+    grasp_unseen_tilt_deg: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -376,6 +392,10 @@ class Condition:
     characterized_noise: SensorNoiseConfig | None = None
     # v0.2c review: part-to-part spread of the mating model (simulator side; None: every part nominal).
     part_spread: PartSpread | None = None
+    # heldout2 (v0.2f): the simulated part's cavity clearance and lead-in when they differ from
+    # the drawing. Controllers are told the drawing (clearance_mm / chamfer_mm or the asset).
+    actual_clearance_mm: float | None = None
+    actual_chamfer_mm: float | None = None
 
 
 # --------------------------------------------------------------------------------------

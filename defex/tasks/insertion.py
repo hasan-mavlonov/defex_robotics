@@ -184,8 +184,11 @@ class InsertionTask:
         )
 
         sensors = SensorSuite(scenario.noise, scenario.seed)
-        vision = sensors.vision_measurement(scenario.socket_pose)
-        grasp_est = sensors.grasp_measurement(scenario.grasp_offset)
+        # heldout2: the camera and the in-hand estimate may measure something other than the truth.
+        seen_socket = scenario.socket_pose if scenario.vision_target_pose is None else scenario.vision_target_pose
+        seen_grasp = scenario.grasp_offset if scenario.measured_grasp_offset is None else scenario.measured_grasp_offset
+        vision = sensors.vision_measurement(seen_socket)
+        grasp_est = sensors.grasp_measurement(seen_grasp)
         estimator = StateEstimator(payload, dt, scenario.noise.ft_filter_cutoff_hz)
         estimator.reset(vision, grasp_est)
         motion = CartesianMotionGenerator(self.fixture, dt)
@@ -205,8 +208,9 @@ class InsertionTask:
             obs = estimator.update(sensors.measure(be.read_sensors()), motion.pose)
         estimator.end_tare()
 
+        told_connector = scenario.connector if scenario.characterized_connector is None else scenario.characterized_connector
         ctx = ControllerContext(
-            connector=scenario.connector,
+            connector=told_connector,
             nominal_socket_pose=be.nominal_socket_pose,
             home_pose=home,
             control_period_s=dt,

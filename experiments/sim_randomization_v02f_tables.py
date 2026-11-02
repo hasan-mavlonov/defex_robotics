@@ -221,15 +221,16 @@ def p_verdict_fails(p_hold: float, k: int = 12, need: int = MIN_HOLD) -> float:
 
 def print_power(bench: Path, trials: dict[str, int], k: int = 12) -> None:
     """Chance that each directional reference fails the per-variant rule from trial noise alone,
-    if every variant had the benchmark's per-trial rates. ``trials``: per-condition trials per group."""
+    if every variant had the benchmark's per-trial rates. ``trials``: per-condition trials per group,
+    keyed "group" (both machines) or "machine.group" (that machine, overriding)."""
     print(f"| Machine | Group | Metric | X vs Y | Reference | Benchmark X-better / Y-better rate | n per variant | "
           f"P(variant holds) | P(fewer than {MIN_HOLD} of {k} hold) |")
     print("|---|---|---|---|---|---|---|---|---|")
     for (m, g, metric, x, y), (cls, b, c, n, cx, cy, p) in references(bench).items():
         if cls == "n.s.":
             continue
-        nn = sum(trials[gg] * len(GROUPS[gg]) for gg in GROUPS) if g == ALL_GOOD else \
-            trials[g] * len(group_conds(g))
+        t = {gg: trials.get(f"{m}.{gg}", trials.get(gg, 0)) for gg in GROUPS}
+        nn = sum(t[gg] * len(GROUPS[gg]) for gg in GROUPS) if g == ALL_GOOD else t[g] * len(group_conds(g))
         ph = p_direction(b / n, c / n, nn, cls)
         flag = " (low power)" if p_verdict_fails(ph, k) > 0.2 else ""
         print(f"| {m} | {g} | {metric} | {x} vs {y} | {cls} | {b / n:.3f} / {c / n:.3f} | {nn} | {ph:.3f} | "
@@ -367,7 +368,7 @@ def main(paths: list[Path] | None = None) -> None:
     ap.add_argument("--references", type=Path, default=None)
     ap.add_argument("--benchmark", type=Path, default=BENCHMARK)
     ap.add_argument("--power", type=str, default="",
-                    help="group:trials,... per-condition trials (with --references): noise-only failure chance")
+                    help="[machine.]group:trials,... (with --references): noise-only failure chance")
     args = ap.parse_args(None if paths is None else [str(p) for p in paths])
     if args.references is not None:
         if args.power:

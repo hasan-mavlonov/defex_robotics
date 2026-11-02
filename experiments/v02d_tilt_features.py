@@ -7,8 +7,9 @@ One JSON object per trial: identifiers, the trial outcome (as in trials.csv), an
 the controller-visible quantities (wrench windows, seat-conform outcome, wall probes, commanded
 and measured orientation relative to C's socket-axis estimate) plus the true connector tilt at
 that moment. Ground truth is attached here, after the controller has read the observation; it
-never reaches a controller. The controller runs unchanged (instance methods are wrapped, and
-the tilt verdict, when present, is evaluated in shadow: its result is recorded, not acted on).
+never reaches a controller. The controller runs unchanged: instance methods are wrapped, and
+the tilt check's evidence (AdaptiveInsertionController._tilt_evidence, a pure function) is
+recorded at every VERIFY start ("shadow"), whether or not the check is switched on.
 """
 
 from __future__ import annotations
@@ -27,11 +28,12 @@ import numpy as np
 from defex.config import DEG, MM
 
 DEV_SEEDS = frozenset((2026, 2027, *range(3001, 3041)))
+VALIDATION_SEED = 4003  # v0.2d go/no-go, run once (--validation)
 
 _TASK = None
 
 
-def parse_seeds(text: str) -> list[int]:
+def parse_seeds(text: str, validation: bool = False) -> list[int]:
     out: list[int] = []
     for part in text.split(","):
         if "-" in part:
@@ -39,9 +41,10 @@ def parse_seeds(text: str) -> list[int]:
             out.extend(range(int(a), int(b) + 1))
         elif part:
             out.append(int(part))
-    bad = [s for s in out if s not in DEV_SEEDS]
+    allowed = DEV_SEEDS | ({VALIDATION_SEED} if validation else set())
+    bad = [s for s in out if s not in allowed]
     if bad:
-        raise SystemExit(f"development seeds only (2026, 2027, 3001-3040), not {bad}")
+        raise SystemExit(f"development seeds only (2026, 2027, 3001-3040; 4003 with --validation), not {bad}")
     return out
 
 
@@ -118,12 +121,14 @@ def instrument(ctrl, gt_box: dict) -> dict:
                            "axial_n": float(d.axial_force), "lat_n": np.asarray(d.lateral_force, float).tolist(),
                            "torque": np.asarray(d.torque, float).tolist(),
                            "cop_mm": None if d.cop is None else (np.asarray(d.cop) / MM).tolist()}
-        if hasattr(ctrl, "_tilt_verdict"):
-            out["shadow"] = ctrl._tilt_verdict(obs, record=True)
+        if hasattr(ctrl, "_tilt_evidence"):
+            tilt, edge = ctrl._tilt_evidence(obs)
+            out["shadow"] = {"tilt_deg": tilt / DEG, "edge": edge}
         return out
 
     orig = {k: getattr(ctrl, k) for k in ("_begin_verify", "_verify_step", "_succeed", "_lateral_verdict",
-                                          "_wall_yaw_verdict", "_detect_step", "_conclude_detect", "_enter")}
+                                          "_wall_yaw_verdict", "_detect_step", "_conclude_detect", "_enter",
+                                          "_begin_latch_verify")}
 
     def begin_verify(obs):
         rec["verifies"].append({"begin": snap(obs, "begin"), "events": []})
@@ -136,7 +141,8 @@ def instrument(ctrl, gt_box: dict) -> dict:
         cmd = orig["_verify_step"](obs)
         v = rec["verifies"][-1] if rec["verifies"] else None
         if v is not None and ph == "seat_conform" and ctrl.phase != "seat_conform":
-            v["seat_conform"] = {"rc_flat": ctrl._rc_flat.tolist(), "rc_done": ctrl._rc_done.tolist(),
+            v["seat_conform"] = {"t": float(obs.t - ctrl.t_start), "rc_flat": ctrl._rc_flat.tolist(),
+                                 "rc_done": ctrl._rc_done.tolist(),
                                  "rc_dir": None if ctrl._rc_dir is None else ctrl._rc_dir.tolist(),
                                  "win": window("seat_conform"), **orient(obs), "gt": gt()}
         if v is not None and ph == "pull" and ctrl.phase != "pull":
@@ -159,6 +165,13 @@ def instrument(ctrl, gt_box: dict) -> dict:
              "need_mm": float(max(ctrl._wall_half_travel(ctrl.cfg.wall_yaw_tolerance_deg * DEG),
                                   ctrl.cfg.wall_yaw_min_free_fraction * ctrl._wall_half_travel(0.0)) / MM)})
         return orig["_wall_yaw_verdict"](obs)
+
+    def begin_latch_verify(obs):
+        if rec["verifies"] and hasattr(ctrl, "_tilt_evidence"):
+            tilt, edge = ctrl._tilt_evidence(obs)
+            rec["verifies"][-1].setdefault("latch_checks", []).append(
+                {"t": float(obs.t - ctrl.t_start), "phase": ctrl.phase, "tilt_deg": tilt / DEG, "edge": edge, "gt": gt()})
+        return orig["_begin_latch_verify"](obs)
 
     def succeed(obs):
         if rec["verifies"]:
@@ -194,6 +207,7 @@ def instrument(ctrl, gt_box: dict) -> dict:
     ctrl._detect_step = detect_step
     ctrl._conclude_detect = conclude_detect
     ctrl._enter = enter
+    ctrl._begin_latch_verify = begin_latch_verify
     return rec
 
 
@@ -228,10 +242,9 @@ def run_job(job: tuple) -> list[dict]:
 
         res = _TASK.run(ctrl, scenario, on_step=on_step)
         row = res.to_row()
-        row.update(base_seed=seed, suite=suite)
+        row.update(base_seed=seed, suite=suite, backend=os.environ.get("DEFEX_BACKEND", "gantry"))
         row["record"] = rec
-        row["events"] = [e for e in res.events if e[1] in ("verify", "wall_yaw", "seat_conform", "latch", "tilt",
-                                                             "reseat", "conform", "surface_alignment", "finish")]
+        row["events"] = res.events
         out.append(row)
     return out
 
@@ -239,10 +252,13 @@ def run_job(job: tuple) -> list[dict]:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--backend", choices=["gantry", "arm"], default="arm")
-    ap.add_argument("--suite", choices=["standard", "heldout", "latching", "latch_spread"], default="standard")
+    ap.add_argument("--suite", default="standard", help="comma-separated: standard, heldout, latching, latch_spread")
     ap.add_argument("--conditions", default="", help="comma-separated (default: every condition of the suite)")
     ap.add_argument("--controllers", default="adaptive")
-    ap.add_argument("--seeds", required=True)
+    ap.add_argument("--seeds", default="")
+    ap.add_argument("--jobs-file", default="", help="JSON list of [suite, condition, controller, seed, trial] to run "
+                                                   "instead of the suite x seeds x trials grid")
+    ap.add_argument("--validation", action="store_true", help="allow the validation seed 4003")
     ap.add_argument("--trials", type=int, default=20)
     ap.add_argument("--first-trial", type=int, default=0)
     ap.add_argument("--workers", type=int, default=3)
@@ -250,23 +266,34 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
     os.environ["DEFEX_BACKEND"] = args.backend
-    seeds = parse_seeds(args.seeds)
-    conds = [c.name for c in all_conditions(args.suite)]
-    if args.conditions:
-        wanted = args.conditions.split(",")
-        unknown = set(wanted) - set(conds)
-        if unknown:
-            raise SystemExit(f"unknown conditions: {sorted(unknown)}")
-        conds = [c for c in conds if c in wanted]
-    idx = list(range(args.first_trial, args.first_trial + args.trials))
-    jobs = [(args.suite, c, ctrl, s, tuple(idx[k:k + args.chunk]))
-            for s in seeds for c in conds for ctrl in args.controllers.split(",") for k in range(0, len(idx), args.chunk)]
+    if args.jobs_file:
+        entries = json.loads(Path(args.jobs_file).read_text())
+        parse_seeds(",".join(str(e[3]) for e in entries), args.validation)
+        jobs = [(su, c, ctrl, int(s), (int(i),)) for su, c, ctrl, s, i in entries]
+    else:
+        seeds = parse_seeds(args.seeds, args.validation)
+        suites = args.suite.split(",")
+        conds = [(su, c.name) for su in suites for c in all_conditions(su)]
+        if args.conditions:
+            wanted = args.conditions.split(",")
+            unknown = set(wanted) - {c for _, c in conds}
+            if unknown:
+                raise SystemExit(f"unknown conditions: {sorted(unknown)}")
+            conds = [(su, c) for su, c in conds if c in wanted]
+        idx = list(range(args.first_trial, args.first_trial + args.trials))
+        jobs = [(su, c, ctrl, s, tuple(idx[k:k + args.chunk])) for s in seeds for su, c in conds
+                for ctrl in args.controllers.split(",") for k in range(0, len(idx), args.chunk)]
     total = sum(len(j[4]) for j in jobs)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     from experiments.runner import environment_info
 
-    meta = {"args": vars(args), "environment": environment_info(), "trials": total}
+    from defex.config import to_dict
+    from defex.control.registry import make_controller
+
+    meta = {"args": vars(args), "environment": environment_info(), "trials": total,
+            "variants_file": os.environ.get("DEFEX_CONTROLLER_VARIANTS"),
+            "controller_configs": {c: to_dict(make_controller(c).cfg) for c in sorted({j[2] for j in jobs})}}
     out.with_suffix("").with_suffix(".meta.json").write_text(json.dumps(meta, indent=1))
     t0 = time.time()
     done = 0

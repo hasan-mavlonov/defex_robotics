@@ -900,6 +900,17 @@ class AdaptiveConfig:
     # Optional speed cap for the insertion setpoint once the tip is in the terminal zone (0: off). Tested in
     # development against first-insertion stops on half-latched parts; see results/v0.2c_defect_verdict.
     latch_zone_speed_mm_s: float = 0.0
+    # v0.2d: tilt check at the start of the latching VERIFY (results/v0.2d_tilt_check). Push-click-pull cannot see
+    # tilt. On the arm, a top-face conform that slid into the lead-in kept its rotation (up to 3.9 deg per axis), and
+    # the plug latched wedged at the cavity's tilt limit, which along the Micro-Fit's diagonal (0.15 mm clearance at
+    # 7.7 mm) is about 3.2 deg, just over the 3 deg criterion. Such a plug is turned well off C's own socket-axis
+    # estimate, and the walls, not the floor, carry its push: the centre of pressure of the bottoming wrench lies
+    # near or past the plug's edge, where a floor contact cannot put it because the terminal and latch forces act at
+    # the centre (seated good parts: 0.58 of the half-width, training seeds 3001-3030). VERIFY fails, as any failed
+    # check does, when both exceed these bounds. Off unless the selection rule installs it.
+    tilt_check: bool = False
+    tilt_check_deg: float = 2.0  # measured plug axis against C's socket-axis estimate (camera + flat-face folds)
+    tilt_check_edge_fraction: float = 0.875  # largest |CoP| / plug half-width of the bottoming wrench
     # VERIFY
     verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance
     seat_conform_min_s: float = 0.08

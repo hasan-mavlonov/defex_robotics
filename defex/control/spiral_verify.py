@@ -36,6 +36,8 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Callable
 
+import numpy as np
+
 from defex.config import MM, CompliantStageConfig
 from defex.control.adaptive_fsm import AdaptiveInsertionController
 from defex.control.base import Command, ControllerContext
@@ -110,6 +112,10 @@ class CompliantSpiralSearchVerifyController(CompliantSpiralSearchController):
         v.adm_lat.reset()
         v.adm_rot.reset()
         v.adm_conf.reset()
+        # Every hand-over starts as the first: no samples, diagnosis or fold left from an earlier VERIFY.
+        v._recent.clear()
+        v.diagnosis = None
+        v.R_corr = np.eye(3)
         v.yaw_adj = 0.0
         v.touch_calibrated = self.face_depth is not None
         v.depth_offset = float(self.face_depth) if v.touch_calibrated else 0.0

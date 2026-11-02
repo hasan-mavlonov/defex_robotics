@@ -23,7 +23,9 @@ measurement. The physics behavior is pinned by the test suite (see
 validated on hardware (see [Limitations](#assumptions-and-limitations)).
 The method sections below describe the v0.2d code, which benchmark_v0.2d ran and
 which differs from the code benchmark_v0.2c ran (see
-[The controllers](#the-controllers)).
+[The controllers](#the-controllers)). The code on branch `v0.2e/integration` adds
+three fixes on top of it (simulator reset, H/I pull retry rule version 5, C's
+tilt-check force guard), which benchmark_v0.2e ran.
 
 ## Results: benchmark_v0.2d, two machines, the same 35.2 N push for every cell
 
@@ -103,6 +105,27 @@ bad part, and passes no mis-seated good part (H 112, I 138 on the second seed).
 The other two changes: G also helps on arm standard (p = 0.0074), and J seats
 more gantry latching good parts than C (98.7% against 96.5%, p = 0.011).
 Simulation only.
+
+**Third seed, v0.2e code.**
+[`results/benchmark_v0.2e`](results/benchmark_v0.2e/REPORT.md) is pre-registered.
+It ran on seed 20261130 with the code on this branch, which adds three fixes
+validated in [`results/v0.2e_validation`](results/v0.2e_validation/REPORT.md): a
+simulator reset, a depth gate and lateral compliance in H and I's pull retry, and a
+force guard on C's tilt check.
+
+- **Standard suite:** C is again ahead of every conventional cell on both machines
+  (gantry 99.1% against 96.8%, arm 98.1% against 96.2%).
+- **Gantry latching good parts:** F now matches C (98.8% against 97.5%, p = 0.12).
+- **Arm latching good parts:** C is below F (92.0% against 95.2%, p = 0.014).
+- **Bad parts:** C, G, H, I and J passed 0 of 2,200.
+- **Mis-seated good parts passed:** C 0, H 101, I 138, J 2, and G 1. G's is a plug at
+  3.01 deg tilt, the first C or G has passed on any seed.
+
+C's trials in the conditions where it fell most (gantry mis-characterized vision,
+arm latching) were rerun on the v0.2d code. They gave identical rows
+([`results/v0.2e_postrun_check`](results/v0.2e_postrun_check/REPORT.md)), so C's drop
+there comes from the seed, not the fixes. C is ahead on all three seeds only on the
+standard suite.
 
 
 ## Earlier result: benchmark_v0.2c, two machines, conventional cells with the same pull test
@@ -292,7 +315,9 @@ gantry baselines were never tuned with the latching connector: re-tuned, F seats
 * That C rejects bad parts better than a conventional cell. With the same pull
   test, H and I passed 0 of 2,200 bad parts, as C did.
 * That C seats more latching parts. F seats more good latching parts than C on
-  the gantry (98.5% against 96.5%, p = 0.012) and matches it on the arm.
+  the gantry (98.5% against 96.5%, p = 0.012) and matches it on the arm. On
+  benchmark_v0.2e (seed 20261130) the two machines swap: F matches C on the gantry
+  and seats more on the arm (95.2% against 92.0%, p = 0.014).
 * That C handles part-to-part variation better. With every controller pushing to
   35.2 N and H and I re-pushing after a failed pull, a conventional cell matches C
   on latch_spread good parts on both machines.
@@ -860,7 +885,7 @@ The project targets the existing `.venv` on the Mac mini (Python 3.12, MuJoCo
 source .venv/bin/activate
 pip install -e ".[dev,video]"     # mujoco, numpy, matplotlib; pytest; imageio + ffmpeg for MP4
 
-pytest -q                         # 193 tests (physics, geometry, sensing, controllers, reports)
+pytest -q                         # 221 tests (physics, geometry, sensing, controllers, reports)
 pytest -q -m "not slow"           # skip the closed-loop controller tests
 python -m experiments.baseline    # one-minute check: all controllers at 100% on easy conditions
 ```
@@ -957,7 +982,7 @@ experiments/              baseline check, robustness benchmark, evaluation + plo
 demos/                    live viewer, video recorder, replay, investor video
   media/                  rendered investor video and its README still
 simulations/              generated workcell MJCF, original prototype, viewer script
-tests/                    193 tests: geometry, physics, sensing, controllers, metrics
+tests/                    221 tests: geometry, physics, sensing, controllers, metrics
 results/benchmark_v0.1/   the reported benchmark: trials.csv, summary.json/.csv, report.md,
                           plots/, events.json.gz, trajectories/ (replayable),
                           earlier_runs/ (superseded reports)

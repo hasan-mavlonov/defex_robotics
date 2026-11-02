@@ -39,6 +39,19 @@ code. On that seed C's gantry mis-characterized-vision lead did not replicate
 (87.2% against 86.2%, p = 0.67); C below F on gantry latching and J below C on arm
 standard did (p = 0.0026 and 9e-5); 57 of 60 verdicts replicated
 ([`benchmark_v0.2d_rep/REPORT.md`](../results/benchmark_v0.2d_rep/REPORT.md)).
+A third seed, 20261130, ran on the v0.2e code, which has three validated fixes.
+On that seed:
+
+- C is ahead on standard on both machines (gantry 99.1% against 96.8%, arm 98.1%
+  against 96.2%).
+- F matches C on gantry latching good parts (p = 0.12) and seats more on the arm
+  (95.2% against 92.0%, p = 0.014).
+- C, G, H, I and J pass 0 of 2,200 bad parts.
+- Mis-seated good parts passed: C 0 of 7,400, H 101, I 138, J 2, G 1.
+
+C's trials in the conditions where it fell most were rerun on the v0.2d code and gave
+identical rows, so C's drop there comes from the seed
+([`benchmark_v0.2e/REPORT.md`](../results/benchmark_v0.2e/REPORT.md)).
 
 ## What was tested
 

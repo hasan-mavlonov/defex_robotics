@@ -19,6 +19,20 @@ I 161 (mostly yawed plugs);
 C makes fewer good units per hour than I on every suite. J passes 3 and seats as
 many latching parts as I, and fewer standard parts than C.
 
+**benchmark_v0.2e** (seed 20261130, v0.2e code with three validated fixes,
+`results/benchmark_v0.2e/REPORT.md`):
+
+- C again leads on standard on both machines.
+- F matches C on gantry latching good parts (p = 0.12) and beats it on the arm
+  (95.2% against 92.0%, p = 0.014).
+- C, G, H, I and J pass 0 of 2,200 bad parts.
+- Unseated good parts called good: C 0, H 101, I 138, J 2, and G 1 (a 3.01 deg plug,
+  the first for C or G on any seed).
+
+C's trials in the conditions where it fell most were rerun on the v0.2d code and gave
+identical rows, so C's drop there comes from the seed, not the fixes. If asked "does C's lead hold?": across three seeds, only on the
+standard suite.
+
 ## 1. "How does it compare with spiral search?"
 
 Mixed, and the losses are in the README headline. Spiral search on a compliance

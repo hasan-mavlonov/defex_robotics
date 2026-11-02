@@ -25,7 +25,7 @@ The method sections below describe the v0.2d code, which benchmark_v0.2d ran and
 which differs from the code benchmark_v0.2c ran (see
 [The controllers](#the-controllers)).
 
-## Results: benchmark_v0.2d, two machines, same push and pull for every cell
+## Results: benchmark_v0.2d, two machines, the same 35.2 N push for every cell
 
 Pre-registered ([`PREREGISTRATION.md`](results/benchmark_v0.2d/PREREGISTRATION.md),
 code frozen at 42df5c8): seed 20261123, gantry and UR5e arm, ten controllers,
@@ -41,8 +41,9 @@ again after a failed pull; C and G check plug tilt in the latch check; and
 **Headline, as the pre-registered rules require.**
 
 * **On gantry latching good parts, F seats more than C**: 98.5% against 96.5%
-  (McNemar p = 0.012).
-* **A conventional cell matches C on four of eight suites**: arm latching
+  (McNemar p = 0.012, between 0.01 and 0.05, with no correction for multiple
+  comparisons).
+* **A conventional cell matches C in four of the eight machine-suite cells**: arm latching
   (F 93.7% against C 94.3%, p = 0.64), arm mis-characterized vision (F 79.4%
   against 79.0%, p = 0.92), and latch_spread good parts on both machines
   (gantry I 99.8% against 100.0%, arm H 99.7% against 99.8%, p = 1). C's
@@ -57,16 +58,20 @@ C leads every conventional cell on the standard suite (gantry 99.2% against
 mis-characterized vision (87.6% against 83.4%, p = 0.044; no correction for
 multiple comparisons).
 
-**What is left of C's lead: it does not pass mis-seated connectors that a depth
+**The stop condition holds.** A conventional cell matches or beats C in five of
+eight cells; under the pre-registration, Hasan decides how the pitch changes.
+
+**C's clearest difference: it does not pass mis-seated connectors that a depth
 check accepts.** Across all 7,400 good-part trials C passed none as good (upper
 bound 0.05%); H passed 118 and I 161, all on the housing-only connector, mostly
-tilted or short plugs under 2 mm of camera error (C against H and against I,
-p <= 7.6e-6 on each of the four housing-only suites). J, which runs C's
-verification after F's insertion, passed 3 and seats as many latching parts as
-I; it seats fewer than C on the standard suite (gantry 98.0% against 99.2%,
-p = 0.00012; arm 97.0% against 97.8%, p = 0.03).
+yawed or tilted plugs under 2 mm of camera error (C against H and against I,
+p <= 7.6e-6 in each of the four housing-only cells). J, which runs C's
+verification after F's insertion, passed 3 (Wilson upper bound 0.12%) and seats
+as many latching parts as I; it seats fewer than C on the standard suite (gantry
+98.0% against 99.2%, p = 0.00012; arm 97.0% against 97.8%, p = 0.03, between 0.01
+and 0.05).
 
-**C is slower on every suite.** Good units per hour, C against F (I, J in
+**C is slower than F and I on every suite.** Good units per hour, C against F (I, J in
 brackets): standard, gantry 608 against 1,128 (1,128, 655) and arm 386 against
 593 (593, 381); latching good parts, gantry 438 against 854 (494, 494) and arm
 289 against 474 (313, 311). Median successful cycle on the standard suite:
@@ -85,7 +90,9 @@ gantry 5.30 s against 2.43 s, arm 8.14 s against 4.77 s.
 
 Good units per hour count 0 s per protective stop. With 60 s per stop see
 [`HEADLINE_TABLES.md`](results/benchmark_v0.2d/HEADLINE_TABLES.md). G (C plus a
-learned contact prior) beats C on four suites (p < 0.05) and passed no bad unit.
+learned contact prior) beats C in four cells (p < 0.05) and passed no bad unit.
+Zero counts in the table have Wilson 95% upper bounds of 0.19% (2,000 trials),
+0.76% (500) and 0.64% (600).
 A second seed with the same code (`results/benchmark_v0.2d_rep`, seed 20261124)
 was pre-registered to check which of these verdicts hold. Simulation only.
 
@@ -263,7 +270,7 @@ gantry baselines were never tuned with the latching connector: re-tuned, F seats
 
 * C passed none of 7,400 good-part trials as good when the connector was not
   seated (Wilson 95% upper bound 0.05%). The conventional cells with a pull test
-  passed 118 (H) and 161 (I), mostly tilted or short plugs under camera error that
+  passed 118 (H) and 161 (I), mostly yawed or tilted plugs under camera error that
   their depth check accepts; the difference is significant on each housing-only
   suite on both machines.
 * Under the standard conditions C seats more housing-only connectors than every

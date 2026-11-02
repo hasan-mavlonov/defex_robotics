@@ -16,3 +16,8 @@
 - Tables made after the run with the pre-registered commands: `TABLES.md`,
   `AUDIT_TABLES.md`, `PAIRED_TABLES.md`, `HEADLINE_TABLES.md`. No run was repeated or
   dropped.
+- Not met: the pre-registration asks this log to record an empty
+  `git status --porcelain --untracked-files=all` outside `results/` at the start. It
+  was not recorded at 23:20. Run after the run, at 01:53 PST on 2026-11-02 (HEAD
+  ebfffea), it was empty; no untracked file outside `results/` was removed in between
+  that this log knows of, but the start state is not attested.

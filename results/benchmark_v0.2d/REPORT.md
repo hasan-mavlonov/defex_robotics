@@ -14,8 +14,12 @@ matches C on 4 cells (arm latching, arm mis-characterized vision, latch_spread o
 machines). On gantry latching good parts C is below F (96.5% vs 98.5%, p = 0.012). No
 controller with a pull test or C's VERIFY (C, G, H, I, J) passed a deliberately bad part:
 0 of 2,200 each. On good-part trials C passed no bad units while H and I passed 18-48 per
-housing-only cell (p <= 7.6e-6 in every such cell). C is the slowest of the competitive
-controllers: on gantry standard 608 good units per hour against F and I's 1,128. The
+housing-only cell (p <= 7.6e-6 in every such cell). C makes fewer good units per hour
+than F and I on every cell (gantry standard 608 against 1,128). J, F's insertion
+followed by C's verification, passed 3 bad units in 7,400 good-part trials (Wilson
+upper bound 0.12%), seated fewer than C on `standard` and at least as many as I
+everywhere (more on `standard` and gantry mis-characterized vision), at
+381-655 good units per hour against C's 386-608 on `standard`. The
 stop condition holds: a fair baseline matches or beats C in 5 of 8 cells. Hasan decides
 how the pitch changes.
 
@@ -36,8 +40,8 @@ rules, applied"):
 | arm, latch_spread good parts | 99.8% | H 99.7% | 1 / 0 | 1 | **a fair baseline matches C** |
 
 \* 0.01 <= p < 0.05. There is no multiple-comparison correction (about 60 tests in
-`TABLES.md`, about 40 in `PAIRED_TABLES.md`); these two verdicts are the ones most
-likely to change on another seed. `benchmark_v0.2d_rep` (seed 20261124, same code) was
+`TABLES.md`, 80 in `PAIRED_TABLES.md`); these two verdicts, and J below C on arm
+standard (p = 0.03), are the ones most likely to change on another seed. `benchmark_v0.2d_rep` (seed 20261124, same code) was
 pre-registered to check this.
 
 Part-to-part variation (`latch_spread`, good parts): a fair baseline matches C on both
@@ -49,8 +53,9 @@ seeds and are not paired.
 
 Deliberately bad parts passed (metric 2): C, G, H, I and J 0 of 800 on each machine's
 latching suite and 0 of 300 on each latch_spread suite, 0 of 2,200 each in all (Wilson 95%
-upper bound 0.17%). No difference between C and H or I. Without a pull test D and F pass
-most bad parts (gantry latching D 399, F 510 of 800; arm D 376, F 473). The headline
+upper bound 0.17%). No difference between C and H or I. Without a pull test D passes
+about half the latching bad parts and F most (gantry D 399, F 510 of 800; arm D 376,
+F 473). The headline
 script prints a p for the pooled row; pooled totals get no test under the
 pre-registration, so it is not used.
 
@@ -58,16 +63,20 @@ Bad units on good-part trials, C against H and I (metric 5, `PAIRED_TABLES.md`):
 
 | Cell | C | H | I | p, C vs H / C vs I |
 |---|---|---|---|---|
-| gantry standard (2,000 trials) | 0 | 37 | 48 | 1.5e-11 / 7.1e-15 |
-| gantry mis-characterized vision (500) | 0 | 28 | 39 | 7.5e-9 / 3.6e-12 |
-| arm standard (2,000) | 0 | 35 | 43 | 5.8e-11 / 2.3e-13 |
-| arm mis-characterized vision (500) | 0 | 18 | 31 | 7.6e-6 / 9.3e-10 |
+| gantry standard (2,000 trials) | 0 (<= 0.19%) | 37 | 48 | 1.5e-11 / 7.1e-15 |
+| gantry mis-characterized vision (500) | 0 (<= 0.76%) | 28 | 39 | 7.5e-9 / 3.6e-12 |
+| arm standard (2,000) | 0 (<= 0.19%) | 35 | 43 | 5.8e-11 / 2.3e-13 |
+| arm mis-characterized vision (500) | 0 (<= 0.76%) | 18 | 31 | 7.6e-6 / 9.3e-10 |
 | latching and latch_spread good parts, both machines | 0 | 0 | 0 | 1 |
 
 C passes fewer than H and I on every housing-only cell. All of I's are seat declarations
-ground truth calls unseated (`false_accept`), at 11.7-15.0 mm depth with up to 5.0 deg
-tilt, mostly on `noise_2mm` and `heldout_mischar_2mm` (`PAIRED_TABLES.md`, last table).
-On the latching suites the pull test catches these and no one passes any.
+ground truth calls unseated (`false_accept`), mostly on `noise_2mm` and
+`heldout_mischar_2mm` (`PAIRED_TABLES.md`, last table). Most are yawed, not short:
+recounted from `trials.csv` against the final-state limits (`defex/tasks/insertion.py`:
+depth >= 14.5 mm, tilt and yaw <= 3 deg), 91 of I's 161 have yaw above 3 deg, 68 tilt
+above 3 deg and 13 are short (a plug can fail more than one); H's 118: 66, 45 and 22.
+On the latching good parts C, G, H, I and J pass none; cells without a pull do (D 3-20
+per cell, F 5 and 31 on latch_spread, A, B and E 1-2; `TABLES.md`).
 
 G against C (metric 3): G helps on 4 cells, gantry standard (p = 0.0063), gantry
 mis-characterized vision (p = 0.00016), arm latching (p = 0.00012) and arm
@@ -87,14 +96,16 @@ J against C and against I (metric 4):
 | arm, mis-characterized vision | matches (p = 0.58) | matches (p = 0.28) | 0 vs 0 / 0 vs 31, fewer |
 | arm, latch_spread | matches (p = 0.5) | matches (identical) | 0 / 0 |
 
-On the latching suites J's seated results are trial for trial the same as I's: F's
+On gantry and arm latching and arm latch_spread J's seated results are trial for trial
+the same as I's (0 / 0 discordant pairs); on gantry latch_spread J seated one more. F's
 insertion decides, and VERIFY and the pull reject the same parts. On housing-only parts J
 keeps nearly all of C's protection against bad units (3 against I's 87 on the gantry, 0
 against 74 on the arm) and seats fewer than C on `standard`. J passed no deliberately
 bad part. J's three bad units (`AUDIT_TABLES.md`) are at full depth (15.00 mm) and under
 0.01 deg tilt (gantry `heldout_worst_case` trials 28 and 46, `friction_1` trial 13);
-ground truth failed them on its final-state check, and `trials.csv` does not record
-which part of that check. Whether J or C would be the product is not decided by this run.
+ground truth failed them on its final-state check. Their recorded depth, tilt, yaw and
+lateral offset are inside the limits, which leaves the settling check (final speed
+<= 2 mm/s), not recorded in `trials.csv`. Whether J or C would be the product is not decided by this run.
 
 ## Cycle time and throughput
 
@@ -108,7 +119,7 @@ Median successful cycle and good units per hour (0 s / 60 s per protective stop)
 | arm, standard | 8.14 s, 386 / 374 | 7.98 s, 381 | 4.77 s, 593 | 4.77 s, 593 |
 | arm, latching good parts | 9.00 s, 289 / 287 | 8.63 s, 311 / 303 | 8.55 s, 313 / 299 | 4.68 s, 474 / 454 |
 
-On housing-only parts C and J take about twice F and I's cycle. On latching parts J,
+On housing-only parts C's median cycle is 1.6-2.2 times F and I's, J's 1.5-2.0 times. On latching parts J,
 I and H take about C's cycle; F is about twice as fast as all of them and passes most
 bad parts. Protective stops on gantry bad parts: J 129 of 800, F and I 74, C 33, G 34
 (`TABLES.md`, gantry latching); none of C, F, I or J stopped on arm bad parts (latching and latch_spread). Bad-part
@@ -122,8 +133,14 @@ stops do not enter good units per hour.
 - latch_spread: matched on both machines, as expected.
 - Latching good parts: F matches or beats C, as expected; on the gantry it beats C.
 - Bad parts: C, G, H, I and J passed none, as expected.
-- Bad units on good parts: C 0, as expected. J 3 on the gantry and 0 on the arm ("a few,
-  far fewer than I"), as expected.
+- Bad units on good parts: C 0, as expected. J 3 on the gantry and 0 on the arm, "a few,
+  far fewer than I" as expected; but development expected tilted plugs, and J's 3 are
+  at full depth with no tilt.
+- The pre-registration expected the stop condition in six of eight cells; it holds in
+  five (C is also ahead on gantry mis-characterized vision).
+- "A, B and E pass most bad parts": not as stated. A passed 9 of 2,200, mostly stopping
+  instead (gantry latching 794 of 800 stops); B and E passed 348-396 of 800 per latching
+  suite, under half.
 - J below C on gantry standard, as expected. J below C on arm standard (p = 0.03) was
   not seen in development.
 - G helped on 4 cells; the dev check had 1.

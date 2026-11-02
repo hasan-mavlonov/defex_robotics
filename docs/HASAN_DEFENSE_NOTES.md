@@ -7,12 +7,14 @@ Micro-Fit insert target 30 N) unless marked. Simulation only.
 **benchmark_v0.2d first** (seed 20261123, code 42df5c8, 96,000 trials, 35.2 N
 insert target for every controller, H and I re-push after a failed pull, J = F's
 insertion plus C's verification; `results/benchmark_v0.2d/REPORT.md`). Where it
-changes an answer below, the answer says so. In one paragraph: C leads every
+changes an answer below, the answer ends with a "benchmark_v0.2d:" line. In one
+paragraph: C leads every
 conventional cell on the standard suite on both machines and on gantry
 mis-characterized vision (p = 0.044); F seats more gantry latching good parts than
 C (98.5% against 96.5%, p = 0.012); a conventional cell matches C on the other four
-suites, including latch_spread on both machines; C, H and I pass 0 of 2,200 bad
-parts; C passes 0 of 7,400 good-part trials that were not seated, H 118 and I 161;
+cells, including latch_spread on both machines; C, H and I pass 0 of 2,200 bad
+parts; on 7,400 good-part trials C calls no unseated connector good, H 118 times and
+I 161 (mostly yawed plugs);
 C makes fewer good units per hour than I on every suite. J passes 3 and seats as
 many latching parts as I, and fewer standard parts than C.
 
@@ -27,13 +29,20 @@ pass 0 of 2,200 deliberately bad parts. Where C clearly differs: it called no
 mis-seated connector good in 7,400 good-part trials; I did so 135 times.
 `results/benchmark_v0.2c/REPORT.md`, `PAIRED_TABLES.md`.
 
+benchmark_v0.2d: F seats more gantry latching good parts than C (98.5% against
+96.5%, p = 0.012); I now matches C on latching parts on both machines (p = 0.093
+and 0.43). C still seats more standard parts (gantry 99.2% against 96.3%, arm
+97.8% against 96.1%) and called no mis-seated connector good in 7,400 good-part
+trials; I did so 161 times, H 118.
+
 ## 2. "So why not just use spiral search?"
 
 In simulation, spiral search with a pull test is the faster cell: it makes more
 good units per hour than C on seven of eight suites (standard: gantry 1,101
 against 606, arm 596 against 373), and seats as many or more latching parts.
 What C buys is fewer mis-seated connectors leaving the cell, mostly when the
-camera error is large. Whether that is worth the lower throughput depends on
+camera error is large. (benchmark_v0.2d: I makes more good units per hour than C
+in all eight cells; gantry standard 1,128 against 608.) Whether that is worth the lower throughput depends on
 what a mis-seated connector costs the customer, which we have not priced. In
 benchmark_v0.2c, C's lead on parts at the edge of the datasheet came mostly from
 a stall push a spiral cell could add; the v0.2d code gives the spiral cells the
@@ -66,10 +75,12 @@ this is a setting, not proof of the method (`REPORT.md`, "latch_spread: what the
 gap is"). The v0.2d code sets the insert target to 35.2 N for every controller,
 and after a failed pull H and I push again and pull once more
 (`results/v0.2d_force_budget/REPORT.md`, `results/v0.2d_pull_retry/REPORT.md`).
-In benchmark_v0.2d, at the maximum terminal friction, H seated 99 and 100 of 100,
-I, J and C 100 of 100 on each machine; D and F seated 84-96 but also passed 4-24
-short plugs as good (`results/benchmark_v0.2d/TABLES.md`, latch_spread). The gap
-was the setting.
+In benchmark_v0.2d, with terminal forces at the datasheet maximum
+(`mf_terminal_max`), H seated 99 and 100 of 100 and I, J and C 100 of 100 on each
+machine; D and F, with the same 35.2 N push but no pull or re-push, seated 76-96
+and passed 4-24 short plugs as good (`results/benchmark_v0.2d/TABLES.md`,
+latch_spread). Most of the gap was the setting; the rest closed only for H and I,
+whose re-push copies C's proof push.
 
 ## 5. "Why not learning?"
 
@@ -78,7 +89,9 @@ network that predicts where the hole is from a blocked contact (G). It beats C o
 six of eight suites (for example arm standard 98.4% against 97.6%, p = 0.0015;
 arm with the camera worse than believed 85.0% against 78.0%) and shows no gain on
 latch_spread. On latching good parts it is level with I (not a pre-registered
-comparison). End-to-end learned policies need real force traces we do not have,
+comparison). benchmark_v0.2d: G beats C in four of eight cells (gantry standard,
+gantry and arm with the camera worse than believed, arm latching) and passed no
+bad unit. End-to-end learned policies need real force traces we do not have,
 and would make the false-accept number hard to defend.
 `results/benchmark_v0.2c/REPORT.md` (G against C).
 
@@ -112,14 +125,16 @@ socket pose or contact state; a test fails the build if controller code imports
 the simulator or ground truth
 (`tests/test_motion_and_estimation.py::test_controller_code_cannot_reach_the_simulator`).
 When the camera is worse than its stated accuracy, C does worse and F and I
-match it.
+match it. (benchmark_v0.2d: C leads F and I on the gantry there, 87.6% against
+83.4%, p = 0.044, and matches them on the arm.)
 
 At Checkpoint 2, C's latch check used the simulator's assumed latch geometry. It
 now uses datasheet values only: a pull at 1.1 x the 32 N maximum mating force and
 a movement limit of 0.6 x the 1.75 mm terminal wipe. With latch position and
 force varied within and at the edge of the datasheet, C seats 600 and 597 of 600
 good parts (`latch_spread`), including 100 of 100 per machine in the
-early-latch condition (`mf_latch_early`). The spread itself is assumed, not
+early-latch condition (`mf_latch_early`). benchmark_v0.2d: 600 and 599 of 600,
+100 of 100 early-latch parts per machine. The spread itself is assumed, not
 measured.
 
 ## 9. "Has C ever passed a bad part?"

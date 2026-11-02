@@ -1,14 +1,17 @@
 # DAIE technical brief (draft for Hasan's review)
 
-Simulation results for the Defex Adaptive Insertion Engine (controller C), as of
-benchmark_v0.2c. Not validated on hardware. Every claim names the file it comes
+Simulation results for the Defex Adaptive Insertion Engine (controller C):
+benchmark_v0.2d first, then benchmark_v0.2c. Not validated on hardware. Every claim names the file it comes
 from; unless stated otherwise that is a benchmark_v0.2c file: results committed
 at c3884c6, code frozen at 45f8b06, pre-registered at b479e17, seed 20261116,
 Micro-Fit insert target 30 N.
 
 **benchmark_v0.2d** (seed 20261123, code 42df5c8, pre-registered at 966a5f5,
 96,000 trials, insert target 35.2 N for every controller;
-[`REPORT.md`](../results/benchmark_v0.2d/REPORT.md)) changes three results.
+[`REPORT.md`](../results/benchmark_v0.2d/REPORT.md)) changes four of the eight
+cell verdicts of benchmark_v0.2c: gantry mis-characterized vision (matches -> C
+ahead), arm latching (C below -> matches) and latch_spread on both machines (C
+ahead -> matches).
 
 | Machine, suite | C | Best of D, E, F, H, I | p | Verdict |
 |---|---|---|---|---|
@@ -22,13 +25,16 @@ Micro-Fit insert target 30 N.
 | arm, latch_spread good parts | 99.8% | H 99.7% | 1 | matches |
 
 C's latch_spread lead is gone: with the same 35.2 N push and a re-push after a
-failed pull, H and I seat as many varied parts as C. Bad parts passed: C, H and
+failed pull, H and I match C on varied parts (gantry 597 and 599 against 600, arm
+598 and 597 against 599). Bad parts passed: C, H and
 I 0 of 2,200 each. Good-part trials passed as good when not seated: C 0 of 7,400,
 H 118, I 161. C makes fewer good units per hour than I on every suite (gantry
 standard 608 against 1,128). J, F's insertion followed by C's verification,
 passed 3 such units, seats as many latching parts as I and fewer standard parts
-than C (`HEADLINE_TABLES.md`). No multiple-comparison correction; the two
-verdicts at 0.01 <= p < 0.05 are being re-checked on seed 20261124 with the same
+than C, at 381-655 good units per hour on the standard suite against C's 386-608
+(`HEADLINE_TABLES.md`). No multiple-comparison correction; the three verdicts at
+0.01 <= p < 0.05 (the two above, and J below C on arm standard, p = 0.03) are being
+re-checked on seed 20261124 with the same
 code.
 
 ## What was tested
@@ -87,7 +93,8 @@ VERIFY, so it is not a fair baseline
 
 C seats more housing-only connectors under the standard conditions on both
 machines. F and I seat more latching good parts than C on both machines, and
-match C when the camera is worse than believed.
+match C when the camera is worse than believed (benchmark_v0.2c; see the v0.2d
+table above for what changed).
 
 In benchmark_v0.2c, C's latch_spread lead came mostly from one rule. When a plug
 stalls short, C pushes at 1.1 x the datasheet's 32 N maximum mating force; the

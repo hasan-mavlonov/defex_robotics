@@ -318,8 +318,9 @@ comparison.
    - arm latching_good C vs F (0.67), C vs I (0.72) and J vs C (0.63).
 
    So **the arm's latching "C below F" cannot be resolved per variant at this
-   budget**: it needs about 100 trials per variant. Every other primary directional
-   comparison has under 0.04.
+   budget**. To bring the chance below 0.2 it needs about 50 trials per variant, and
+   about 80 to bring it below 0.04. Going from 20 to 80 trials of arm `mf_noise_1mm`
+   would add about 50 min. Every other primary directional comparison has under 0.04.
 5. **What is reported when a comparison does not hold:**
    - It goes in the report's first paragraph if it is primary.
    - The failing variants are listed with their drawn parameters, and so are departing

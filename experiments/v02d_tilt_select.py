@@ -24,6 +24,8 @@ from pathlib import Path
 
 MAX_TILT_DEG = 3.0  # SuccessCriteria.max_tilt_deg
 SUITE_ORDER = ("latching", "latch_spread", "standard", "heldout")
+EQUAL_FIELDS = ("success", "failure_reason", "declared_success", "cycle_time_s", "retries", "final_depth_mm",
+                "final_tilt_deg", "final_lateral_mm", "final_yaw_deg", "peak_contact_force_n", "sim_time_s")
 
 
 def load(paths: list[str]) -> list[dict]:
@@ -124,8 +126,11 @@ def cmd_table(args) -> None:
                     raise SystemExit(f"missing re-run {fk}")
                 kr = reruns[fk]
                 if not acted(kr):
-                    assert not fires(br, variants[k]), fk
-                    kr = br  # the check passed every time: the trial is the base trial (equivalence run)
+                    # The check passed every time: the re-run must be the base trial, field for field.
+                    same = [f for f in EQUAL_FIELDS if kr[f] != br[f]]
+                    if fires(br, variants[k]) or same:
+                        raise SystemExit(f"re-run {fk} differs from its base trial without a failed check: {same}")
+                    kr = br
             else:
                 kr = br
             fired += int(kr is not br)

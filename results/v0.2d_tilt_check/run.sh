@@ -39,6 +39,20 @@ if [ "$STEP" = all ] || [ "$STEP" = selection ]; then
       --reruns $R/selection/arm_reruns.jsonl.gz,$R/selection/gantry_reruns.jsonl.gz > $R/selection/TABLES.md
 fi
 
+if [ "$STEP" = all ] || [ "$STEP" = selection_addendum ]; then
+  # The collector of 91bfd9a missed latch checks after a held re-seat (92 gantry trials, none on the arm).
+  # Re-run every trial a candidate acts on or with an unrecorded check, with the collector of 44ea9a7.
+  $PY -m experiments.v02d_tilt_select fired --variants $R/variants.json --out "$R/selection/reruns2_{backend}.json" \
+      $R/selection/arm_s1.jsonl.gz $R/selection/arm_s2.jsonl.gz $R/selection/gantry_s1.jsonl.gz $R/selection/gantry_s2.jsonl.gz
+  for B in arm gantry; do
+    $PY -m experiments.v02d_tilt_features --backend $B --jobs-file $R/selection/reruns2_$B.json --workers 3 \
+        --out $R/selection/${B}_reruns2.jsonl.gz
+  done
+  $PY -m experiments.v02d_tilt_select table --variants $R/variants.json \
+      --base $R/selection/arm_s1.jsonl.gz,$R/selection/arm_s2.jsonl.gz,$R/selection/gantry_s1.jsonl.gz,$R/selection/gantry_s2.jsonl.gz \
+      --reruns $R/selection/arm_reruns2.jsonl.gz,$R/selection/gantry_reruns2.jsonl.gz > $R/selection/TABLES.md
+fi
+
 if [ "$STEP" = all ] || [ "$STEP" = validation ]; then
   # Validation seed 4003, once, the candidate the selection picked (selection/TABLES.md: tilt_k2).
   K=tilt_k2

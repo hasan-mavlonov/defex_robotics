@@ -279,9 +279,13 @@ def j_vs(rows: list[dict], other: str, pred=ok) -> dict | None:
     """J against ``other``, paired on the trials both ran: counts where ``pred`` holds (ok: seated; escape: bad
     units passed), discordant pairs and exact McNemar p. None when either controller is absent."""
     present = controllers(rows)
+    if J not in present and any(c.startswith(J) for c in present):
+        raise ValueError(f"a J candidate ran without {J}: the J rules read only {J}")
     if J not in present or other not in present:
         return None
     n = {c: sum(r["controller"] == c for r in rows) for c in (J, other)}
+    if n[J] != n[other]:
+        raise ValueError(f"J and {other} ran different trial sets ({n[J]} and {n[other]}): the rules need complete pairs")
     k = {c: sum(pred(r) for r in rows if r["controller"] == c) for c in (J, other)}
     jo, oo, m = paired(rows, J, other, pred)
     return {"n": n, "k": k, "j_only": jo, "other_only": oo, "pairs": m, "p": mcnemar(jo, oo)}
@@ -296,8 +300,9 @@ def j_decisions(name: str, rows: list[dict], good: bool = True) -> list[str]:
             rate = {c: s["k"][c] / max(1, n[c]) for c in (J, other)}
             p = s["p"]
             gap = 100 * (rate[J] - rate[other])
-            verdict = (f"J below {LETTER[other]}" if gap < 0 and p < 0.05 else
-                       f"J ahead of {LETTER[other]}" if gap > 0 and p < 0.05 else f"J matches {LETTER[other]}")
+            verdict = (f"J below {LETTER[other]}" if s["j_only"] < s["other_only"] and p < 0.05 else
+                       f"J ahead of {LETTER[other]}" if s["j_only"] > s["other_only"] and p < 0.05 else
+                       f"J matches {LETTER[other]}")
             out.append(f"| {name} | J vs {LETTER[other]}, seated | {100 * rate[J]:.1f}% vs {100 * rate[other]:.1f}% "
                        f"({gap:+.1f} pts) | {s['j_only']} / {s['other_only']} (J-only / {LETTER[other]}-only) | "
                        f"{fmt_p(p)} | {verdict} |")

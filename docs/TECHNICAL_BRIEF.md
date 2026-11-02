@@ -3,7 +3,10 @@
 Simulation results for the Defex Adaptive Insertion Engine (controller C), as of
 benchmark_v0.2c. Not validated on hardware. Every claim names the file it comes
 from; unless stated otherwise that is a benchmark_v0.2c file: results committed
-at c3884c6, code frozen at 45f8b06, pre-registered at b479e17, seed 20261116.
+at c3884c6, code frozen at 45f8b06, pre-registered at b479e17, seed 20261116,
+Micro-Fit insert target 30 N.
+
+<!-- v0.2d: fill after benchmark_v0.2d -->
 
 ## What was tested
 
@@ -28,6 +31,23 @@ connector, by selection rules committed before the runs
 [`v0.2c_gantry_baselines`](../results/v0.2c_gantry_baselines/REPORT.md)). G is C
 plus a learned contact prior.
 
+The v0.2d code changes the method; benchmark_v0.2d (seed 20261123, A-J) has not
+run. The Micro-Fit's insert target is 35.2 N (1.1 x the datasheet's 32 N maximum
+mating force) for every controller, up from 30 N; abort 40 N, protective stop 48 N
+and damage 58 N are unchanged
+([`v0.2d_force_budget`](../results/v0.2d_force_budget/REPORT.md)). A, B and E's
+taught overtravel on the arm uses the stiffness along the push, 10.8 N/mm,
+instead of the weakest direction, 8.0 N/mm
+([`v0.2d_axial_stiffness`](../results/v0.2d_axial_stiffness/REPORT.md)). After a
+failed pull, H and I push again at the insert target and pull once more, built
+as C's proof push ([`v0.2d_pull_retry`](../results/v0.2d_pull_retry/REPORT.md)).
+C's latching VERIFY, which G shares, has a tilt check
+([`v0.2d_tilt_check`](../results/v0.2d_tilt_check/REPORT.md)). J is new: F's
+insertion, then C's VERIFY, searching again after a failed check. J contains C's
+VERIFY, so it is not a fair baseline
+([`v0.2d_j_verify`](../results/v0.2d_j_verify/REPORT.md),
+[`v0.2d_j_repick`](../results/v0.2d_j_repick/REPORT.md)).
+
 ## 1. Good parts seated, against the conventional cells
 
 | Machine, suite | C | Best of D, E, F, H, I | McNemar p |
@@ -47,13 +67,14 @@ C seats more housing-only connectors under the standard conditions on both
 machines. F and I seat more latching good parts than C on both machines, and
 match C when the camera is worse than believed.
 
-C's latch_spread lead comes mostly from one rule. When a plug stalls short, C
-pushes at 1.1 x the datasheet's 32 N maximum mating force; the conventional
-cells push at the connector file's 30 N insert target and seat none of the 100
-parts at maximum terminal friction on either machine. Without that condition C
-still leads (500 against 473 of 500 on the gantry, 497 against 474 on the arm,
-against I). A conventional cell with the same push has not been tested
-([`REPORT.md`](../results/benchmark_v0.2c/REPORT.md#latch_spread-what-the-gap-is)).
+In benchmark_v0.2c, C's latch_spread lead came mostly from one rule. When a plug
+stalls short, C pushes at 1.1 x the datasheet's 32 N maximum mating force; the
+conventional cells pushed at the connector file's 30 N insert target and seated
+none of the 100 parts at maximum terminal friction on either machine. Without
+that condition C still led (500 against 473 of 500 on the gantry, 497 against 474
+on the arm, against I). A conventional cell with the same push was not in the run
+([`REPORT.md`](../results/benchmark_v0.2c/REPORT.md#latch_spread-what-the-gap-is));
+the v0.2d code gives every controller the 35.2 N insert target.
 
 ## 2. Bad units passed as good
 
@@ -80,7 +101,8 @@ and the cell calls it seated), all good-part trials, 3,700 per machine:
 where C's verification shows. I's escapes are plugs 11-15 mm deep (full depth
 15 mm), up to 5 degrees of tilt, 102 of 132 of them under 2 mm of camera error;
 its depth check accepts them. G's one escape is a plug at 3.21 degrees of tilt;
-VERIFY does not check tilt.
+benchmark_v0.2c's VERIFY did not check tilt (the v0.2d code adds a tilt check to
+the latching VERIFY).
 
 ## 3. Throughput
 
@@ -98,6 +120,8 @@ deliberately bad part in a median 8.4 s (gantry) and 12.8 s (arm) on the
 latching suite.
 
 ## What this supports
+
+<!-- v0.2d: fill after benchmark_v0.2d -->
 
 - In simulation, C did not call a mis-seated connector good in 7,400 good-part
   trials (upper bound 0.05%); the best conventional cell with a pull test did so

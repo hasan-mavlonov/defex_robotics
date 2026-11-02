@@ -3,59 +3,81 @@
 Development work, not a benchmark. After the force-budget fix, what was left of C's
 latch_spread lead over H and I was mostly one behaviour: when the pull fails on a plug
 that stopped in the terminal zone (`mf_terminal_max`), C pushes again and pulls again,
-while H and I reject at the first failed pull
+while H and I rejected at the first failed pull
 ([`../v0.2d_force_budget/REPORT.md`](../v0.2d_force_budget/REPORT.md), (b)). A
-conventional cell can do the same, so it was tried.
+conventional cell can do the same, so H and I were given one retry.
 
-## The retry
+**Result:** with the retry (version 4, picked by a rule committed before its dev runs
+and confirmed once on seed 4004), H and I seat as many latch_spread good parts as C on
+dev seeds on both machines, and pass no more bad parts.
 
-`SpiralSearchConfig.pull_retries` (0 by default). After a failed pull: INSERT's contact
-speed until the plug pushes back, then the force loop at the insert target (35.2 N)
-capped at 2 mm/s; pull again once held for 0.4 s at 0.8 x the target, or when stalled
-(INSERT's stall rule), or after 6 s. Hold and cap are C's proof-push values
-(`AdaptiveConfig.proof_push_s`, `proof_push_speed_mm_s`). One retry, then reject.
+## The retry (version 4, installed)
 
-## Versions and what they showed
+`SpiralSearchConfig.pull_retries` (H and I: 1; D and F: 0). After a failed pull, a
+re-push copied from C's bottom proof push: the force loop at the insert target
+(35.2 N) capped at 2 mm/s, INSERT's force and torque limits (fail on a limit); pull
+again once 0.8 x the target has been held 0.4 s without the plug advancing more than
+0.1 mm (an advance restarts the hold), or after 6 s. Hold, cap and advance are C's
+`proof_push_s`, `proof_push_speed_mm_s` and `proof_advance_mm`. One retry, then
+reject. Test:
+`tests/test_fair_baselines.py::test_pull_retry_re_push_reaches_the_target_before_the_second_pull`.
 
-* v1 (02ece67, runs in [`v1/`](v1/TABLES.md)): the re-push ended on hold or 3 s after
-  contact. Gantry: H 234 -> 239, I 224 -> 240 of 240 latch_spread good parts, no bad
-  parts passed. Arm: no seats gained (the re-push timed out while the plug was still
-  moving, at 19-24 N), and H passed 2 broken-latch bad parts.
-* Current (5a02674): the re-push also ends on a stall. The
-  [selection rule](SELECTION_RULE.md) was committed with it, before its dev runs.
+## How it got there (all on dev seeds 2026 and 2027)
 
-Arm smoke trials and the H failures show why the retry is unsafe as a plain
-re-push: on `mf_terminal_max_broken_latch` (terminal friction at the datasheet maximum,
-latch broken), a second pull that starts from the terminal zone is held at 35.2 N by
-terminal friction alone, and passes. C does not have this hole because its latch check
-needs the plug at the floor first.
+| Version | Re-push ended on | What the dev runs showed | Status |
+|---|---|---|---|
+| v1 ([`v1/`](v1/TABLES.md), 02ece67) | hold, or 3 s after contact | gantry gains; arm none, H passed 2 broken-latch parts | dropped |
+| v2 ([`dev/`](dev/TABLES.md), 5a02674) | hold, a stall, or 6 s | pick "I on the gantry only", confirmed on seed 4003 | **withdrawn**: the fairness review found the stall exit had no force gate; H's re-pushes and I's on the arm ended at 9-16 N, and the arm H bad-part passes (16) came from second pulls after those weak re-pushes |
+| v3 ([`dev3/`](dev3/TABLES.md), 0ba51c0) | hold or 6 s, capped, force limits | gantry gains, no new stops; arm none: the hold ran out while the plug was still moving through the terminal peak | not used |
+| v4 ([`dev4/`](dev4/TABLES.md), 1f1ca4a) | as v3, an advance restarts the hold | gains on all four cells, no new bad parts or stops | **installed** |
 
-## Dev runs and the pick ([`dev/TABLES.md`](dev/TABLES.md))
+Each version's rule was committed before that version's dev runs
+([`SELECTION_RULE.md`](SELECTION_RULE.md)); each was written after seeing the previous
+version's results on the same dev seeds, and v4 after seed-2026 smoke trials. Seed
+4004 was kept fresh for the final check.
+
+## Dev runs, version 4 ([`dev4/TABLES.md`](dev4/TABLES.md))
 
 Seeds 2026 and 2027, latching and latch_spread, 20 trials per condition; retry off is
 `results/v0.2d_force_budget/after`. C and D are field-identical (controls).
 
-| Machine | Ctrl | Good seated off -> on | Bad parts + bad units off -> on | Rule |
+| Machine | Ctrl | Good seated off -> on (of 360) | Bad parts + bad units off -> on | Protective stops |
 |---|---|---|---|---|
-| gantry | H | 340 -> 340 of 360 | 0 -> 0 | off (no gain) |
-| gantry | I | 342 -> 358 of 360 | 0 -> 0 | **on** |
-| arm | H | 321 -> 321 of 360 | 1 -> 17 | off (16 broken-latch parts passed) |
-| arm | I | 344 -> 344 of 360 | 0 -> 0 | off (no gain) |
+| gantry | H | 340 -> 345 | 0 -> 0 | unchanged |
+| gantry | I | 342 -> 358 | 0 -> 0 | unchanged |
+| arm | H | 321 -> 336 | 1 -> 1 | unchanged |
+| arm | I | 344 -> 354 | 0 -> 0 | unchanged |
 
-## Validation, seed 4003, run once
+C against H and I on latch_spread good parts after the retry (C-only / other-only):
+gantry H 1 / 0, I 0 / 0; arm H 2 / 2, I 0 / 2. Before it: gantry 6 / 0 and 16 / 0,
+arm 17 / 2 and 10 / 2. On latching good parts nothing changed (gantry C vs H 13 / 2,
+C vs I 2 / 3; arm 12 / 0 and 3 / 7).
 
-Pick registered at 305f4bf; retry off at 34520aa
-([`val4003_off/`](val4003_off/)). Gantry I, good parts seated off -> on: latching
-60 -> 60 of 60, latch_spread 111 -> 120 of 120 (0 lost / 9 gained, p = 0.0039); bad
-parts passed plus bad units 0 -> 0 on both suites. The pick stands. Every
-`config.json` shows `git_dirty: false`.
+Cost: the retry adds cell time on bad parts (each rejected bad part now pulls twice).
+Good units per hour counting bad-part cycles, latch_spread dev: gantry H 281 -> 248,
+I 247 -> 227; arm H 280 -> 244, I 280 -> 237.
 
-## What this means for the comparison
+## Validation, seed 4004, run once
 
-On the gantry, C's latch_spread lead over I is gone on dev seeds (240 against 240). On
-the arm the retry did not help either H or I and is off there, so C's arm lead over H
-and I on `mf_terminal_max` stays (dev: 17/2 and 10/2 trials). Doing the retry safely on
-the arm would need a depth gate before the second pull, which is C's design rather
-than a conventional cell's; that was not tried. Throughput: the retry costs I's gantry
-cell time on bad parts (good units per hour on dev latch_spread 247 -> 236, counting
-bad-part cycles).
+Pick registered at 5d2c3dc; retry off at 34520aa ([`val4004_off/`](val4004_off/)).
+Latching and latch_spread pooled, 180 good-part trials per controller and machine:
+
+| Machine | Ctrl | Good seated off -> on | Lost / gained (p) | Bad parts + bad units | Stops |
+|---|---|---|---|---|---|
+| gantry | H | 163 -> 169 | 0 / 6 (0.031) | 0 -> 0 | 14 -> 14 |
+| gantry | I | 165 -> 177 | 0 / 12 (0.00049) | 0 -> 0 | 24 -> 24 |
+| arm | H | 159 -> 163 | 0 / 4 (0.12) | 0 -> 0 | 4 -> 4 |
+| arm | I | 166 -> 172 | 0 / 6 (0.031) | 0 -> 0 | 1 -> 1 |
+
+The pick stands in all four cells. Every `config.json` shows `git_dirty: false`.
+
+## Limits
+
+- The seat rule of D, F, H and I (declare seated at 0.8 x the target, 28.2 N, for
+  0.08 s) is below the 32-33 N terminal peak at the datasheet maximum; the retry
+  repairs the consequence rather than the rule. Not re-selected.
+- The retry is C's proof-push logic moved into the conventional cell. It is a
+  plausible conventional program step (push again, pull again), but it was designed
+  with knowledge of C.
+- Seeds 2026 and 2027 were used for four versions; 4004 is the only clean check, at
+  20 trials per condition.

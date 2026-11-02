@@ -21,3 +21,7 @@ done
 #   for S in latching latch_spread; do python -m experiments.robustness --backend gantry --suite $S --seed 4003 \
 #     --trials 20 --controllers spiral_rcc_pull --workers 3 --no-plots --name val4003_off/gantry_${S}_s4003; done
 # then copy results/val4003_off into results/v0.2d_pull_retry/val4003_off.
+# Version 4 validation comparator (retry off, H and I, both machines, seed 4004), at 34520aa:
+#   for B in gantry arm; do for S in latching latch_spread; do python -m experiments.robustness --backend $B \
+#     --suite $S --seed 4004 --trials 20 --controllers spiral_pull,spiral_rcc_pull --workers 4 --no-plots \
+#     --name val4004_off/${B}_${S}_s4004; done; done

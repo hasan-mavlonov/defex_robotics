@@ -406,15 +406,20 @@ class AdaptiveInsertionController(InsertionController):
                 f"#{self.attempts} probe=({self.xy[0] / MM:+.2f},{self.xy[1] / MM:+.2f}) mm "
                 f"yaw_corr={matrix_to_rotvec(self.R_corr)[2] / DEG:+.1f} deg",
             )
-            self.monitor.reset(obs.t)
-            self._unjams_left = c.unjam_per_attempt
-            self._contact = False
-            self._bottom_since = None
-            self._trace = []
-            self._f_insert = c.insert_force_n
-            self._bottom_proofed = False
+            self._begin_attempt(obs.t)
             self._enter(obs.t, INSERT)
         return self._cmd(c.reposition_speed_mm_s)
+
+    def _begin_attempt(self, t: float) -> None:
+        """Per-attempt state, reset as each attempt starts its descent (also by J at its hand-over to VERIFY)."""
+        c = self.cfg
+        self.monitor.reset(t)
+        self._unjams_left = c.unjam_per_attempt
+        self._contact = False
+        self._bottom_since = None
+        self._trace = []
+        self._f_insert = c.insert_force_n
+        self._bottom_proofed = False
 
     # ------------------------------------------------------------------ INSERT
     def _insert_step(self, obs: Observation) -> Command:

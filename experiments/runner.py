@@ -206,6 +206,12 @@ def run_suite(
             for c in controllers if hasattr(make_controller(c), "stiff_fixture_cfg")
         },
         "compliant_stage": to_dict(CompliantStageConfig()),
+        # v0.2d: J's VERIFY runs C's code with C's config.
+        "verify_configs": {
+            c: {"cfg": to_dict(make_controller(c).verifier.cfg), "on_verify_fail": make_controller(c).on_verify_fail,
+                "rcc_terms": make_controller(c).rcc_terms}
+            for c in controllers if hasattr(make_controller(c), "verifier")
+        },
     }
     write_json(meta, out_dir / "config.json")
     results: list[TrialResult] = []

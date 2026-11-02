@@ -18,6 +18,12 @@ from defex.control.spiral_search import (
     SpiralSearchController,
     SpiralSearchPullController,
 )
+from defex.control.spiral_verify import (
+    CompliantSpiralSearchVerifyController,
+    CompliantSpiralSearchVerifyRejectController,
+    CompliantSpiralSearchVerifyRejectNoRCCController,
+    CompliantSpiralSearchVerifyResearchController,
+)
 
 CONTROLLERS: dict[str, Callable[[], InsertionController]] = {
     "fixed": FixedTrajectoryController,
@@ -29,6 +35,12 @@ CONTROLLERS: dict[str, Callable[[], InsertionController]] = {
     "adaptive_learned": AdaptiveLearnedController,  # W9: C + learned contact prior (opt-in)
     "spiral_pull": SpiralSearchPullController,  # v0.2c: H = D + C's retention pull
     "spiral_rcc_pull": CompliantSpiralSearchPullController,  # v0.2c: I = F + C's retention pull
+    # v0.2d: J = F + C's VERIFY, re-search after a failed check (SELECTION_RULE.md); its candidates (a) and (b),
+    # and (a) without the RCC terms
+    "spiral_rcc_verify": CompliantSpiralSearchVerifyController,
+    "spiral_rcc_verify_reject": CompliantSpiralSearchVerifyRejectController,
+    "spiral_rcc_verify_research": CompliantSpiralSearchVerifyResearchController,
+    "spiral_rcc_verify_reject_no_rcc": CompliantSpiralSearchVerifyRejectNoRCCController,
 }
 
 # The benchmark cells A-F. Scripts that run "every controller" by default use this, so
@@ -45,6 +57,10 @@ LABELS = {
     "adaptive_learned": "G: Defex adaptive + learned contact prior",
     "spiral_pull": "H: Spiral search + retention pull",
     "spiral_rcc_pull": "I: Spiral search + passive compliance + retention pull",
+    "spiral_rcc_verify": CompliantSpiralSearchVerifyController.label,
+    "spiral_rcc_verify_reject": CompliantSpiralSearchVerifyRejectController.label,
+    "spiral_rcc_verify_research": CompliantSpiralSearchVerifyResearchController.label,
+    "spiral_rcc_verify_reject_no_rcc": CompliantSpiralSearchVerifyRejectNoRCCController.label,
 }
 
 COLORS = {
@@ -57,6 +73,10 @@ COLORS = {
     "adaptive_learned": "#705010",
     "spiral_pull": "#1f6b48",
     "spiral_rcc_pull": "#8c2f47",
+    "spiral_rcc_verify": "#b5651d",
+    "spiral_rcc_verify_reject": "#d98c3a",
+    "spiral_rcc_verify_research": "#b5651d",
+    "spiral_rcc_verify_reject_no_rcc": "#c9b38f",
 }
 
 

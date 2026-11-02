@@ -167,10 +167,12 @@ def instrument(ctrl, gt_box: dict) -> dict:
         return orig["_wall_yaw_verdict"](obs)
 
     def begin_latch_verify(obs):
-        if rec["verifies"] and hasattr(ctrl, "_tilt_evidence"):
+        if hasattr(ctrl, "_tilt_evidence"):
             tilt, edge = ctrl._tilt_evidence(obs)
-            rec["verifies"][-1].setdefault("latch_checks", []).append(
-                {"t": float(obs.t - ctrl.t_start), "phase": ctrl.phase, "tilt_deg": tilt / DEG, "edge": edge, "gt": gt()})
+            chk = {"t": float(obs.t - ctrl.t_start), "phase": ctrl.phase, "tilt_deg": tilt / DEG, "edge": edge, "gt": gt()}
+            rec.setdefault("latch_checks", []).append(chk)  # every latch check, also from a held re-seat
+            if rec["verifies"]:
+                rec["verifies"][-1].setdefault("latch_checks", []).append(chk)
         return orig["_begin_latch_verify"](obs)
 
     def succeed(obs):

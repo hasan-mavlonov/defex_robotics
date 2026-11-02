@@ -9,8 +9,9 @@ Inputs are files written by ``experiments.v02d_tilt_features``. The base files c
 check off; they hold the check's evidence at every start of a latch check. A candidate changes a trial only
 from the first latch check where its verdict fails (the evidence is a pure function and a passing verdict
 changes no state), so every trial where it never fails is the base trial, and the trials where it does are
-re-run with the candidate switched on (``fired`` writes that list). ``table`` combines the two, checks that
-no needed re-run is missing, and applies the gates of SELECTION_RULE.md.
+re-run with the candidate switched on (``fired`` writes that list, plus every trial with a latch check whose
+evidence was not recorded). ``table`` combines the two, checks that no needed re-run is missing, and applies
+the gates of SELECTION_RULE.md.
 """
 
 from __future__ import annotations
@@ -33,13 +34,34 @@ def load(paths: list[str]) -> list[dict]:
     return rows
 
 
+def latch_checks(row: dict) -> list[dict]:
+    rec = row["record"]
+    if "latch_checks" in rec:
+        return rec["latch_checks"]
+    return [c for v in rec.get("verifies", []) for c in v.get("latch_checks", [])]
+
+
+def observed(row: dict) -> bool:
+    """Every latch check of the trial has its evidence recorded (one "latch ... click" event per check).
+
+    The collector of 91bfd9a recorded a latch check only inside a VERIFY entered through _begin_verify, so a
+    check after a held re-seat in an attempt without one was missed; such trials are re-run like fired ones."""
+    n = sum(1 for e in row["events"] if e[1] == "latch" and e[2].startswith("click"))
+    return n == len(latch_checks(row))
+
+
 def fires(row: dict, cand: dict) -> bool:
     """True if the candidate's verdict fails at some latch-check start of this base trial."""
-    for v in row["record"].get("verifies", []):
-        for chk in v.get("latch_checks", []):
-            if chk["tilt_deg"] > cand["tilt_check_deg"] and chk["edge"] > cand["tilt_check_edge_fraction"]:
-                return True
-    return False
+    return any(c["tilt_deg"] > cand["tilt_check_deg"] and c["edge"] > cand["tilt_check_edge_fraction"]
+               for c in latch_checks(row))
+
+
+def needs_rerun(row: dict, cand: dict) -> bool:
+    return fires(row, cand) or not observed(row)
+
+
+def acted(row: dict) -> bool:
+    return any(e[1] == "tilt" and e[2].endswith("FAIL") for e in row["events"])
 
 
 def key(row: dict, controller: str | None = None) -> tuple:
@@ -71,7 +93,7 @@ def cmd_fired(args) -> None:
         if "@" in row["controller"]:
             continue
         for k in names:
-            if fires(row, variants[k]):
+            if needs_rerun(row, variants[k]):
                 by_backend.setdefault(row["backend"], []).append(
                     [row["suite"], row["condition"], f"{row['controller']}@{k}", row["base_seed"], row["trial_index"]])
     for backend in ("gantry", "arm"):
@@ -97,13 +119,16 @@ def cmd_table(args) -> None:
         fired = 0
         for bk, br in base.items():
             fk = bk[:3] + (f"{bk[3]}@{k}",) + bk[4:]
-            if fires(br, variants[k]):
-                fired += 1
+            if needs_rerun(br, variants[k]):
                 if fk not in reruns:
                     raise SystemExit(f"missing re-run {fk}")
                 kr = reruns[fk]
+                if not acted(kr):
+                    assert not fires(br, variants[k]), fk
+                    kr = br  # the check passed every time: the trial is the base trial (equivalence run)
             else:
                 kr = br
+            fired += int(kr is not br)
             b, c = outcome(br), outcome(kr)
             cell = cells.setdefault(cell_name(bk), {f: [0, 0] for f in (
                 "n_good", "n_bad", "success", "lost", "gained", "false_reject", "tilt_escape", "other_escape",

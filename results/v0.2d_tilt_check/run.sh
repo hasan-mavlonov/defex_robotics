@@ -38,3 +38,21 @@ if [ "$STEP" = all ] || [ "$STEP" = selection ]; then
       --base $R/selection/arm_s1.jsonl.gz,$R/selection/arm_s2.jsonl.gz,$R/selection/gantry_s1.jsonl.gz,$R/selection/gantry_s2.jsonl.gz \
       --reruns $R/selection/arm_reruns.jsonl.gz,$R/selection/gantry_reruns.jsonl.gz > $R/selection/TABLES.md
 fi
+
+if [ "$STEP" = all ] || [ "$STEP" = validation ]; then
+  # Validation seed 4003, once, the candidate the selection picked (selection/TABLES.md: tilt_k2).
+  K=tilt_k2
+  for B in arm gantry; do
+    $PY -m experiments.v02d_tilt_features --validation --backend $B --suite latching,latch_spread --seeds 4003 \
+        --trials 100 --controllers adaptive,adaptive_learned --workers 3 --out $R/validation/${B}.jsonl.gz
+  done
+  $PY -m experiments.v02d_tilt_select fired --variants $R/variants.json --candidates $K \
+      --out "$R/validation/reruns_{backend}.json" $R/validation/arm.jsonl.gz $R/validation/gantry.jsonl.gz
+  for B in arm gantry; do
+    $PY -m experiments.v02d_tilt_features --validation --backend $B --jobs-file $R/validation/reruns_$B.json \
+        --workers 3 --out $R/validation/${B}_reruns.jsonl.gz
+  done
+  $PY -m experiments.v02d_tilt_select table --validation --variants $R/variants.json --candidates $K \
+      --base $R/validation/arm.jsonl.gz,$R/validation/gantry.jsonl.gz \
+      --reruns $R/validation/arm_reruns.jsonl.gz,$R/validation/gantry_reruns.jsonl.gz > $R/validation/TABLES.md
+fi

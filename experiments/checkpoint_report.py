@@ -184,29 +184,47 @@ def defect_table(rows: list[dict], good: list[dict] | None = None) -> list[str]:
     return out + stops
 
 
+def rates(rows: list[dict], ctrls: list[str]) -> dict[str, float]:
+    return {c: sum(ok(r) for r in rows if r["controller"] == c) / max(1, sum(r["controller"] == c for r in rows))
+            for c in ctrls}
+
+
+def c_vs_fair(rows: list[dict], fair: tuple[str, ...] = FAIR) -> dict | None:
+    """The pre-registered success rule on one backend and suite: C against the best of the ``fair`` controllers
+    present (highest success rate, the first in ``fair`` on a tie). ``outcome``: below, matches or ahead."""
+    present = controllers(rows)
+    fair = [c for c in fair if c in present]
+    if "adaptive" not in present or not fair:
+        return None
+    rate = rates(rows, present)
+    best = max(fair, key=lambda c: rate[c])
+    co, bo, _ = paired(rows, "adaptive", best)
+    p = mcnemar(co, bo)
+    gap = 100 * (rate["adaptive"] - rate[best])
+    outcome = "below" if gap < 0 and p < 0.05 else "matches" if p >= 0.05 or gap < 1.0 else "ahead"
+    return {"fair": fair, "rate": rate, "best": best, "c_only": co, "other_only": bo, "p": p, "gap": gap,
+            "outcome": outcome}
+
+
+VERDICT = {"below": "C below the best fair baseline, p < 0.05: goes in the README headline",
+           "matches": "a fair baseline matches C: goes in the README headline; Hasan decides the pitch",
+           "ahead": "C ahead of every fair baseline"}
+
+
 def decisions(name: str, rows: list[dict]) -> list[str]:
     """The pre-registered decision rules, applied to one backend and suite (good parts on latching)."""
     present = controllers(rows)
     if "adaptive" not in present:
         return []
-    rate = {c: sum(ok(r) for r in rows if r["controller"] == c) / max(1, sum(r["controller"] == c for r in rows))
-            for c in present}
     out = []
-    fair = [c for c in FAIR if c in present]
-    if fair:
-        best = max(fair, key=lambda c: rate[c])
-        co, bo, _ = paired(rows, "adaptive", best)
-        p = mcnemar(co, bo)
-        gap = 100 * (rate["adaptive"] - rate[best])
-        if gap < 0 and p < 0.05:
-            verdict = "C below the best fair baseline, p < 0.05: goes in the README headline"
-        elif p >= 0.05 or gap < 1.0:
-            verdict = "a fair baseline matches C: goes in the README headline; Hasan decides the pitch"
-        else:
-            verdict = "C ahead of every fair baseline"
-        out.append(f"| {name} | C vs best of {"/".join(LETTER[c] for c in fair)} ({LETTER[best]}) | {100 * rate['adaptive']:.1f}% vs "
-                   f"{100 * rate[best]:.1f}% ({gap:+.1f} pts) | {co} / {bo} | {fmt_p(p)} | {verdict} |")
+    d = c_vs_fair(rows)
+    if d:
+        rate, best = d["rate"], d["best"]
+        out.append(f"| {name} | C vs best of {"/".join(LETTER[c] for c in d['fair'])} ({LETTER[best]}) | "
+                   f"{100 * rate['adaptive']:.1f}% vs {100 * rate[best]:.1f}% ({d['gap']:+.1f} pts) | "
+                   f"{d['c_only']} / {d['other_only']} | {fmt_p(d['p'])} | {VERDICT[d['outcome']]} |")
     if "adaptive_learned" in present:
+        rate = rates(rows, present)
         co, go, _ = paired(rows, "adaptive", "adaptive_learned")
         p = mcnemar(co, go)
         gap = 100 * (rate["adaptive_learned"] - rate["adaptive"])
@@ -217,22 +235,38 @@ def decisions(name: str, rows: list[dict]) -> list[str]:
     return out
 
 
-def defect_decision(name: str, rows: list[dict]) -> list[str]:
+def c_vs_fair_bad(rows: list[dict], fair: tuple[str, ...] = FAIR) -> dict | None:
+    """The pre-registered bad-part rule: C against the ``fair`` controller present that passed the fewest
+    (the first in ``fair`` on a tie). ``outcome``: fewer, more or same."""
     present = controllers(rows)
-    fair = [c for c in FAIR if c in present]
+    fair = [c for c in fair if c in present]
     if "adaptive" not in present or not fair:
-        return []
+        return None
     esc = {c: sum(escape(r) for r in rows if r["controller"] == c) for c in present}
     n = {c: sum(r["controller"] == c for r in rows) for c in present}
     best = min(fair, key=lambda c: esc[c])
     co, bo, _ = paired(rows, "adaptive", best, escape)
     p = mcnemar(co, bo)
+    outcome = ("fewer" if esc["adaptive"] < esc[best] and p < 0.05 else
+               "more" if esc["adaptive"] > esc[best] and p < 0.05 else "same")
+    return {"fair": fair, "escapes": esc, "n": n, "best": best, "c_only": co, "other_only": bo, "p": p,
+            "outcome": outcome}
+
+
+DEFECT_VERDICT = {"fewer": "C passes fewer bad parts, p < 0.05", "more": "C passes more bad parts, p < 0.05",
+                  "same": "no significant difference in bad parts passed"}
+
+
+def defect_decision(name: str, rows: list[dict]) -> list[str]:
+    d = c_vs_fair_bad(rows)
+    if not d:
+        return []
+    esc, n, best = d["escapes"], d["n"], d["best"]
     hi = 100 * wilson(esc["adaptive"], n["adaptive"])[1]
-    verdict = ("C passes fewer bad parts, p < 0.05" if esc["adaptive"] < esc[best] and p < 0.05
-               else "no significant difference in bad parts passed")
-    out = [f"| {name} | bad parts passed, C vs fewest of {"/".join(LETTER[c] for c in fair)} ({LETTER[best]}) | {esc['adaptive']}/{n['adaptive']} "
-           f"(<= {hi:.1f}%) vs {esc[best]}/{n[best]} | {co} / {bo} | {fmt_p(p)} | {verdict} |"]
-    if "adaptive_learned" in present:
+    out = [f"| {name} | bad parts passed, C vs fewest of {"/".join(LETTER[c] for c in d['fair'])} ({LETTER[best]}) | "
+           f"{esc['adaptive']}/{n['adaptive']} (<= {hi:.1f}%) vs {esc[best]}/{n[best]} | {d['c_only']} / "
+           f"{d['other_only']} | {fmt_p(d['p'])} | {DEFECT_VERDICT[d['outcome']]} |"]
+    if "adaptive_learned" in esc:
         out.append(f"| {name} | bad parts passed, G | {esc['adaptive_learned']}/{n['adaptive_learned']} (<= "
                    f"{100 * wilson(esc['adaptive_learned'], n['adaptive_learned'])[1]:.1f}%) | | | |")
     return out
@@ -241,35 +275,52 @@ def defect_decision(name: str, rows: list[dict]) -> list[str]:
 J = "spiral_rcc_verify"
 
 
+def j_vs(rows: list[dict], other: str, pred=ok) -> dict | None:
+    """J against ``other``, paired on the trials both ran: counts where ``pred`` holds (ok: seated; escape: bad
+    units passed), discordant pairs and exact McNemar p. None when either controller is absent."""
+    present = controllers(rows)
+    if J not in present or other not in present:
+        return None
+    n = {c: sum(r["controller"] == c for r in rows) for c in (J, other)}
+    k = {c: sum(pred(r) for r in rows if r["controller"] == c) for c in (J, other)}
+    jo, oo, m = paired(rows, J, other, pred)
+    return {"n": n, "k": k, "j_only": jo, "other_only": oo, "pairs": m, "p": mcnemar(jo, oo)}
+
+
 def j_decisions(name: str, rows: list[dict], good: bool = True) -> list[str]:
     """v0.2d pre-registered: J against C and against I, paired (successes on good parts, bad units on all)."""
-    present = controllers(rows)
-    if J not in present:
-        return []
-    n = {c: sum(r["controller"] == c for r in rows) for c in present}
     out = []
     for other in ("adaptive", "spiral_rcc_pull"):
-        if other not in present:
-            continue
-        if good:
-            rate = {c: sum(ok(r) for r in rows if r["controller"] == c) / max(1, n[c]) for c in (J, other)}
-            jo, oo, _ = paired(rows, J, other)
-            p = mcnemar(jo, oo)
+        if good and (s := j_vs(rows, other)):
+            n = s["n"]
+            rate = {c: s["k"][c] / max(1, n[c]) for c in (J, other)}
+            p = s["p"]
             gap = 100 * (rate[J] - rate[other])
             verdict = (f"J below {LETTER[other]}" if gap < 0 and p < 0.05 else
                        f"J ahead of {LETTER[other]}" if gap > 0 and p < 0.05 else f"J matches {LETTER[other]}")
             out.append(f"| {name} | J vs {LETTER[other]}, seated | {100 * rate[J]:.1f}% vs {100 * rate[other]:.1f}% "
-                       f"({gap:+.1f} pts) | {jo} / {oo} (J-only / {LETTER[other]}-only) | {fmt_p(p)} | {verdict} |")
-        esc = {c: sum(escape(r) for r in rows if r["controller"] == c) for c in (J, other)}
-        jo, oo, _ = paired(rows, J, other, escape)
-        p = mcnemar(jo, oo)
-        verdict = (f"J passes fewer than {LETTER[other]}" if esc[J] < esc[other] and p < 0.05 else
-                   f"J passes more than {LETTER[other]}" if esc[J] > esc[other] and p < 0.05 else
-                   "no significant difference")
-        out.append(f"| {name} | J vs {LETTER[other]}, bad units passed | {esc[J]}/{n[J]} "
-                   f"(<= {100 * wilson(esc[J], n[J])[1]:.1f}%) vs {esc[other]}/{n[other]} | {jo} / {oo} | "
-                   f"{fmt_p(p)} | {verdict} |")
+                       f"({gap:+.1f} pts) | {s['j_only']} / {s['other_only']} (J-only / {LETTER[other]}-only) | "
+                       f"{fmt_p(p)} | {verdict} |")
+        if e := j_vs(rows, other, escape):
+            esc, n, p = e["k"], e["n"], e["p"]
+            verdict = (f"J passes fewer than {LETTER[other]}" if esc[J] < esc[other] and p < 0.05 else
+                       f"J passes more than {LETTER[other]}" if esc[J] > esc[other] and p < 0.05 else
+                       "no significant difference")
+            out.append(f"| {name} | J vs {LETTER[other]}, bad units passed | {esc[J]}/{n[J]} "
+                       f"(<= {100 * wilson(esc[J], n[J])[1]:.1f}%) vs {esc[other]}/{n[other]} | {e['j_only']} / "
+                       f"{e['other_only']} | {fmt_p(p)} | {verdict} |")
     return out
+
+
+BAD_PART_SUITES = ("latching", "latch_spread")
+
+
+def split(suite: str, rows: list[dict]) -> tuple[list[dict], list[dict]]:
+    """(rows the success rules read, deliberately bad parts): good and bad parts on the latching suites,
+    every row and none on the others."""
+    if suite in BAD_PART_SUITES:
+        return [r for r in rows if r["group"] != "bad_part"], [r for r in rows if r["group"] == "bad_part"]
+    return rows, []
 
 
 def main() -> None:
@@ -286,9 +337,8 @@ def main() -> None:
         rows = load(folder)
         backend, _, suite = folder.name.partition("_")
         lines.append(f"\n## {backend}, {suite} suite")
-        if suite in ("latching", "latch_spread"):
-            good = [r for r in rows if r["group"] != "bad_part"]
-            bad = [r for r in rows if r["group"] == "bad_part"]
+        if suite in BAD_PART_SUITES:
+            good, bad = split(suite, rows)
             lines += success_table(good, "Good parts:")
             lines += per_condition(good)
             lines += defect_table(bad, good)

@@ -928,6 +928,13 @@ class AdaptiveConfig:
     tilt_check: bool = True
     tilt_check_deg: float = 2.5  # measured plug axis against C's socket-axis estimate (camera + flat-face folds)
     tilt_check_edge_fraction: float = 0.875  # largest |CoP| / plug half-width of the bottoming wrench
+    # v0.2e: no tilt verdict from a window under a force floor (results/v0.2e_tilt_guard). The bounds were designed
+    # and selected on bottoming windows (DETECT force at every VERIFY start >= 13.3 N, 30 N code); on the arm's
+    # floor-impact settle and after a timed-out proof push the window can be at a few newtons, where any torque left
+    # on the plug reads as a CoP past the edge. Floor: the in-cavity tilt dead band (cavity_tilt_lever_mm x force)
+    # carried from the insert target reaches the edge bound (1 mm x 35.2 N / (0.875 x 3.425 mm) = 11.7 N for the
+    # Micro-Fit). Under it the check is skipped, exactly as with tilt_check off.
+    tilt_check_force_guard: bool = True
     # VERIFY
     verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance
     seat_conform_min_s: float = 0.08

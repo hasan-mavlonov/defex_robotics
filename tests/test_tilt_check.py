@@ -178,3 +178,75 @@ def test_a_failed_check_holds_for_the_rest_of_the_attempt_while_the_plug_stays_t
     c.attempts = 4
     _fill(c, reseated)
     assert c._tilt_verdict(reseated)
+
+
+# ------------------------------------------------------------------ v0.2e: force guard (results/v0.2e_tilt_guard)
+def test_force_floor_is_the_tilt_dead_band_at_the_insert_target_reaching_the_edge_bound():
+    c = _ctrl()
+    assert c.cfg.tilt_check_force_guard and c.cfg.insert_force_n == pytest.approx(35.2)
+    assert c._tilt_force_floor() == pytest.approx(1.0 * 35.2 / (0.875 * 3.425), rel=1e-9)  # 11.75 N
+
+
+@pytest.mark.parametrize("fz, verdict", [(5.0, None), (11.0, None), (12.5, False), (25.0, False)])
+def test_no_verdict_from_a_window_under_the_force_floor(fz, verdict):
+    c = _ctrl(tilt_check_deg=2.0)
+    c.attempts = 2
+    o = _obs(tilt_rv_deg=(-2.4, 2.4, 0.0), cop_mm=(3.2, 0.0), fz=fz)
+    _fill(c, o)
+    ok = c._tilt_verdict(o)
+    assert c.events[-1].kind == "tilt"
+    if verdict is None:
+        assert ok is True and c._tilt_failed_attempt == -1 and c.events[-1].detail.endswith("no verdict")
+    else:
+        assert ok is verdict and c.events[-1].detail.endswith("FAIL")
+
+
+def test_low_force_cop_is_what_the_guard_keeps_out():
+    # A few newtons still carrying the tilt torque the dead band allows at the insert target (1 mm x 35.2 N):
+    # the CoP reads far past the edge although nothing says the walls hold the plug.
+    o = _obs(tilt_rv_deg=(-2.4, 2.4, 0.0), fz=4.0)
+    o.torque = np.array([0.0, -1.0 * MM * 35.2, 0.0])
+    old = _ctrl(tilt_check_force_guard=False)
+    _fill(old, o)
+    assert old._tilt_evidence(o)[1] > 2.0
+    assert old._tilt_verdict(o) is False  # the check as at 966a5f5
+    new = _ctrl()
+    _fill(new, o)
+    assert new._tilt_verdict(o) is True
+
+
+def test_a_blocked_verdict_runs_the_latch_check_exactly_as_with_the_check_off():
+    o = _obs(tilt_rv_deg=(-2.4, 2.4, 0.0), cop_mm=(3.2, 0.0), fz=4.0)
+    runs = []
+    for kw in ({"tilt_check": False}, {"tilt_check": True}):
+        c = _ctrl(**kw)
+        _fill(c, o)
+        c._trace = []
+        runs.append((c, c._begin_latch_verify(o)))
+    (off, cmd_off), (on, cmd_on) = runs
+    assert on.state == off.state == VERIFY and on.phase == off.phase == "pull"
+    assert (on.z, on._pull_target, on._pull_limit, on._pull_start, on._clicked, on._tilt_failed_attempt) == \
+           (off.z, off._pull_target, off._pull_limit, off._pull_start, off._clicked, off._tilt_failed_attempt)
+    assert np.array_equal(cmd_on.target.p, cmd_off.target.p) and np.array_equal(cmd_on.target.R, cmd_off.target.R)
+    assert (cmd_on.max_linear_speed, cmd_on.max_angular_speed) == (cmd_off.max_linear_speed, cmd_off.max_angular_speed)
+    assert [e.detail for e in on.events if e.kind != "tilt"] == [e.detail for e in off.events]
+
+
+def test_no_samples_gives_no_verdict():
+    # J's hand-over: C's sample window is empty (before the guard: CoP 0, so a PASS).
+    c = _ctrl()
+    o = _obs(tilt_rv_deg=(-3.0, 3.0, 0.0))
+    assert c._tilt_verdict(o) is True and c.events[-1].detail.endswith("no verdict")
+
+
+def test_the_guard_also_covers_the_recheck_within_a_failed_attempt():
+    c = _ctrl(tilt_check_deg=2.0)
+    wedged = _obs(tilt_rv_deg=(-2.4, 2.4, 0.0), cop_mm=(3.2, 0.0))
+    _fill(c, wedged)
+    assert not c._tilt_verdict(wedged)
+    low = _obs(tilt_rv_deg=(-2.3, 2.3, 0.0), cop_mm=(2.0, 2.0), fz=6.0)
+    _fill(c, low)
+    assert c._tilt_verdict(low) and c.events[-1].detail.endswith("no verdict")
+    high = _obs(tilt_rv_deg=(-2.3, 2.3, 0.0), cop_mm=(2.0, 2.0), fz=30.0)
+    _fill(c, high)
+    assert not c._tilt_verdict(high)

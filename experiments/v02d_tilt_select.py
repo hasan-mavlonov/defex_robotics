@@ -167,7 +167,8 @@ def cmd_table(args) -> None:
                        f"{s['stop'][0]} / {s['stop'][1]} | {s['fired'][0]} |")
         out.append("")
     out.append("### Gates (SELECTION_RULE.md)\n")
-    out.append("| Candidate | Tilt escapes base / check | G1 removes half | Net good lost (allowed) | G2 cost | "
+    first = "V1 not more tilt escapes" if args.validation else "G1 removes half"
+    out.append(f"| Candidate | Tilt escapes base / check | {first} | Net good lost (allowed) | G2 cost | "
                "G3 false rejects | G4 no new bad passes, escapes, stops | Passes |")
     out.append("|---|---|---|---|---|---|---|---|")
     passing = []

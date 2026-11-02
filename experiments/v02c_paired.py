@@ -1,6 +1,9 @@
 """Paired C vs H and I, escapes on good-part trials, latch_spread without mf_terminal_max.
 
 python -m experiments.v02c_paired results/benchmark_v0.2c
+
+When a run has J (v0.2d: F + C's VERIFY), J paired against C and against I in a second table with the same
+columns, and a J column in the per-machine escapes; neither appears without J.
 """
 from __future__ import annotations
 
@@ -16,7 +19,8 @@ GOOD = {
                      "mf_terminal_min"},
 }
 LETTER = {"adaptive": "C", "adaptive_learned": "G", "spiral": "D", "spiral_rcc": "F", "spiral_pull": "H",
-          "spiral_rcc_pull": "I"}
+          "spiral_rcc_pull": "I", "spiral_rcc_verify": "J"}
+J = "spiral_rcc_verify"
 
 
 def mcnemar(b: int, c: int) -> float:
@@ -32,6 +36,20 @@ def escape(r) -> bool:
     return not ok(r) and r["protective_stop"] != "True" and r["declared_success"] != "False"
 
 
+def pair_line(rows: dict, run: str, name: str, keep, a: str, other: str) -> str:
+    """One paired row: ``a`` against ``other`` on the trials of ``a`` whose condition ``keep`` accepts."""
+    keys = [k for k in rows if k[0] == a and keep(k[1])]
+    pairs = [(rows[k], rows[(other,) + k[1:]]) for k in keys]
+    b = sum(ok(x) and not ok(y) for x, y in pairs)
+    c = sum(ok(y) and not ok(x) for x, y in pairs)
+    eb = sum(escape(x) and not escape(y) for x, y in pairs)
+    ec = sum(escape(y) and not escape(x) for x, y in pairs)
+    return (f"| {run}, {name} | {LETTER[other]} | {len(keys)} | {sum(ok(x) for x, _ in pairs)} / "
+            f"{sum(ok(y) for _, y in pairs)} | {b} / {c} | {mcnemar(b, c):.2g} | "
+            f"{sum(escape(x) for x, _ in pairs)} / {sum(escape(y) for _, y in pairs)} | "
+            f"{mcnemar(eb, ec):.2g} |")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("root", type=Path)
@@ -39,7 +57,7 @@ def main() -> None:
     print(f"# Paired comparisons for {root.name}\n")
     print("| Run | C vs | Trials | Successes C / other | C-only / other-only | p | Escapes C / other | p |")
     print("|---|---|---|---|---|---|---|---|")
-    esc_total, esc_rows = Counter(), {}
+    esc_total, esc_rows, j_lines, has_j = Counter(), {}, [], False
     for run in sorted(p.name for p in root.iterdir() if (p / "trials.csv").exists()):
         suite = run.split("_", 1)[1]
         rows = {(r["controller"], r["condition"], r["trial_index"]): r
@@ -50,25 +68,28 @@ def main() -> None:
             sets.append(("good parts without mf_terminal_max", lambda c: c in good - {"mf_terminal_max"}))
         for other in ("spiral_rcc_pull", "spiral_pull"):
             for name, keep in sets:
-                keys = [k for k in rows if k[0] == "adaptive" and keep(k[1])]
-                pairs = [(rows[k], rows[(other,) + k[1:]]) for k in keys]
-                b = sum(ok(x) and not ok(y) for x, y in pairs)
-                c = sum(ok(y) and not ok(x) for x, y in pairs)
-                eb = sum(escape(x) and not escape(y) for x, y in pairs)
-                ec = sum(escape(y) and not escape(x) for x, y in pairs)
-                print(f"| {run}, {name} | {LETTER[other]} | {len(keys)} | {sum(ok(x) for x, _ in pairs)} / "
-                      f"{sum(ok(y) for _, y in pairs)} | {b} / {c} | {mcnemar(b, c):.2g} | "
-                      f"{sum(escape(x) for x, _ in pairs)} / {sum(escape(y) for _, y in pairs)} | "
-                      f"{mcnemar(eb, ec):.2g} |")
+                print(pair_line(rows, run, name, keep, "adaptive", other))
+        present = {k[0] for k in rows}
+        if J in present:
+            has_j = True
+            for other in ("adaptive", "spiral_rcc_pull"):
+                if other in present:
+                    j_lines += [pair_line(rows, run, name, keep, J, other) for name, keep in sets]
         for ctrl in LETTER:
             e = [r for k, r in rows.items() if k[0] == ctrl and (good is None or k[1] in good) and escape(r)]
             esc_total[(run.split("_")[0], ctrl)] += len(e)
             esc_rows.setdefault(ctrl, []).extend((run, r) for r in e)
+    if has_j:
+        print("\n## J against C and against I\n")
+        print("| Run | J vs | Trials | Successes J / other | J-only / other-only | p | Escapes J / other | p |")
+        print("|---|---|---|---|---|---|---|---|")
+        print("\n".join(j_lines))
+    shown = [c for c in LETTER if c != J or has_j]
     print("\n## Bad units passed on good-part trials, per machine\n")
-    print("| Machine | " + " | ".join(LETTER.values()) + " |")
-    print("|---|" + "---|" * len(LETTER))
+    print("| Machine | " + " | ".join(LETTER[c] for c in shown) + " |")
+    print("|---|" + "---|" * len(shown))
     for m in ("gantry", "arm"):
-        print(f"| {m} | " + " | ".join(str(esc_total[(m, c)]) for c in LETTER) + " |")
+        print(f"| {m} | " + " | ".join(str(esc_total[(m, c)]) for c in shown) + " |")
     print("\n## I's escapes on good-part trials\n")
     print("| Run | Escapes | Depth min-max (mm) | Tilt max (deg) | Lateral max (mm) | Reasons | Conditions |")
     print("|---|---|---|---|---|---|---|")

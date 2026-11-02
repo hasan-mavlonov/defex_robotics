@@ -510,6 +510,12 @@ class SpiralSearchConfig:
     repush_hold_s: float = 0.4
     repush_speed_mm_s: float = 2.0
     repush_advance_mm: float = 0.1
+    # v0.2e (pull retry rule version 5, results/v0.2e_pull_retry), on for H and I. repush_seat_gate: pull again
+    # only if the re-push held and the plug is within INSERT's seat window (as C checks the latch after a held
+    # re-seat only at its seat depth); else reject. verify_lateral_compliance: INSERT's zero-stiffness lateral
+    # admittance keeps running through the pull, re-push and re-seat (before: frozen at its INSERT value).
+    repush_seat_gate: bool = False
+    verify_lateral_compliance: bool = False
 
 
 @dataclass(frozen=True)

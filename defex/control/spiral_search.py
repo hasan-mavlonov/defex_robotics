@@ -308,10 +308,7 @@ class SpiralSearchController(InsertionController):
             v = self.insert_axis.velocity(c.insert_force_n, f_ax)
         self.z -= v * dt
         self.adm.update(F[:2], dt)
-        if self.face_depth is not None:
-            gain, need = obs.depth - self.face_depth, self.depth - c.seat_margin_mm * MM
-        else:  # went straight in: depth from the vision estimate, window widened by its accuracy
-            gain, need = obs.depth, self.depth - c.seat_margin_mm * MM - 3.0 * self.sigma_z
+        gain, need = self._seat_window(obs)
         if gain >= need and f_ax >= 0.8 * c.insert_force_n:
             if self._settled_since is None:
                 self._settled_since = obs.t
@@ -323,6 +320,14 @@ class SpiralSearchController(InsertionController):
         if f_ax > 0.7 * c.insert_force_n and self._stalled(obs.t, obs.depth):
             return self._jam_or_fail(obs, "jam")
         return self._cmd(30.0)
+
+    def _seat_window(self, obs: Observation) -> tuple[float, float]:
+        """(Depth gained, depth needed) for INSERT's seat rule, from the encoders (and F/k on the RCC stage)."""
+        c = self.cfg
+        if self.face_depth is not None:
+            return obs.depth - self.face_depth, self.depth - c.seat_margin_mm * MM
+        # went straight in: depth from the vision estimate, window widened by its accuracy
+        return obs.depth, self.depth - c.seat_margin_mm * MM - 3.0 * self.sigma_z
 
     def _check_seat(self, obs: Observation, depth: float) -> Command:
         c = self.cfg
@@ -366,6 +371,8 @@ class SpiralSearchController(InsertionController):
         moved = self._pull_start - float(obs.depth)
         timed_out = obs.t - self._phase_t > c.pull_test_max_s
         if self._pull_phase == "pull":
+            if c.verify_lateral_compliance:
+                self.adm.update(F[:2], dt)
             self.z -= self.insert_axis.velocity(-self._pull_target, f_ax) * dt
             held = f_ax <= -self._pull_target
             if held or moved > self._pull_limit or timed_out:
@@ -375,6 +382,7 @@ class SpiralSearchController(InsertionController):
                     if self._pull_retries_left <= 0:
                         return self._fail(obs, "retention_failed")
                     self._pull_retries_left -= 1
+                    self.retries += 1  # v0.2e: counted, as C's slide-out retry is
                     self._repush_t_force, self._repush_peak, self._repush_depth0 = None, 0.0, 0.0
                     self.log(obs.t, "retry", f"pull failed: push again at {c.insert_force_n:.1f} N and pull once more")
                     self._pull_phase, self._phase_t = "repush", obs.t
@@ -386,6 +394,8 @@ class SpiralSearchController(InsertionController):
             if reason:
                 return self._fail(obs, reason)
             self.z -= min(self.insert_axis.velocity(c.insert_force_n, f_ax), c.repush_speed_mm_s * MM) * dt
+            if c.verify_lateral_compliance:
+                self.adm.update(F[:2], dt)
             self._repush_peak = max(self._repush_peak, f_ax)
             if self._repush_t_force is not None and obs.depth - self._repush_depth0 > c.repush_advance_mm * MM:
                 self._repush_t_force = None  # the plug is still going in (C: "not a hard stop"): keep pushing
@@ -393,11 +403,25 @@ class SpiralSearchController(InsertionController):
                 self._repush_t_force, self._repush_depth0 = obs.t, float(obs.depth)
             held = self._repush_t_force is not None and obs.t - self._repush_t_force >= c.repush_hold_s
             if held or obs.t - self._phase_t > 2.0 * c.pull_test_max_s:
-                self.log(obs.t, "verify", f"re-push {'held' if held else 'timed out'}, peak {self._repush_peak:.1f} N, "
-                                          f"now {f_ax:.1f} N at {obs.depth / MM:.2f} mm: pull again")
+                head = (f"re-push {'held' if held else 'timed out'}, peak {self._repush_peak:.1f} N, "
+                        f"now {f_ax:.1f} N at {obs.depth / MM:.2f} mm")
+                if c.repush_seat_gate:
+                    # As C after a held re-seat: the latch is checked only on a plug held at the push force at the
+                    # seat depth (C: its seated_candidate gate; here INSERT's seat window). Otherwise rejected.
+                    gain, need = self._seat_window(obs)
+                    if not held:
+                        self.log(obs.t, "verify", f"{head}: not held at the target, not checked")
+                        return self._fail(obs, "repush_not_held")
+                    if gain < need:
+                        self.log(obs.t, "verify", f"{head}: {gain / MM:.2f} mm, short of the seat depth "
+                                                  f"{need / MM:.2f} mm, not checked")
+                        return self._fail(obs, "repush_short_of_seat")
+                self.log(obs.t, "verify", f"{head}: pull again")
                 self._pull_start = float(obs.depth)
                 self._pull_phase, self._phase_t = "pull", obs.t
             return self._cmd(10.0)
+        if c.verify_lateral_compliance:
+            self.adm.update(F[:2], dt)
         self.z -= self.insert_axis.velocity(c.insert_force_n, f_ax) * dt
         back = float(obs.depth) >= self._pull_start - c.reseat_tolerance_mm * MM
         if (back and f_ax >= 0.8 * c.insert_force_n) or timed_out:
@@ -431,12 +455,14 @@ def _with_retention_pull(cfg: SpiralSearchConfig, retries: int = 0) -> SpiralSea
     """C's installed latch check on a spiral cell: the same pull force and movement limit (datasheet-based).
 
     v0.2d: ``retries`` re-pushes after a failed pull, picked per controller and machine by
-    results/v0.2d_pull_retry/SELECTION_RULE.md (version 4): on for H and I on both machines."""
+    results/v0.2d_pull_retry/SELECTION_RULE.md (version 4): on for H and I on both machines.
+    v0.2e (rule version 5, results/v0.2e_pull_retry): the second pull only from the seat depth, and
+    INSERT's lateral compliance through the pull, re-push and re-seat."""
     a = AdaptiveConfig()
     return replace(cfg, retention_pull=True, pull_test_mating_factor=a.pull_test_mating_factor,
                    pull_limit_wipe_fraction=a.pull_limit_wipe_fraction, pull_retries=retries,
                    repush_hold_s=a.proof_push_s, repush_speed_mm_s=a.proof_push_speed_mm_s,
-                   repush_advance_mm=a.proof_advance_mm)
+                   repush_advance_mm=a.proof_advance_mm, repush_seat_gate=True, verify_lateral_compliance=True)
 
 
 class SpiralSearchPullController(SpiralSearchController):

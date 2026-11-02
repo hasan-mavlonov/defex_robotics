@@ -116,7 +116,8 @@ def test_h_and_i_are_d_and_f_with_cs_retention_pull():
         for cb, cp in ((b.cfg, p.cfg), (b.stiff_fixture_cfg, p.stiff_fixture_cfg)):
             diff = {k for k, v in asdict(cp).items() if asdict(cb)[k] != v}
             assert diff <= {"retention_pull", "pull_test_mating_factor", "pull_limit_wipe_fraction", "pull_retries",
-                            "repush_hold_s", "repush_speed_mm_s", "repush_advance_mm"}
+                            "repush_hold_s", "repush_speed_mm_s", "repush_advance_mm", "repush_seat_gate",
+                            "verify_lateral_compliance"}
             assert cp.retention_pull
             assert cp.pull_test_mating_factor == a.pull_test_mating_factor
             assert cp.pull_limit_wipe_fraction == a.pull_limit_wipe_fraction

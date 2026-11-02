@@ -502,10 +502,9 @@ class SpiralSearchConfig:
     pull_test_max_s: float = 3.0
     reseat_tolerance_mm: float = 0.05
     # v0.2d: after a failed pull, push again at the insert target and pull once more, as C pushes again after
-    # a slide-out. INSERT's contact speed until the plug pushes back, then the force loop capped at
-    # repush_speed_mm_s; pull again once held repush_hold_s at the target, or stalled (INSERT's stall rule), or
-    # after 2 x pull_test_max_s. Hold and cap
-    # are AdaptiveConfig's proof_push_s and proof_push_speed_mm_s. 0: off (D, F, the v0.2c H and I); H, I: 1.
+    # a slide-out (its bottom proof push): force loop capped at repush_speed_mm_s, INSERT's force limits, pull
+    # again once held repush_hold_s at 0.8 x the target or after 2 x pull_test_max_s. Hold and cap are
+    # AdaptiveConfig's proof_push_s and proof_push_speed_mm_s. 0: off (D, F, the v0.2c H and I).
     pull_retries: int = 0
     repush_hold_s: float = 0.4
     repush_speed_mm_s: float = 2.0

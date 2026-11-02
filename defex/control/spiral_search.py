@@ -361,7 +361,7 @@ class SpiralSearchController(InsertionController):
         """v0.2c review: guarded retention pull after the depth check, then re-seat (as C's latch check)."""
         c = self.cfg
         dt = self.ctx.control_period_s
-        F, _ = self._wrench(obs)
+        F, T = self._wrench(obs)
         f_ax = float(F[2])
         moved = self._pull_start - float(obs.depth)
         timed_out = obs.t - self._phase_t > c.pull_test_max_s
@@ -375,27 +375,24 @@ class SpiralSearchController(InsertionController):
                     if self._pull_retries_left <= 0:
                         return self._fail(obs, "retention_failed")
                     self._pull_retries_left -= 1
-                    self._repush_t_force = self._repush_t_contact = None
-                    self._hist.clear()
+                    self._repush_t_force, self._repush_peak = None, 0.0
                     self.log(obs.t, "retry", f"pull failed: push again at {c.insert_force_n:.1f} N and pull once more")
                     self._pull_phase, self._phase_t = "repush", obs.t
                     return self._cmd(10.0)
                 self._pull_phase, self._phase_t = "reseat", obs.t
             return self._cmd(10.0)
-        if self._pull_phase == "repush":
-            if self._repush_t_contact is None and f_ax >= c.contact_force_n:
-                self._repush_t_contact = obs.t
-            if self._repush_t_contact is None:
-                v = self._v_insert
-            else:
-                v = min(self.insert_axis.velocity(c.insert_force_n, f_ax), c.repush_speed_mm_s * MM)
-            self.z -= v * dt
+        if self._pull_phase == "repush":  # as C's bottom proof push: capped speed, hold at the target, no stall exit
+            reason = self._limits(F, T)
+            if reason:
+                return self._fail(obs, reason)
+            self.z -= min(self.insert_axis.velocity(c.insert_force_n, f_ax), c.repush_speed_mm_s * MM) * dt
+            self._repush_peak = max(self._repush_peak, f_ax)
             if f_ax >= 0.8 * c.insert_force_n and self._repush_t_force is None:
                 self._repush_t_force = obs.t
             held = self._repush_t_force is not None and obs.t - self._repush_t_force >= c.repush_hold_s
-            stalled = self._repush_t_contact is not None and self._stalled(obs.t, obs.depth)  # INSERT's stall rule
-            if held or stalled or obs.t - self._phase_t > 2.0 * c.pull_test_max_s:
-                self.log(obs.t, "verify", f"re-push held at {f_ax:.1f} N, {obs.depth / MM:.2f} mm: pull again")
+            if held or obs.t - self._phase_t > 2.0 * c.pull_test_max_s:
+                self.log(obs.t, "verify", f"re-push {'held' if held else 'timed out'}, peak {self._repush_peak:.1f} N, "
+                                          f"now {f_ax:.1f} N at {obs.depth / MM:.2f} mm: pull again")
                 self._pull_start = float(obs.depth)
                 self._pull_phase, self._phase_t = "pull", obs.t
             return self._cmd(10.0)
@@ -432,7 +429,7 @@ def _with_retention_pull(cfg: SpiralSearchConfig, retries: int = 0) -> SpiralSea
     """C's installed latch check on a spiral cell: the same pull force and movement limit (datasheet-based).
 
     v0.2d: ``retries`` re-pushes after a failed pull, picked per controller and machine by
-    results/v0.2d_pull_retry/SELECTION_RULE.md: on only for I on the gantry."""
+    results/v0.2d_pull_retry/SELECTION_RULE.md (version 3: dev candidate, on everywhere)."""
     a = AdaptiveConfig()
     return replace(cfg, retention_pull=True, pull_test_mating_factor=a.pull_test_mating_factor,
                    pull_limit_wipe_fraction=a.pull_limit_wipe_fraction, pull_retries=retries,
@@ -447,8 +444,8 @@ class SpiralSearchPullController(SpiralSearchController):
 
     def __init__(self) -> None:
         super().__init__()
-        self.cfg = _with_retention_pull(self.cfg)
-        self.stiff_fixture_cfg = _with_retention_pull(self.stiff_fixture_cfg)
+        self.cfg = _with_retention_pull(self.cfg, retries=1)
+        self.stiff_fixture_cfg = _with_retention_pull(self.stiff_fixture_cfg, retries=1)
 
 
 class CompliantSpiralSearchPullController(CompliantSpiralSearchController):
@@ -460,4 +457,4 @@ class CompliantSpiralSearchPullController(CompliantSpiralSearchController):
     def __init__(self) -> None:
         super().__init__()
         self.cfg = _with_retention_pull(self.cfg, retries=1)  # gantry
-        self.stiff_fixture_cfg = _with_retention_pull(self.stiff_fixture_cfg)  # arm
+        self.stiff_fixture_cfg = _with_retention_pull(self.stiff_fixture_cfg, retries=1)  # arm

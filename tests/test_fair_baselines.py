@@ -121,7 +121,7 @@ def test_h_and_i_are_d_and_f_with_cs_retention_pull():
             assert cp.pull_test_mating_factor == a.pull_test_mating_factor
             assert cp.pull_limit_wipe_fraction == a.pull_limit_wipe_fraction
             # v0.2d: one re-push and second pull after a failed pull, with C's proof-push hold and speed cap
-            picked = 1 if pulled == "spiral_rcc_pull" and cp is p.cfg else 0  # SELECTION_RULE: I on the gantry only
+            picked = 1  # SELECTION_RULE version 3: dev candidate, on in every cell
             assert cb.pull_retries == 0 and cp.pull_retries == picked
             assert cp.repush_hold_s == a.proof_push_s and cp.repush_speed_mm_s == a.proof_push_speed_mm_s
 
@@ -225,3 +225,21 @@ def test_j_after_a_failed_check_rejects_or_searches_again(task):
     assert kinds(rb).count("verify_handover") == 2 and rb.retries == 1
     n = kinds(ra).index("abort")
     assert rb.events[:n] == ra.events[:n] and rb.events[n][1] == "retry"
+
+
+def test_pull_retry_re_push_reaches_the_target_before_the_second_pull(task):
+    """v0.2d review: the re-push ended on a stall at 9-16 N; it must hold 0.8 x the target before pulling again."""
+    from dataclasses import replace as _replace
+
+    from defex.tasks.conditions import latch_spread_conditions
+
+    cond = {c.name: c for c in latch_spread_conditions()}["mf_terminal_max"]
+    sc = sample_scenario(cond, 12, 2026, task.backend.nominal_socket_pose)
+    ctrl = make_controller("spiral_pull")
+    ctrl.cfg = _replace(ctrl.cfg, pull_retries=1)
+    res = task.run(ctrl, sc)
+    events = [(k, d) for _, k, d in ((e.t, e.kind, e.detail) for e in ctrl.events)]
+    assert ("retry", "pull failed: push again at 35.2 N and pull once more") in events
+    held = [d for k, d in events if k == "verify" and d.startswith("re-push held, peak")]
+    assert held and float(held[0].split()[3]) >= 0.8 * ctrl.cfg.insert_force_n
+    assert res.success

@@ -319,8 +319,8 @@ def verify_outcomes(root: Path, runs: list[str]) -> list[str]:
                     if k.split("|")[1] == c:
                         half[(m, c)] += [float(x[2].split("half free travel ")[1].split(" mm")[0])
                                          for x in e if x[1] == "wall_yaw" and x[2].endswith("PASS")]
-    out += ["", "Half free travel between the walls on wall-yaw passes (mm, encoder positions at the two wall "
-                "contacts; C on the stiff wrist, J through the RCC stage):", "",
+    out += ["", "Half free travel between the walls on wall-yaw passes (mm, the plug positions VERIFY was given at the "
+                "two wall contacts: encoders for C and for J without the RCC terms, encoders plus F / k for J):", "",
             "| Machine | Controller | Passes | p5 | median | p95 |", "|---|---|---|---|---|---|"]
     for (m, c), v in sorted(half.items()):
         if v:

@@ -34,7 +34,8 @@ for SEED in 2026 2027; do
   done
 done
 
-# 3. Validation seed 4003, once, after the pick is committed: both candidates (F for the hand-over check).
+# 3. Validation seed 4003, once, after the pick is committed (7fc078e): both candidates (F for the hand-over check).
+#    Run before dev2027, at the same commit.
 for B in gantry arm; do
   for S in standard latching heldout latch_spread; do
     $PY -m experiments.robustness --suite $S --backend $B --trials 20 --seed 4003 --workers 3 --no-plots \
@@ -43,4 +44,4 @@ for B in gantry arm; do
 done
 
 # 4. Tables.
-$PY -m experiments.v02d_j_tables results/v0.2d_j_verify > results/v0.2d_j_verify/TABLES.md
+$PY -m experiments.v02d_j_tables results/v0.2d_j_verify --pick spiral_rcc_verify_research > results/v0.2d_j_verify/TABLES.md

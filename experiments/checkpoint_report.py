@@ -238,6 +238,40 @@ def defect_decision(name: str, rows: list[dict]) -> list[str]:
     return out
 
 
+J = "spiral_rcc_verify"
+
+
+def j_decisions(name: str, rows: list[dict], good: bool = True) -> list[str]:
+    """v0.2d pre-registered: J against C and against I, paired (successes on good parts, bad units on all)."""
+    present = controllers(rows)
+    if J not in present:
+        return []
+    n = {c: sum(r["controller"] == c for r in rows) for c in present}
+    out = []
+    for other in ("adaptive", "spiral_rcc_pull"):
+        if other not in present:
+            continue
+        if good:
+            rate = {c: sum(ok(r) for r in rows if r["controller"] == c) / max(1, n[c]) for c in (J, other)}
+            jo, oo, _ = paired(rows, J, other)
+            p = mcnemar(jo, oo)
+            gap = 100 * (rate[J] - rate[other])
+            verdict = (f"J below {LETTER[other]}" if gap < 0 and p < 0.05 else
+                       f"J ahead of {LETTER[other]}" if gap > 0 and p < 0.05 else f"J matches {LETTER[other]}")
+            out.append(f"| {name} | J vs {LETTER[other]}, seated | {100 * rate[J]:.1f}% vs {100 * rate[other]:.1f}% "
+                       f"({gap:+.1f} pts) | {jo} / {oo} (J-only / {LETTER[other]}-only) | {fmt_p(p)} | {verdict} |")
+        esc = {c: sum(escape(r) for r in rows if r["controller"] == c) for c in (J, other)}
+        jo, oo, _ = paired(rows, J, other, escape)
+        p = mcnemar(jo, oo)
+        verdict = (f"J passes fewer than {LETTER[other]}" if esc[J] < esc[other] and p < 0.05 else
+                   f"J passes more than {LETTER[other]}" if esc[J] > esc[other] and p < 0.05 else
+                   "no significant difference")
+        out.append(f"| {name} | J vs {LETTER[other]}, bad units passed | {esc[J]}/{n[J]} "
+                   f"(<= {100 * wilson(esc[J], n[J])[1]:.1f}%) vs {esc[other]}/{n[other]} | {jo} / {oo} | "
+                   f"{fmt_p(p)} | {verdict} |")
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("run", type=Path)
@@ -260,10 +294,13 @@ def main() -> None:
             lines += defect_table(bad, good)
             rules += decisions(f"{backend}, {suite} (good parts)", good)
             rules += defect_decision(f"{backend}, {suite} (bad parts)", bad)
+            rules += j_decisions(f"{backend}, {suite} (good parts)", good)
+            rules += j_decisions(f"{backend}, {suite} (bad parts)", bad, good=False)
         else:
             lines += success_table(rows, "All conditions:")
             lines += per_condition(rows)
             rules += decisions(f"{backend}, {suite}", rows)
+            rules += j_decisions(f"{backend}, {suite}", rows)
     if rules:
         lines += ["\n## Pre-registered decision rules, applied", "",
                   "| Backend, suite | Comparison | Success | Discordant pairs | McNemar p | Rule outcome |",

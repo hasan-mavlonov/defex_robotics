@@ -38,9 +38,9 @@ keeps `on_verify_fail = "research"`; only its comment changed (3ea570b).
 
 ## Checks
 
-- Up to F's "seated", J's events equal F's on all 4,247 trials where F declared seated
-  (both seeds); on the 252 where F did not, J's row equals F's.
-- Tilt check: 1 FAIL among 3,396 tilt verdicts in all latching runs of these folders, on a
+- Up to F's "seated", J's events equal F's on all 3,033 trials per candidate where F declared seated
+  (both seeds); on the 247 where F did not, J's row equals F's.
+- Tilt check: 1 FAIL among the 3,425 tilt verdicts logged in these runs (C and J), on a
   bad part (`mf_terminal_max_broken_latch`). As disclosed in the rule: C's sample window
   is empty at J's hand-over, so the check cannot fail at J's first latch check.
 

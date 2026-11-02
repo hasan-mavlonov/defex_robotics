@@ -19,10 +19,14 @@ import numpy as np
 
 from defex.logging.metrics import STOP_RESET_S
 
-ORDER = ["fixed", "correction", "correction_rcc", "spiral", "spiral_rcc", "spiral_pull", "spiral_rcc_pull", "adaptive",
-         "adaptive_learned"]
+ORDER = ["fixed", "correction", "correction_rcc", "spiral", "spiral_rcc", "spiral_pull", "spiral_rcc_pull",
+         "spiral_rcc_verify", "spiral_rcc_verify_reject", "spiral_rcc_verify_research",
+         "spiral_rcc_verify_reject_no_rcc", "adaptive", "adaptive_learned"]
 LETTER = {"fixed": "A", "correction": "B", "correction_rcc": "E", "spiral": "D", "spiral_rcc": "F",
-          "adaptive": "C", "adaptive_learned": "G", "spiral_pull": "H", "spiral_rcc_pull": "I"}
+          "adaptive": "C", "adaptive_learned": "G", "spiral_pull": "H", "spiral_rcc_pull": "I",
+          "spiral_rcc_verify": "J", "spiral_rcc_verify_reject": "J(a)", "spiral_rcc_verify_research": "J(b)",
+          "spiral_rcc_verify_reject_no_rcc": "J(a) no RCC terms"}
+# J (v0.2d) runs C's VERIFY: not a conventional baseline, so not in FAIR.
 FAIR = ("spiral", "correction_rcc", "spiral_rcc", "spiral_pull", "spiral_rcc_pull")  # D, E, F, H, I
 DEFECTS = ("mf_half_latched", "mf_broken_latch", "mf_stubbed_terminal", "mf_wrong_polarization")
 

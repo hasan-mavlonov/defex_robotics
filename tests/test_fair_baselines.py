@@ -1,5 +1,6 @@
 """Conventional baselines D (spiral search), E (vision + RCC) and F (spiral + RCC)."""
 
+import numpy as np
 import pytest
 
 from defex.config import MM, CompliantStageConfig
@@ -118,3 +119,102 @@ def test_h_and_i_are_d_and_f_with_cs_retention_pull():
             assert cp.retention_pull
             assert cp.pull_test_mating_factor == a.pull_test_mating_factor
             assert cp.pull_limit_wipe_fraction == a.pull_limit_wipe_fraction
+
+
+J_NAMES = ("spiral_rcc_verify_reject", "spiral_rcc_verify_research", "spiral_rcc_verify_reject_no_rcc")
+
+
+def test_j_is_f_with_cs_verify():
+    """v0.2d: J runs F's settings and code up to the hand-over, then C's own VERIFY code with C's settings."""
+    from dataclasses import asdict
+
+    from defex.config import AdaptiveConfig
+    from defex.control.adaptive_fsm import AdaptiveInsertionController
+    from defex.control.spiral_search import CompliantSpiralSearchController, SpiralSearchController
+    from defex.control.spiral_verify import CompliantSpiralSearchVerifyController, _Verifier
+
+    f = make_controller("spiral_rcc")
+    for name in J_NAMES:
+        j = make_controller(name)
+        assert j.compliant_wrist and isinstance(j, CompliantSpiralSearchController)
+        assert asdict(j.cfg) == asdict(f.cfg) and asdict(j.stiff_fixture_cfg) == asdict(f.stiff_fixture_cfg)
+        assert type(j.verifier) is _Verifier and asdict(j.verifier.cfg) == asdict(AdaptiveConfig())
+    assert make_controller("spiral_rcc_verify_reject").on_verify_fail == "reject"
+    assert make_controller("spiral_rcc_verify_research").on_verify_fail == "research"
+    assert not make_controller("spiral_rcc_verify_reject_no_rcc").rcc_terms
+    # Reused, not reimplemented: J overrides only the hand-over points of F, the verifier only C's planner.
+    f_methods = {k for cls in (CompliantSpiralSearchController, SpiralSearchController) for k, v in vars(cls).items()
+                 if callable(v)}
+    j_methods = {k for k, v in vars(CompliantSpiralSearchVerifyController).items() if callable(v)}
+    assert j_methods & f_methods == {"__init__", "reset", "step", "_succeed"}
+    c_methods = {k for k, v in vars(AdaptiveInsertionController).items() if callable(v)}
+    assert {k for k, v in vars(_Verifier).items() if callable(v)} == {"__init__", "_plan_correction"} <= c_methods
+
+
+def _ticks(task, ctrl, sc):
+    ticks = []
+    res = task.run(ctrl, sc, on_step=lambda s: ticks.append(
+        (s.obs.t, s.obs.fixture_tcp.as_array(), s.obs.force.copy(), s.obs.torque.copy(), s.setpoint.as_array())))
+    return res, ticks
+
+
+def _assert_hands_over_where_f_seats(task, sc):
+    rf, tf = _ticks(task, make_controller("spiral_rcc"), sc)
+    assert rf.declared_success
+    t_f = next(t for t, kind, _ in rf.events if kind == "finish")
+    k = next(i for i, e in enumerate(rf.events) if e[1] == "seated")
+    for name in J_NAMES:
+        rj, tj = _ticks(task, make_controller(name), sc)
+        assert rj.events[:k + 1] == rf.events[:k + 1]
+        assert rj.events[k + 1][:2] == (t_f, "verify_handover")
+        before = [x for x in tf if x[0] <= t_f]
+        assert len(tj) > len(before) and [x[0] for x in tj[:len(before)]] == [x[0] for x in before]
+        for a, b in zip(before, tj):
+            for u, v in zip(a[1:4], b[1:4]):  # the observation: pose, force, torque
+                assert np.array_equal(u, v)
+            if a[0] < t_f:  # the command; at the hand-over tick J's first command is VERIFY's
+                assert np.array_equal(a[4], b[4])
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("cond,i", [("nominal", 0), ("noise_1mm", 1), ("mf_nominal", 0)])
+def test_j_hands_over_where_f_declares_seated(task, cond, i):
+    """Floor contact (went straight in), a face contact then the spiral, and a latching part (gantry)."""
+    from defex.tasks.conditions import latching_conditions_by_name
+    from experiments.runner import nominal_socket_pose
+
+    c = {**conditions_by_name(), **latching_conditions_by_name()}[cond]
+    sc = sample_scenario(c, i, 2026, nominal_socket_pose(c, task.fixture))
+    _assert_hands_over_where_f_seats(task, sc)
+
+
+@pytest.mark.slow
+def test_j_hands_over_where_f_declares_seated_on_the_arm():
+    from defex.sim.arm_backend import MuJoCoArmBackend, menagerie_available
+    from defex.tasks.insertion import InsertionTask
+    from experiments.runner import nominal_socket_pose
+
+    if not menagerie_available():
+        pytest.skip("MuJoCo Menagerie UR5e not fetched")
+    task = InsertionTask(backend=MuJoCoArmBackend())
+    c = conditions_by_name()["noise_1mm"]
+    _assert_hands_over_where_f_seats(task, sample_scenario(c, 1, 2026, nominal_socket_pose(c, task.fixture)))
+
+
+@pytest.mark.slow
+def test_j_after_a_failed_check_rejects_or_searches_again(task):
+    """A broken latch fails the pull: (a) rejects; (b) gives F its second attempt, then rejects."""
+    from defex.tasks.conditions import latching_conditions_by_name
+    from experiments.runner import nominal_socket_pose
+
+    c = latching_conditions_by_name()["mf_broken_latch"]
+    sc = sample_scenario(c, 0, 2026, nominal_socket_pose(c, task.fixture))
+    ra = task.run(make_controller("spiral_rcc_verify_reject"), sc)
+    rb = task.run(make_controller("spiral_rcc_verify_research"), sc)
+    for r in (ra, rb):
+        assert r.declared_success is False and r.failure_reason == "aborted:verify_failed"
+    kinds = lambda r: [k for _, k, _ in r.events]  # noqa: E731
+    assert kinds(ra).count("verify_handover") == 1 and ra.retries == 0
+    assert kinds(rb).count("verify_handover") == 2 and rb.retries == 1
+    n = kinds(ra).index("abort")
+    assert rb.events[:n] == ra.events[:n] and rb.events[n][1] == "retry"

@@ -376,6 +376,7 @@ class SpiralSearchController(InsertionController):
                         return self._fail(obs, "retention_failed")
                     self._pull_retries_left -= 1
                     self._repush_t_force = self._repush_t_contact = None
+                    self._hist.clear()
                     self.log(obs.t, "retry", f"pull failed: push again at {c.insert_force_n:.1f} N and pull once more")
                     self._pull_phase, self._phase_t = "repush", obs.t
                     return self._cmd(10.0)
@@ -392,8 +393,8 @@ class SpiralSearchController(InsertionController):
             if f_ax >= 0.8 * c.insert_force_n and self._repush_t_force is None:
                 self._repush_t_force = obs.t
             held = self._repush_t_force is not None and obs.t - self._repush_t_force >= c.repush_hold_s
-            t0 = self._phase_t if self._repush_t_contact is None else self._repush_t_contact
-            if held or obs.t - t0 > c.pull_test_max_s:
+            stalled = self._repush_t_contact is not None and self._stalled(obs.t, obs.depth)  # INSERT's stall rule
+            if held or stalled or obs.t - self._phase_t > 2.0 * c.pull_test_max_s:
                 self.log(obs.t, "verify", f"re-push held at {f_ax:.1f} N, {obs.depth / MM:.2f} mm: pull again")
                 self._pull_start = float(obs.depth)
                 self._pull_phase, self._phase_t = "pull", obs.t

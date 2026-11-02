@@ -255,6 +255,24 @@ def handover_check(root: Path, runs: list[str]) -> list[str]:
     return out
 
 
+def registered_j_check(root: Path, runs: list[str]) -> list[str]:
+    """spiral_rcc_verify (J, registered after the pick) against the picked candidate's rows in the same runs."""
+    out = []
+    for run in runs:
+        for (m, s), rows in load_run(root / run).items():
+            j = {(r["condition"], r["trial_index"]): r for r in rows if r["controller"] == "spiral_rcc_verify"}
+            b = {(r["condition"], r["trial_index"]): r for r in rows if r["controller"] == JB}
+            if not j:
+                continue
+            same = sum(all(j[k][f] == b[k][f] for f in j[k] if f not in ("controller", "wall_time_s")) for k in j if k in b)
+            out.append(f"| {run} | {m}, {s} | {same}/{len(j)} |")
+    if out:
+        out = ["\n### J as registered (`spiral_rcc_verify`) repeats J(b)\n",
+               "| Run | Machine, suite | Trials identical to J(b) (all fields but controller and wall time) |",
+               "|---|---|---|"] + out
+    return out
+
+
 def verify_outcomes(root: Path, runs: list[str]) -> list[str]:
     """What C's VERIFY did inside J: handovers, checks failed, and the arm's wall-yaw readings."""
     out = ["\n### What VERIFY did inside J (seeds pooled)\n",
@@ -341,6 +359,7 @@ def main() -> None:
         lines += totals_table({run: runs[run]}, f"Totals, {run}")
         lines += main_table({run: runs[run]}, f"Per machine and suite, {run}")
     lines += handover_check(root, sorted(runs))
+    lines += registered_j_check(root, sorted(runs))
     lines += verify_outcomes(root, sorted(dev))
     print("\n".join(lines))
 

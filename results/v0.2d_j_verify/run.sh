@@ -22,8 +22,10 @@ for B in gantry arm; do
   done
 done > results/v0.2d_j_verify/equivalence/COMPARE.txt
 
-# 2. Dev seeds. 2026 ranks J's two candidates (SELECTION_RULE.md, committed before this run).
+# 2. Dev seeds. 2026 ranks J's two candidates (SELECTION_RULE.md, committed before this run), at 9e7d012.
+#    2027 runs after the pick is committed and adds spiral_rcc_verify (J, = J(b)) to check it repeats J(b) exactly.
 for SEED in 2026 2027; do
+  [ $SEED = 2027 ] && CTRL=$CTRL,spiral_rcc_verify
   for B in gantry arm; do
     for S in standard latching heldout latch_spread; do
       $PY -m experiments.robustness --suite $S --backend $B --trials 20 --seed $SEED --workers 3 --no-plots \

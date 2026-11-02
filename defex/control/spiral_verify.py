@@ -59,7 +59,9 @@ class _Verifier(AdaptiveInsertionController):
 class CompliantSpiralSearchVerifyController(CompliantSpiralSearchController):
     name = "spiral_rcc_verify"
     label = "J: F + C's verify"
-    on_verify_fail: str | None = None
+    # Picked by results/v0.2d_j_verify/SELECTION_RULE.md on dev seed 2026 (more good parts seated, no bad unit
+    # passed by either candidate).
+    on_verify_fail: str | None = "research"
     rcc_terms = True
 
     def __init__(self, on_verify_fail: str | None = None) -> None:

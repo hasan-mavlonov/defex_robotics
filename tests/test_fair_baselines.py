@@ -121,7 +121,7 @@ def test_h_and_i_are_d_and_f_with_cs_retention_pull():
             assert cp.pull_limit_wipe_fraction == a.pull_limit_wipe_fraction
 
 
-J_NAMES = ("spiral_rcc_verify_reject", "spiral_rcc_verify_research", "spiral_rcc_verify_reject_no_rcc")
+J_NAMES = ("spiral_rcc_verify", "spiral_rcc_verify_reject", "spiral_rcc_verify_research", "spiral_rcc_verify_reject_no_rcc")
 
 
 def test_j_is_f_with_cs_verify():
@@ -139,6 +139,8 @@ def test_j_is_f_with_cs_verify():
         assert j.compliant_wrist and isinstance(j, CompliantSpiralSearchController)
         assert asdict(j.cfg) == asdict(f.cfg) and asdict(j.stiff_fixture_cfg) == asdict(f.stiff_fixture_cfg)
         assert type(j.verifier) is _Verifier and asdict(j.verifier.cfg) == asdict(AdaptiveConfig())
+    assert make_controller("spiral_rcc_verify").on_verify_fail == "research"  # the selection rule's pick
+    assert make_controller("spiral_rcc_verify").rcc_terms
     assert make_controller("spiral_rcc_verify_reject").on_verify_fail == "reject"
     assert make_controller("spiral_rcc_verify_research").on_verify_fail == "research"
     assert not make_controller("spiral_rcc_verify_reject_no_rcc").rcc_terms

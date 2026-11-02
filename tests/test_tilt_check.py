@@ -152,6 +152,9 @@ def test_training_seed_tilt_escape_is_rejected_on_the_arm():
     task = InsertionTask(backend=backend)
     cond = latching_conditions_by_name()["mf_noise_1mm"]
     scenario = sample_scenario(cond, 17, 3004, nominal_socket_pose(cond, task.fixture))
+    # Recorded with the Micro-Fit's old 30 N insert target; at 35.2 N (v0.2d force budget) this trial ends on time.
+    fb = replace(scenario.connector.force_budget, insert_target_n=30.0)
+    scenario = replace(scenario, connector=replace(scenario.connector, force_budget=fb))
     base = task.run(AdaptiveInsertionController(replace(AdaptiveConfig(), tilt_check=False)), scenario)
     assert base.failure_reason == "false_accept" and base.final_tilt_deg > 3.0
     checked = task.run(AdaptiveInsertionController(), scenario)

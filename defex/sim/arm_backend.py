@@ -147,6 +147,10 @@ class MuJoCoArmBackend(MuJoCoBackend):
         self._dynamics = self._fixture_dynamics()
 
     # ------------------------------------------------------------------ kinematics
+    @property
+    def insertion_stiffness_n_per_mm(self) -> float | None:
+        return getattr(self, "_insertion_k", None)
+
     def _fixture_dynamics(self) -> FixtureDynamics:
         if self._home_q is None:  # called by the parent before the home pose exists
             return None
@@ -164,6 +168,7 @@ class MuJoCoArmBackend(MuJoCoBackend):
         meff = self._tool_effective_mass_z()
         self.data.qpos[self._qadr] = saved
         lag = self._servo_following_lag(self._act)  # every joint moves both the tool's position and its orientation
+        self._insertion_k = float(1.0 / C[2, 2]) * 1e-3  # along z, the insertion axis at home
         return FixtureDynamics(
             translational_stiffness_n_per_mm=float(1.0 / C[:3, :3].diagonal().max()) * 1e-3,
             yaw_stiffness_nm_per_rad=float(1.0 / C[5, 5]),

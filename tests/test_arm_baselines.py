@@ -213,3 +213,16 @@ def test_two_speed_guarded_moves_off_by_default_and_banded_when_on():
     assert c._v_free == pytest.approx(25e-3 * s)
     assert c._free_or(0.004, 5e-3, 1e-3, 12e-3) == c._v_free
     assert c._free_or(0.004, 0.5e-3, 1e-3, 12e-3) == 0.004 and c._free_or(0.004, 13e-3, 1e-3, 12e-3) == 0.004
+
+
+def test_taught_overtravel_uses_the_stiffness_along_the_push():
+    """v0.2d: dividing by the arm's weakest direction (y) pushed 1.34 x the target along z, at the 48 N stop."""
+    from defex.control.baselines import taught_overtravel
+
+    spec = ConnectorSpec.load("microfit3_4ckt")
+    target = spec.force_budget.insert_target_n
+    assert taught_overtravel(_ctx(spec, ARM), 0.0) == pytest.approx(target / 8.0)
+    axial = replace(_ctx(spec, ARM), insertion_stiffness_n_per_mm=10.76)
+    assert taught_overtravel(axial, 0.0) == pytest.approx(target / 10.76)
+    housing = ConnectorSpec.load("rect_12x8")
+    assert taught_overtravel(replace(_ctx(housing, ARM), insertion_stiffness_n_per_mm=10.76), 1.5) == 1.5

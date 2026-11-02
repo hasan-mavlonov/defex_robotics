@@ -213,6 +213,7 @@ class InsertionTask:
             fixture=self.fixture,
             vision_accuracy=scenario.characterized_noise or scenario.noise,
             fixture_dynamics=getattr(be, "fixture_dynamics", None),
+            insertion_stiffness_n_per_mm=getattr(be, "insertion_stiffness_n_per_mm", None),
         )
         controller.reset(ctx)
 

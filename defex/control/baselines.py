@@ -95,6 +95,8 @@ def taught_overtravel(ctx: ControllerContext, programmed_mm: float) -> float:
     if budget is None:
         return programmed_mm
     k = ctx.fixture_dynamics.translational_stiffness_n_per_mm if ctx.fixture_dynamics else 10.0
+    if ctx.insertion_stiffness_n_per_mm is not None:  # v0.2d: the axis the program pushes along
+        k = ctx.insertion_stiffness_n_per_mm
     return max(programmed_mm, budget.insert_target_n / k)
 
 

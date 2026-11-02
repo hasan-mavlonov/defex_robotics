@@ -33,6 +33,9 @@ class ControllerContext:
     fixture: FixtureConfig
     vision_accuracy: SensorNoiseConfig  # characterized accuracy of the vision system
     fixture_dynamics: "FixtureDynamics | None" = None  # the machine actually pushing (W5)
+    # Stiffness along the insertion axis at the home pose, where it differs from the weakest
+    # direction in fixture_dynamics (the arm). None: taken equal to the weakest direction.
+    insertion_stiffness_n_per_mm: float | None = None
 
 
 @dataclass

@@ -70,3 +70,23 @@ if [ "$STEP" = all ] || [ "$STEP" = validation ]; then
       --base $R/validation/arm.jsonl.gz,$R/validation/gantry.jsonl.gz \
       --reruns $R/validation/arm_reruns.jsonl.gz,$R/validation/gantry_reruns.jsonl.gz > $R/validation/TABLES.md
 fi
+
+if [ "$STEP" = all ] || [ "$STEP" = equivalence ]; then
+  # Before: b94b971 in a temporary detached worktree (git worktree add --detach $BASE b94b971; removed after).
+  # After: this tree, tilt_k2 installed. Dev seed 2026, latching suite and three standard conditions, 20 trials.
+  BASE=${BASE:-../defex_robotics-d-tilt-check-base}
+  RUN="-m experiments.robustness --trials 20 --seed 2026 --workers 3 --no-plots --controllers adaptive,adaptive_learned"
+  for B in gantry arm; do
+    (cd $BASE && $PY $RUN --backend $B --suite latching --name v0.2d_tilt_equiv/before_${B}_latching)
+    (cd $BASE && $PY $RUN --backend $B --suite standard --conditions nominal,noise_1mm,noise_2mm --name v0.2d_tilt_equiv/before_${B}_standard)
+    $PY $RUN --backend $B --suite latching --name v0.2d_tilt_check/equivalence/after_${B}_latching
+    $PY $RUN --backend $B --suite standard --conditions nominal,noise_1mm,noise_2mm --name v0.2d_tilt_check/equivalence/after_${B}_standard
+  done
+  cp -R $BASE/results/v0.2d_tilt_equiv/before_* $R/equivalence/
+  for B in gantry arm; do
+    for S in latching standard; do
+      $PY -m experiments.v02d_tilt_equivalence $R/equivalence/before_${B}_${S} $R/equivalence/after_${B}_${S} \
+          | tee $R/equivalence/${B}_${S}.txt
+    done
+  done
+fi

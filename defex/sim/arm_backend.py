@@ -131,8 +131,7 @@ class MuJoCoArmBackend(MuJoCoBackend):
         m = self.model
         m.pair_friction[:, 0] = params.friction
         m.pair_friction[:, 1] = params.friction
-        m.body_pos[self._connector_body] = params.grasp_offset.p
-        m.body_quat[self._connector_body] = params.grasp_offset.quat()
+        self._set_grasp(params.grasp_offset)
         self._setup_mating(params)
         self.reset()
 

@@ -1,10 +1,21 @@
-# sim_randomization_v0.2f pre-registration (DRAFT)
+# sim_randomization_v0.2f pre-registration
 
-DRAFT for the lead agent's review. Not final. Seed 20261205 has not been run. When final,
-this file is renamed PREREGISTRATION.md and committed before the first trial. Nothing
-below changes after that. If the run exposes a bug, the bug gets a fix, a new
+Written and committed before the run. The lead agent reviewed the draft (commit c367c05,
+PREREGISTRATION_DRAFT.md) and decided the changes listed under "Changes from the
+draft". Nothing below changes after the first trial of seed 20261205 has run. If the run exposes a bug, the bug gets a fix, a new
 pre-registration and a fresh seed. No result is read until both runs have finished. A
 run that stops early is repeated with the same command, and RUN_LOG.md says so.
+
+## Changes from the draft (lead agent's review, 2026-11-02)
+
+1. Arm `mf_noise_1mm`: 50 trials per variant instead of 20. Gantry unchanged.
+   POWER.md and the low-power list were recomputed for this.
+2. G pinned to its nominal model: accepted, with the disclosure. The report says
+   "G pinned (configuration of this run)" in its first paragraph wherever G is compared.
+3. Three items stay as disclosed under "Disclosed before the run": the controllers are
+   told the servo draw, latch forces are not varied, and the reference is v0.2e on
+   another seed.
+4. The development observations stay as written.
 
 ## Question
 
@@ -34,8 +45,9 @@ It does not ask whether any rate stays the same, and it says nothing about real 
   ':(exclude)docs'` was empty on 4df8cae. The only code added since is this run's own:
   `experiments/sim_randomization_v02f.py`, `experiments/sim_randomization_v02f_tables.py`
   and `tests/test_sim_randomization_v02f.py`.
-- Frozen commit: **[the commit that adds the final PREREGISTRATION.md; hash filled in at
-  finalisation]**. The run may start from a later commit that changes only `results/`.
+- Frozen code commit: **c87f942** (the last commit that changes code: per-machine trial
+  counts in the power table). The run starts from the commit that adds this file, which
+  changes only `results/`, or from a later commit that changes only `results/`.
   Both `config.json` files must show `git_dirty: false`. RUN_LOG.md records
   `git status --porcelain --untracked-files=all` outside `results/` at the start, the
   environment and the load average.
@@ -108,7 +120,7 @@ groups were fixed before any run on seed 20261205, from where C stood in benchma
 | c_favourable | standard | `noise_1mm`, `noise_2mm`, `generalization_combined` | 15 |
 | neutral | standard | `nominal`, `lateral_3mm`, `friction_1` | 15 |
 | c_unfavourable | heldout | `heldout_worst_case`, `heldout_handeye_bias_1.5mm` | 15 |
-| latching_good | latching | `mf_noise_1mm` | 20 |
+| latching_good | latching | `mf_noise_1mm` | gantry 20, arm 50 |
 | bad_parts | latching | `mf_half_latched`, `mf_broken_latch`, `mf_stubbed_terminal` | 4 each |
 
 Notes on the conditions:
@@ -133,8 +145,10 @@ after the run.
 
 ## Trials and compute
 
-- Per machine and variant: 8 x 15 + 20 + 3 x 4 = 152 trials per controller.
-- Per machine: 152 x 6 controllers x 13 variants = 11,856 trials. Both machines: 23,712.
+- Per variant, per controller:
+  - gantry: 8 x 15 + 20 + 3 x 4 = 152 trials;
+  - arm: 8 x 15 + 50 + 3 x 4 = 182 trials.
+- Over 6 controllers and 13 variants: gantry 11,856 trials, arm 14,196. In all 26,052.
 - Timing on development seed 2026: variants 0-3, all 13 conditions above plus
   `mf_moderate`, 3 trials each, 6 controllers, `--workers 4`, 936 trials per machine.
   - Gantry: 160 s.
@@ -146,8 +160,12 @@ after the run.
     `trials.csv`.
 - Estimate, from the randomized variants' mean time per trial per condition:
   - gantry 30 min;
-  - arm 72 min;
-  - **about 102 min** at `--workers 4` under the same load.
+  - arm 99 min, with 50 `mf_noise_1mm` trials;
+  - **about 129 min** at `--workers 4` under the same load.
+
+  The draft planned 20 arm `mf_noise_1mm` trials and about 102 min. The lead agent
+  raised it to 50 so that the arm's latching "C below F" can be resolved. That
+  comparison is the newest verdict against C.
 - More trials per condition or more variants? We chose the trials per condition first,
   then the number of variants:
   - **The decision rule is per variant.** It asks whether each simulator keeps the
@@ -166,15 +184,15 @@ after the run.
 
 ```
 PY=python   # ~/projects/defex_robotics/.venv/bin/python, from the repository root
-CELLS=standard:noise_1mm:15,standard:noise_2mm:15,standard:generalization_combined:15,\
+H=standard:noise_1mm:15,standard:noise_2mm:15,standard:generalization_combined:15,\
 standard:nominal:15,standard:lateral_3mm:15,standard:friction_1:15,\
-heldout:heldout_worst_case:15,heldout:heldout_handeye_bias_1.5mm:15,\
-latching:mf_noise_1mm:20,latching:mf_half_latched:4,latching:mf_broken_latch:4,latching:mf_stubbed_terminal:4
-for B in gantry arm; do
-  $PY -m experiments.sim_randomization_v02f --backend $B --variants 12 --seed 20261205 --workers 4 \
-    --g-model pinned --cells $CELLS \
+heldout:heldout_worst_case:15,heldout:heldout_handeye_bias_1.5mm:15
+BAD=latching:mf_half_latched:4,latching:mf_broken_latch:4,latching:mf_stubbed_terminal:4
+for B in gantry:20 arm:50; do
+  $PY -m experiments.sim_randomization_v02f --backend ${B%%:*} --variants 12 --seed 20261205 --workers 4 \
+    --g-model pinned --cells $H,latching:mf_noise_1mm:${B##*:},$BAD \
     --controllers adaptive,spiral_rcc,spiral_pull,spiral_rcc_pull,spiral_rcc_verify,adaptive_learned \
-    --name sim_randomization_v0.2f/$B
+    --name sim_randomization_v0.2f/${B%%:*}
 done
 $PY -m experiments.sim_randomization_v02f_tables results/sim_randomization_v0.2f \
   > results/sim_randomization_v0.2f/TABLES.md
@@ -308,19 +326,21 @@ comparison.
    rather than the physics.
 4. **Low power, stated before the run.** For each directional reference, the tables
    compute the chance that trial noise alone fails rule 3(a). That assumes every variant
-   had the benchmark's per-trial X-better and Y-better rates at this run's n
-   (`POWER.md`). Where that chance is over 0.2, a "does not hold" is reported as **"not
+   had the benchmark's per-trial X-better and Y-better rates at this run's n. The
+   values are in `POWER.md`, from
+   `--power c_favourable:15,neutral:15,c_unfavourable:15,gantry.latching_good:20,arm.latching_good:50`. Where that chance is over 0.2, a "does not hold" is reported as **"not
    resolved (low power)"**, never as evidence that the comparison failed or reversed. A
    "holds" is reported as "holds". At the planned trials these are:
    - gantry c_favourable J vs C (0.45);
    - gantry c_unfavourable C vs H (0.48);
    - gantry latching_good G vs C (0.87);
-   - arm latching_good C vs F (0.67), C vs I (0.72) and J vs C (0.63).
+   - arm latching_good C vs I (0.22).
 
-   So **the arm's latching "C below F" cannot be resolved per variant at this
-   budget**. To bring the chance below 0.2 it needs about 50 trials per variant, and
-   about 80 to bring it below 0.04. Going from 20 to 80 trials of arm `mf_noise_1mm`
-   would add about 50 min. Every other primary directional comparison has under 0.04.
+   With 50 trials, **the arm's latching "C below F" is resolvable** (0.17). So are arm
+   latching J vs C (0.13) and G vs C (0.00). Arm latching C vs I stays just over the line
+   (0.22). C vs F and C vs I differ by one pair in benchmark_v0.2e (18/37 against 19/37).
+   Every other primary directional comparison is under 0.04, apart from arm latching
+   C vs F at 0.17.
 5. **What is reported when a comparison does not hold:**
    - It goes in the report's first paragraph if it is primary.
    - The failing variants are listed with their drawn parameters, and so are departing
@@ -404,4 +424,6 @@ comparison.
   above.
 - **The references are on the same conditions but a different seed.** The scenarios
   differ. Variant 0 shows whether this seed reproduces each reference.
+- **The report names G's configuration.** Wherever G is compared, the report's first
+  paragraph says "G pinned (configuration of this run)".
 - **Seed reuse**: development seed 2026 has been used for every v0.2 decision.

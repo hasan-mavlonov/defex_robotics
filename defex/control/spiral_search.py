@@ -106,6 +106,7 @@ class SpiralSearchController(InsertionController):
         self._hist: deque[tuple[float, float]] = deque()
         self._fail_reason = ""
         self._pulled = False
+        self._pull_retries_left = c.pull_retries
         s = contact_speed_scale(ctx)  # W5: same fixture-aware limit as C
         self._v_descent = c.descent_speed_mm_s * MM * s
         self._v_insert = c.insert_speed_mm_s * MM * s
@@ -371,8 +372,31 @@ class SpiralSearchController(InsertionController):
                 passed = held and moved <= self._pull_limit
                 self.log(obs.t, "verify", f"pull {-f_ax:.1f} N at {moved / MM:.2f} mm -> {'PASS' if passed else 'FAIL'}")
                 if not passed:
-                    return self._fail(obs, "retention_failed")
+                    if self._pull_retries_left <= 0:
+                        return self._fail(obs, "retention_failed")
+                    self._pull_retries_left -= 1
+                    self._repush_t_force = self._repush_t_contact = None
+                    self.log(obs.t, "retry", f"pull failed: push again at {c.insert_force_n:.1f} N and pull once more")
+                    self._pull_phase, self._phase_t = "repush", obs.t
+                    return self._cmd(10.0)
                 self._pull_phase, self._phase_t = "reseat", obs.t
+            return self._cmd(10.0)
+        if self._pull_phase == "repush":
+            if self._repush_t_contact is None and f_ax >= c.contact_force_n:
+                self._repush_t_contact = obs.t
+            if self._repush_t_contact is None:
+                v = self._v_insert
+            else:
+                v = min(self.insert_axis.velocity(c.insert_force_n, f_ax), c.repush_speed_mm_s * MM)
+            self.z -= v * dt
+            if f_ax >= 0.8 * c.insert_force_n and self._repush_t_force is None:
+                self._repush_t_force = obs.t
+            held = self._repush_t_force is not None and obs.t - self._repush_t_force >= c.repush_hold_s
+            t0 = self._phase_t if self._repush_t_contact is None else self._repush_t_contact
+            if held or obs.t - t0 > c.pull_test_max_s:
+                self.log(obs.t, "verify", f"re-push held at {f_ax:.1f} N, {obs.depth / MM:.2f} mm: pull again")
+                self._pull_start = float(obs.depth)
+                self._pull_phase, self._phase_t = "pull", obs.t
             return self._cmd(10.0)
         self.z -= self.insert_axis.velocity(c.insert_force_n, f_ax) * dt
         back = float(obs.depth) >= self._pull_start - c.reseat_tolerance_mm * MM
@@ -407,7 +431,8 @@ def _with_retention_pull(cfg: SpiralSearchConfig) -> SpiralSearchConfig:
     """C's installed latch check on a spiral cell: the same pull force and movement limit (datasheet-based)."""
     a = AdaptiveConfig()
     return replace(cfg, retention_pull=True, pull_test_mating_factor=a.pull_test_mating_factor,
-                   pull_limit_wipe_fraction=a.pull_limit_wipe_fraction)
+                   pull_limit_wipe_fraction=a.pull_limit_wipe_fraction, pull_retries=1,
+                   repush_hold_s=a.proof_push_s, repush_speed_mm_s=a.proof_push_speed_mm_s)
 
 
 class SpiralSearchPullController(SpiralSearchController):

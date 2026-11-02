@@ -35,7 +35,10 @@ than C, at 381-655 good units per hour on the standard suite against C's 386-608
 (`HEADLINE_TABLES.md`). No multiple-comparison correction; the three verdicts at
 0.01 <= p < 0.05 (the two above, and J below C on arm standard, p = 0.03) are being
 re-checked on seed 20261124 with the same
-code.
+code. On that seed C's gantry mis-characterized-vision lead did not replicate
+(87.2% against 86.2%, p = 0.67); C below F on gantry latching and J below C on arm
+standard did (p = 0.0026 and 9e-5); 57 of 60 verdicts replicated
+([`benchmark_v0.2d_rep/REPORT.md`](../results/benchmark_v0.2d_rep/REPORT.md)).
 
 ## What was tested
 

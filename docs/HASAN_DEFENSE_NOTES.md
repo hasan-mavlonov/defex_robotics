@@ -10,7 +10,8 @@ insertion plus C's verification; `results/benchmark_v0.2d/REPORT.md`). Where it
 changes an answer below, the answer ends with a "benchmark_v0.2d:" line. In one
 paragraph: C leads every
 conventional cell on the standard suite on both machines and on gantry
-mis-characterized vision (p = 0.044); F seats more gantry latching good parts than
+mis-characterized vision (p = 0.044, not reproduced on the second seed 20261124,
+p = 0.67); F seats more gantry latching good parts than
 C (98.5% against 96.5%, p = 0.012); a conventional cell matches C on the other four
 cells, including latch_spread on both machines; C, H and I pass 0 of 2,200 bad
 parts; on 7,400 good-part trials C calls no unseated connector good, H 118 times and
@@ -126,7 +127,8 @@ the simulator or ground truth
 (`tests/test_motion_and_estimation.py::test_controller_code_cannot_reach_the_simulator`).
 When the camera is worse than its stated accuracy, C does worse and F and I
 match it. (benchmark_v0.2d: C leads F and I on the gantry there, 87.6% against
-83.4%, p = 0.044, and matches them on the arm.)
+83.4%, p = 0.044, and matches them on the arm. On the second seed, 20261124, it
+matches them on the gantry too: 87.2% against 86.2%, p = 0.67.)
 
 At Checkpoint 2, C's latch check used the simulator's assumed latch geometry. It
 now uses datasheet values only: a pull at 1.1 x the 32 N maximum mating force and

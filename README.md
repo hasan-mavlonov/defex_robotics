@@ -56,7 +56,7 @@ again after a failed pull; C and G check plug tilt in the latch check; and
 C leads every conventional cell on the standard suite (gantry 99.2% against
 96.3%, p < 1e-6; arm 97.8% against 96.1%, p = 4.5e-5) and on gantry
 mis-characterized vision (87.6% against 83.4%, p = 0.044; no correction for
-multiple comparisons).
+multiple comparisons; not reproduced on a second seed, see below).
 
 **The stop condition holds.** A conventional cell matches or beats C in five of
 eight cells; under the pre-registration, Hasan decides how the pitch changes.
@@ -93,8 +93,16 @@ Good units per hour count 0 s per protective stop. With 60 s per stop see
 learned contact prior) beats C in four cells (p < 0.05) and passed no bad unit.
 Zero counts in the table have Wilson 95% upper bounds of 0.19% (2,000 trials),
 0.76% (500) and 0.64% (600).
-A second seed with the same code (`results/benchmark_v0.2d_rep`, seed 20261124)
-was pre-registered to check which of these verdicts hold. Simulation only.
+**Second seed.** The same code on seed 20261124
+([`results/benchmark_v0.2d_rep`](results/benchmark_v0.2d_rep/REPORT.md),
+pre-registered) reproduces 57 of the 60 rule verdicts. **C's lead on gantry
+mis-characterized vision does not replicate**: 87.2% against F's 86.2%, p = 0.67.
+On both seeds C is ahead of every conventional cell only on the standard suite,
+below F on gantry latching good parts (p = 0.0026 on the second seed), passes no
+bad part, and passes no mis-seated good part (H 112, I 138 on the second seed).
+The other two changes: G also helps on arm standard (p = 0.0074), and J seats
+more gantry latching good parts than C (98.7% against 96.5%, p = 0.011).
+Simulation only.
 
 
 ## Earlier result: benchmark_v0.2c, two machines, conventional cells with the same pull test
@@ -289,8 +297,8 @@ gantry baselines were never tuned with the latching connector: re-tuned, F seats
   35.2 N and H and I re-pushing after a failed pull, a conventional cell matches C
   on latch_spread good parts on both machines.
 * That C copes better when the camera is worse than believed. F matches C on the
-  arm; on the gantry C leads at p = 0.044, with no correction for the number of
-  tests.
+  arm; on the gantry C led at p = 0.044 on seed 20261123 and matched F on seed
+  20261124 (p = 0.67).
 * That C is faster or cheaper per good unit. It makes fewer good units per hour
   than I on every suite, and the cost of a passed bad unit is not priced.
 * Anything on hardware. The latch snap force is assumed, there is one latching

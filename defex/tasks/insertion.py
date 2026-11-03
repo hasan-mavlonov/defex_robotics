@@ -126,6 +126,12 @@ def evaluate_final_state(gt: GroundTruth, scenario: Scenario, crit: SuccessCrite
         "yaw_deg": yaw / DEG,
         "seated": bool(all(checks.values())),
         "failed_checks": [k for k, ok in checks.items() if not ok],
+        # Logged so the seating checks can be recomputed offline (v0.2f); not used in scoring.
+        "x_mm": float(rel.p[0]) / MM,
+        "y_mm": float(rel.p[1]) / MM,
+        "tcp_speed_mm_s": float(gt.tcp_speed) / MM,
+        "latched": None if gt.latched is None else bool(gt.latched),
+        "latch_intact": None if gt.latched is None else bool(not gt.latch_broken),
     }
 
 
@@ -357,4 +363,9 @@ class InsertionTask:
             events=[(e.t, e.kind, e.detail) for e in controller.events],
             sim_time_s=float(be.time),
             wall_time_s=float(time.perf_counter() - wall0),
+            final_x_mm=final["x_mm"],
+            final_y_mm=final["y_mm"],
+            final_tcp_speed_mm_s=final["tcp_speed_mm_s"],
+            final_latched=final["latched"],
+            final_latch_intact=final["latch_intact"],
         )

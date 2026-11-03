@@ -1,0 +1,360 @@
+# v0.2f evidence: where C's remaining edge comes from
+
+(Written as REPORT.txt because writing REPORT.md was blocked in this session. The text is
+the intended REPORT.md.)
+
+Analysis of committed results only; no simulation was run. Inputs: `results/benchmark_v0.2d`
+(seed 20261123), `results/benchmark_v0.2d_rep` (seed 20261124), both on the v0.2d code
+(42df5c8), and `results/benchmark_v0.2e` (seed 20261130, v0.2e code ddd0d34). Every number
+below is printed by `python -m experiments.v02f_evidence --out results/v0.2f_evidence`
+and listed in `KEY_NUMBERS.md` with the table it comes from. Simulation only.
+
+Labels. POST HOC marks anything chosen after the benchmark results were seen. The whole
+per-condition breakdown is post hoc: the pre-registered comparisons are per cell
+(machine and suite). No p-value is pooled across seeds, and none is corrected for
+multiple comparisons. Bad unit = `declared_success` True and `gt_seated` False.
+
+## Result
+
+1. **C's lead on `standard` comes from three conditions (POST HOC).** On all three seeds,
+   the trials that C seats and I (spiral_rcc_pull) does not are in noise_1mm, noise_2mm
+   and generalization_combined: gantry 60 of 60, 62 of 62, 53 of 53; arm 49 of 51, 49 of
+   51, 53 of 54 (the rest are generalization_tight). On these housing-only parts I runs
+   no pull, and its rows equal F's (`CONCENTRATION.md` (b), `PERCOND.md`).
+2. **More than half of those wins are I's bad units.** On the C-only trials I passed a
+   bad unit (declared success, ground truth not seated) in 44/60, 37/62, 30/53 (gantry)
+   and 31/51, 34/51, 30/54 (arm). On the rest, I rejected or aborted
+   (`CONCENTRATION.md` (c)). All of I's standard bad units are in the same three
+   conditions on every seed (gantry 48, 39, 32; arm 43, 39, 32; `SEEDS.md` (c)).
+3. **The bad-unit gap comes from C's VERIFY, not C's insertion.** J runs F's insertion,
+   then C's VERIFY. Gantry standard, trials where F passed a bad unit: J seated 48 of 48,
+   37 of 39 (1 rejected, 1 bad unit) and 32 of 32. Arm: J seated 28 of 43, 21 of 39 and
+   21 of 32, and rejected the rest (`CONCENTRATION.md` (d)). On housing-only parts, C's
+   VERIFY corrects the pose: it aligns tilt to the floor and centres yaw. On the 32
+   gantry trials of seed 20261130, J's VERIFY aligned tilt by a median 2.79 deg (max
+   4.00) and turned yaw on all 32 (median 1.86 deg, max 3.50) (`CONCENTRATION.md` (g)).
+   Bad units over 7,400 good-part trials: J 3, 2, 2; F 197, 176, 178
+   (`BAD_UNITS.md` (a)).
+4. **C's insertion adds a smaller edge on top.** C against J (same VERIFY, different
+   insertion) on standard, C-only / J-only: gantry 29/6, 33/4, 32/10; arm 36/19, 39/11,
+   43/16. Most of it is in noise_2mm (`CONCENTRATION.md` (a), (d)). J against F (same
+   insertion, VERIFY added): gantry 48/13, 37/7, 32/9; arm 28/11, 21/9, 21/10. Both hold
+   in the same direction on all three seeds (`SEEDS.md` (c)). J is not a fair baseline.
+5. **I's bad units sit just past the 3 deg spec.** Seed 20261130, gantry standard: 32 bad
+   units, depth 14.38-14.98 mm (3 short of the 14.5 mm limit), max(|yaw|, tilt)
+   3.00-5.53 deg, 8 above 4 deg. Arm: 32 bad units, depth 10.43-14.96 mm, 3.01-6.52 deg,
+   7 above 4 deg (`BAD_UNITS.md` (b), (c)). The 3 deg yaw and tilt limits are an assumed
+   seating specification (README, "Success tolerances"), applied to a housing-only part.
+6. **A looser seating spec shrinks C's standard lead; a tighter one widens it (POST HOC
+   rescoring, seed 20261130 only).** The four logged pose columns cannot rescore
+   `gt_seated` (10,507 of 288,000 rows disagree). So the conditions where that matters
+   were replayed with the missing values logged. The 6,000 replayed rows match
+   benchmark_v0.2e exactly. Rescored on gantry standard, C-only / I-only is 53/8 at
+   3 deg, 31/10 at 4 deg and 26/10 at 5 deg; on arm standard it is 54/16, 30/17
+   (p = 0.079) and 27/18 (p = 0.23). I's bad units fall from 32 to 8 to 3 on each machine
+   (arm 7 at 4 deg); C stays at 0. These rescored numbers do not replace the
+   pre-registered ones (part 3, `TOLERANCE.md`).
+7. **C's tail is its retries.** On seed 20261130, C's p95 / median runs from 1.63 (gantry
+   standard) to 2.67 (gantry heldout). It is at or under 1.5 only on gantry latch_spread
+   (1.47, 1.47, 1.48 on the three seeds) (`PHASES.md` (c)). On gantry standard, 133 of the
+   135 successes slower than 1.5 x median had retried. C's successes with no retry have
+   p95 / median 1.11 (`PHASES.md` (d)). The retries sit in the same three
+   high-camera-error conditions: 143 of 193 retried successes. Of the 53 wins over I, 41
+   retried; their median cycle is 9.51 s, against 5.30 s for all of C's successes
+   (POST HOC, `PHASES.md` (d2)).
+
+So, on standard, three things come from the same high-camera-error trials: C's success
+lead, C's zero bad units against I's 32, and C's slow tail. The checkpoint report sets
+out what each possible claim rests on. It does not pick one.
+
+## 1. Per condition, per seed (`PERCOND.md`, `CONCENTRATION.md`)
+
+`PERCOND.md` covers every seed, machine and suite. Per good-part condition it gives the
+seated count of C, I, F, H, J and G, and the discordant pairs C/I, C/F, C/H, C/J and G/C.
+`CONCENTRATION.md` (a) lists, per cell and seed, the conditions that hold C's wins and
+every condition where the other controller seats more. Section (e) gives each
+condition's direction across the three seeds.
+
+Conditions where I seats more than C on all three seeds, C-only / I-only (POST HOC,
+`CONCENTRATION.md` (e), (f)). F gives the same list on the same seeds, with slightly
+different latching counts:
+
+| Cell | Condition | 20261123 | 20261124 | 20261130 | How C fails there |
+|---|---|---|---|---|---|
+| gantry heldout | heldout_worst_case | 6 / 26 | 4 / 34 | 5 / 39 | retry limit (32, 44, 48 trials) |
+| arm heldout | heldout_worst_case | 10 / 37 | 11 / 46 | 13 / 39 | retry limit, protective stops, time limit |
+| gantry heldout | heldout_handeye_bias_1.5mm | 0 / 4 | 0 / 5 | 0 / 5 | retry limit; I fails none |
+| arm heldout | heldout_handeye_bias_1.5mm | 0 / 3 | 0 / 5 | 0 / 6 | time limit, retry limit; I fails none |
+| arm standard | friction_1 | 0 / 7 | 0 / 6 | 0 / 5 | protective stops, time limit; I fails none |
+| gantry latching | mf_noise_1mm | 7 / 16 | 5 / 17 | 7 / 14 | retry limit |
+
+Arm latching `mf_noise_1mm` is mixed: 23/16, 18/20, 19/37 against I. It holds all of C's
+arm latching wins and nearly all of its losses on every seed (`CONCENTRATION.md` (a)). On
+seed 20261130 it is the whole of the pre-registered "C below F" verdict on arm latching:
+18/37 against F, all in mf_noise_1mm.
+
+In the nominal (camera sigma 0.3 mm), noise_0mm and noise_0.5mm conditions, C and I seat
+exactly the same trials on every seed and both machines (0 / 0, `PERCOND.md`).
+
+Conditions where C seats more than I on all three seeds:
+- gantry and arm standard: noise_1mm, noise_2mm, generalization_combined;
+- gantry and arm heldout_mischar_2mm;
+- gantry heldout_vision_outliers;
+- arm heldout_mischar_1mm.
+
+On heldout, C's wins on the mis-characterised camera are cancelled by its losses on the
+worst-case and hand-eye-bias conditions. Cell totals: gantry 60/39, 46/41, 48/60; arm
+50/52, 43/58, 52/60.
+
+On latch_spread, C is ahead of F on all three seeds (gantry 5/0, 7/0, 6/0; arm 32/0,
+31/1, 33/2). F's misses there are mostly bad units on `mf_terminal_max` and `mf_spread`,
+short of depth (`BAD_UNITS.md` (b)). Against I, latch_spread is level (0-2 discordant
+trials per seed).
+
+G against C (`SEEDS.md` (a)): G seats more on every cell except latch_spread, on all
+three seeds. Its gains are in the same conditions. For example, gantry heldout C-only /
+G-only is 10/36, 3/36, 5/54.
+
+## 2. Bad units (`BAD_UNITS.md`, `bad_units.csv`)
+
+Every row with `declared_success` True and `gt_seated` False is in `bad_units.csv`, bad
+parts included. Every good-part one is listed in `BAD_UNITS.md` (e). For the controllers
+that declare, this set is the same as the benchmark tables' `escape` count (checked row
+by row). On good-part trials, over 7,400 per seed (`BAD_UNITS.md` (a)):
+
+| Controller | 20261123 | 20261124 | 20261130 |
+|---|---|---|---|
+| C | 0 | 0 | 0 |
+| G | 0 | 0 | 1 |
+| J | 3 | 2 | 2 |
+| H | 118 | 112 | 101 |
+| I | 161 | 138 | 138 |
+| D | 161 | 154 | 136 |
+| F | 197 | 176 | 178 |
+
+Deliberately bad parts passed, of 2,200 per seed (`BAD_UNITS.md` (d)):
+- C, G, H, I and J: 0 on every seed;
+- D: 1,287, 1,284, 1,275;
+- F: 1,509, 1,504, 1,510.
+
+The failed check is read from the logged pose (`failed_checks` in the script):
+- depth, yaw and tilt are logged exactly;
+- lateral is only partly logged. The code checks each socket axis, but the log holds only
+  the radius, so some rows are `lateral?` (the radius cannot decide);
+- the settled and latched checks are not logged (`not logged`).
+
+`BAD_UNITS.md` (b) counts these per cell. On housing-only suites, nearly all of I's and
+F's bad units fail yaw or tilt only. On seed 20261130 gantry standard that is 27 of 32
+angle only, 3 depth and 2 `lateral?`. On latching good parts, I's 3 (arm, seed 20261130)
+fail tilt only, at 3.02-3.22 deg. G's one fails tilt at 3.01 deg. Bad parts passed by D
+and F mostly show `not logged`, which here is the latched check.
+
+`BAD_UNITS.md` (c) bins the recorded max(|yaw|, tilt) of the housing-only bad units. It
+describes the logged pose. It is not a rescoring (part 3).
+
+## 3. Tolerance sensitivity (POST HOC; `TOLERANCE.md`, `replay_20261130/`)
+
+`gt_seated` is `seated` from `evaluate_final_state` in `defex/tasks/insertion.py`. A plug
+is seated when all of these hold:
+- depth >= socket depth - 0.5 mm;
+- |x| and |y| each <= clearance + 0.15 mm;
+- tilt <= 3 deg and |yaw| <= 3 deg;
+- TCP speed <= 2 mm/s;
+- on latching connectors, latched with the latch intact.
+
+Recomputed from `final_depth_mm`, `final_lateral_mm`, `final_tilt_deg` and
+`final_yaw_deg` at the as-run tolerances, it **does not** reproduce `gt_seated`. 10,507 of
+288,000 rows differ:
+
+- 1,784 rows are seated by the code, but their radius exceeds the per-axis limit. All are
+  in the band up to sqrt 2 x the limit: plugs toward a corner of the rectangular cavity.
+  The radius cannot tell them from plugs that fail on one axis.
+- 8,717 rows on the latching suites pass every logged pose check but are not seated. The
+  failing check is latched (or settled), and neither is logged.
+- 6 rows on the housing-only suites fail the settled check, which is not logged.
+
+So nothing was rescored from the old columns.
+
+**Exact rescoring from a replay (POST HOC, seed 20261130 only).**
+
+Logging. Commit 9197b9c adds five columns to trials.csv: `final_x_mm`, `final_y_mm`
+(socket frame), `final_tcp_speed_mm_s`, `final_latched` and `final_latch_intact`. It
+changes no scoring and no behaviour.
+
+What was replayed. The plan was committed before the run (`replay_20261130/RUN_PLAN.md`).
+A full replay of standard and heldout was estimated at about 91 minutes at 2 workers, so
+only the conditions the old columns cannot rescore were replayed. A row seated as run
+passed every unlogged check, so depth and angle alone decide it. A row unseated as run
+that passed depth and angle failed an unlogged check, so it stays unseated. Replayed, for
+C, F, I and J: standard noise_1mm, noise_2mm and generalization_combined; heldout
+mischar_1mm, mischar_2mm (and gantry worst_case); latching mf_noise_1mm; both machines.
+That is 6,000 rows. The run took 77.5 minutes, over the 60-minute cap, because the CPU
+was shared (`replay_20261130/RUN_LOG.md`).
+
+Checks (`TOLERANCE.md` (1), (2)):
+- All 6,000 rows equal benchmark_v0.2e in every committed column, `wall_time_s` excepted.
+- `gt_seated` recomputed from the new columns at the as-run tolerances matches on 6,000
+  of 6,000.
+- In the replayed conditions, the old-columns rule agrees with the exact rule on all
+  70,689 (row, tolerance) cases it can decide.
+- No row outside the replayed conditions is left undecided.
+- At 0.5 mm and 3 deg, the rescoring reproduces the logged `success` and bad units on
+  every row.
+- `git_dirty` is True on five of the six replay configs. During the replay I edited the
+  analysis script and its tests; neither is used by the runner. The row-identity check
+  covers this.
+
+Results (`TOLERANCE.md` (3), (4); full table below). These are rescored numbers. They do
+not replace the pre-registered ones.
+- **Gantry standard.** C-only / I-only (F is the same) goes from 53/8 at 3 deg to 36/10
+  at 3.5, 31/10 at 4 and 26/10 at 5 deg (p = 0.011). I's bad units go from 32 to 13, 8
+  and 3. C stays at 0, J at 0.
+- **Arm standard.** C-only / I-only goes from 54/16 to 35/17 (p = 0.018), 30/17
+  (p = 0.079) and 27/18 (p = 0.23). I's bad units go from 32 to 12, 7 and 3.
+- **Tighter spec.** At 2 deg C's lead widens: gantry 122/2, arm 119/7. I's bad units rise
+  to 110 and 107, C's to 3 and 1, J's to 7 and 5.
+- **Heldout.** It turns against C as the tolerance loosens: gantry C-only / I-only is
+  48/60 at 3 deg and 23/69 at 5 deg; arm 52/60 and 33/68.
+- **Latching good parts.** Nothing changes above 3 deg on the gantry. On the arm, I's 3
+  and J's 1 bad units disappear at 3.5 deg, and F's lead over C grows slightly (16/38).
+  At 2 deg every controller gains bad units (gantry C 21, I 45).
+- **Depth tolerance.** 1.0 mm instead of 0.5 mm changes at most two trials in any cell.
+
+Rescored table, seed 20261130, good-part trials (seated C / F / I / J; C-only / I-only;
+C-only / F-only; bad units C / F / I / J). Depth tolerance 0.5 mm; the 1.0 mm rows, which
+differ by 0-2 trials, are in `TOLERANCE.md` (3). "as run" is the pre-registered scoring.
+
+| Machine, suite | Yaw/tilt (deg) | Seated C / F / I / J | C-only / I-only (p) | C-only / F-only (p) | Bad units C / F / I / J |
+|---|---|---|---|---|---|
+| gantry standard | 2.0 | 1978 / 1858 / 1858 / 1952 | 122 / 2 (<1e-6) | 122 / 2 (<1e-6) | 3 / 110 / 110 / 7 |
+| gantry standard | 2.5 | 1981 / 1907 / 1907 / 1958 | 79 / 5 (<1e-6) | 79 / 5 (<1e-6) | 0 / 61 / 61 / 1 |
+| gantry standard | 3.0 as run | 1981 / 1936 / 1936 / 1959 | 53 / 8 (<1e-6) | 53 / 8 (<1e-6) | 0 / 32 / 32 / 0 |
+| gantry standard | 3.5 | 1981 / 1955 / 1955 / 1959 | 36 / 10 (0.00016) | 36 / 10 (0.00016) | 0 / 13 / 13 / 0 |
+| gantry standard | 4.0 | 1981 / 1960 / 1960 / 1959 | 31 / 10 (0.0015) | 31 / 10 (0.0015) | 0 / 8 / 8 / 0 |
+| gantry standard | 5.0 | 1981 / 1965 / 1965 / 1959 | 26 / 10 (0.011) | 26 / 10 (0.011) | 0 / 3 / 3 / 0 |
+| gantry heldout | 2.0 | 407 / 365 / 365 / 439 | 88 / 46 (0.00036) | 88 / 46 (0.00036) | 0 / 91 / 91 / 6 |
+| gantry heldout | 2.5 | 407 / 388 / 388 / 444 | 70 / 51 (0.1) | 70 / 51 (0.1) | 0 / 68 / 68 / 1 |
+| gantry heldout | 3.0 as run | 407 / 419 / 419 / 444 | 48 / 60 (0.29) | 48 / 60 (0.29) | 0 / 37 / 37 / 1 |
+| gantry heldout | 3.5 | 407 / 434 / 434 / 444 | 38 / 65 (0.01) | 38 / 65 (0.01) | 0 / 22 / 22 / 1 |
+| gantry heldout | 4.0 | 407 / 445 / 445 / 445 | 30 / 68 (0.00016) | 30 / 68 (0.00016) | 0 / 11 / 11 / 0 |
+| gantry heldout | 5.0 | 407 / 453 / 453 / 445 | 23 / 69 (1.7e-06) | 23 / 69 (1.7e-06) | 0 / 3 / 3 / 0 |
+| gantry latching | 2.0 | 564 / 549 / 547 / 547 | 28 / 11 (0.0095) | 26 / 11 (0.02) | 21 / 44 / 45 / 45 |
+| gantry latching | 2.5 | 577 / 584 / 583 / 583 | 11 / 17 (0.34) | 10 / 17 (0.25) | 8 / 9 / 9 / 9 |
+| gantry latching | 3.0 as run (same at 3.5-5) | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| arm standard | 2.0 | 1961 / 1849 / 1849 / 1930 | 119 / 7 (<1e-6) | 119 / 7 (<1e-6) | 1 / 107 / 107 / 5 |
+| arm standard | 2.5 | 1961 / 1900 / 1900 / 1934 | 72 / 11 (<1e-6) | 72 / 11 (<1e-6) | 1 / 56 / 56 / 1 |
+| arm standard | 3.0 as run | 1962 / 1924 / 1924 / 1935 | 54 / 16 (5.9e-06) | 54 / 16 (5.9e-06) | 0 / 32 / 32 / 0 |
+| arm standard | 3.5 | 1962 / 1944 / 1944 / 1935 | 35 / 17 (0.018) | 35 / 17 (0.018) | 0 / 12 / 12 / 0 |
+| arm standard | 4.0 | 1962 / 1949 / 1949 / 1935 | 30 / 17 (0.079) | 30 / 17 (0.079) | 0 / 7 / 7 / 0 |
+| arm standard | 5.0 | 1962 / 1953 / 1953 / 1935 | 27 / 18 (0.23) | 27 / 18 (0.23) | 0 / 3 / 3 / 0 |
+| arm heldout | 2.0 | 384 / 342 / 342 / 376 | 92 / 50 (0.00053) | 92 / 50 (0.00053) | 0 / 84 / 84 / 3 |
+| arm heldout | 2.5 | 384 / 364 / 364 / 379 | 74 / 54 (0.093) | 74 / 54 (0.093) | 0 / 62 / 62 / 0 |
+| arm heldout | 3.0 as run | 384 / 392 / 392 / 379 | 52 / 60 (0.51) | 52 / 60 (0.51) | 0 / 34 / 34 / 0 |
+| arm heldout | 3.5 | 384 / 406 / 406 / 379 | 41 / 63 (0.039) | 41 / 63 (0.039) | 0 / 20 / 20 / 0 |
+| arm heldout | 4.0 | 384 / 413 / 413 / 379 | 35 / 64 (0.0046) | 35 / 64 (0.0046) | 0 / 13 / 13 / 0 |
+| arm heldout | 5.0 | 384 / 419 / 419 / 379 | 33 / 68 (0.00064) | 33 / 68 (0.00064) | 0 / 7 / 7 / 0 |
+| arm latching | 2.0 | 540 / 525 / 525 / 534 | 36 / 21 (0.063) | 36 / 21 (0.063) | 12 / 49 / 48 / 39 |
+| arm latching | 2.5 | 552 / 561 / 562 / 568 | 23 / 33 (0.23) | 23 / 32 (0.28) | 0 / 13 / 11 / 5 |
+| arm latching | 3.0 as run | 552 / 571 / 570 / 572 | 19 / 37 (0.022) | 18 / 37 (0.014) | 0 / 3 / 3 / 1 |
+| arm latching | 3.5 (same at 4-5) | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+
+Only seed 20261130 was replayed. The two earlier seeds are not rescored.
+
+## 4. Cycle time by phase (`PHASES.md`)
+
+Phases come from the `state` events in `events.json.gz`, over successful trials. For
+every successful trial the phases sum exactly to `cycle_time_s` (largest gap 0 s). The
+buckets are approach, align/tare, first insertion, retries, verify, and re-insert after a
+failed verify (`phase_times` in the script).
+
+Mean seconds per successful trial, seed 20261130 (`PHASES.md` (a), (b)):
+
+| Cell | C verify | J verify | I pull | C insertion | F insertion | C - F mean cycle |
+|---|---|---|---|---|---|---|
+| gantry standard | 1.89 | 2.33 | none (I = F) | 2.44 | 1.38 | +2.94 |
+| gantry latching | 3.04 | 3.04 | 3.04 | 3.06 | 2.45 | +3.65 |
+| arm standard | 2.49 | 3.29 | none (I = F) | 4.90 | 4.01 | +3.38 |
+| arm latching | 3.87 | 3.92 | 3.93 | 5.42 | 4.70 | +4.59 |
+
+- **VERIFY on housing-only parts** costs C 1.89 s (gantry) and 2.49 s (arm) per success.
+  On gantry standard that is about two-thirds of C's extra time over F.
+- **The pull test** on latching parts costs I 3.04 s (gantry) and 3.93 s (arm), the same
+  as C's latching VERIFY. So against I on latching parts, the difference is insertion.
+- **C's extra insertion time** over F is +1.06 s on gantry standard (first attempt
+  +0.61 s, retries +0.44 s). On the latching suites C's first attempt is shorter than F's
+  (gantry -0.77 s) and its retries take longer (+1.38 s). Both machines show the same
+  pattern (`PHASES.md` (b)).
+
+**p95 / median** of successful cycles, for every controller and run: `PHASES.md` (c). On
+seed 20261130 (standard / latching / heldout / latch_spread):
+
+| Controller | gantry | arm |
+|---|---|---|
+| C | 1.63 / 2.23 / 2.67 / 1.48 | 1.71 / 1.97 / 2.03 / 1.61 |
+| F | 1.88 / 4.62 / 3.50 / 1.57 | 2.08 / 2.64 / 2.67 / 1.50 |
+| J | 1.56 / 2.56 / 2.47 / 1.47 | 1.70 / 1.88 / 1.71 / 1.59 |
+
+No controller is at or under 1.5 on standard.
+
+**Why C misses p95 <= 1.5 x median.**
+- C's median cycle is a first-attempt success. A retry costs several seconds: on gantry
+  standard, the slow successes spent a mean 5.47 s in retries.
+- About 10% of C's successes retry (193 of 1,981 on gantry standard; 173 of 1,962 on the
+  arm). With more than 5% retrying, the 95th percentile falls inside the retried group.
+- Over the successes that did not retry, C's p95 / median is 1.11 on gantry standard,
+  1.19 on arm standard, and 1.01-1.16 elsewhere (`PHASES.md` (d)).
+- The retried trials are mostly the high-camera-error ones that C wins: on gantry
+  standard, 143 of the 193 are in noise_1mm, noise_2mm and generalization_combined
+  (POST HOC, `PHASES.md` (d2)).
+- Failures do not enter the percentile, but they take cell time. C's failed good-part
+  trials took a mean 17.7-24.0 s, mostly ending at the retry or time limit
+  (`PHASES.md` (e)).
+
+Retrying less might meet the target, but it would give up part of the success lead. This
+analysis did not test that trade-off; it is Hasan's to weigh.
+
+## 5. Across seeds (`SEEDS.md`)
+
+`SEEDS.md` (a) gives every cell's C-only / X-only and its McNemar p on each seed
+separately. These hold in the same direction on all three seeds (`SEEDS.md` (a), (c); the
+per-condition lines are POST HOC):
+
+- C ahead of I and F on standard, both machines (gantry 60/2, 62/3, 53/8; arm 51/17,
+  51/11, 54/16; p < 1e-4 on every seed).
+- At least 90% of those wins in noise_1mm, noise_2mm and generalization_combined, and all
+  of I's standard bad units in those three conditions.
+- More than half of C's standard wins over I are I bad units.
+- On standard, J seats more than F and passes fewer bad units, and C seats more than J.
+- I seats more than C on heldout_worst_case and heldout_handeye_bias_1.5mm (both
+  machines), on arm friction_1 and on gantry latching mf_noise_1mm.
+- C passes no bad unit and no bad part.
+- G has more discordant wins than C on standard, latching and heldout, on both machines
+  (not on latch_spread).
+- C makes fewer good units per hour than F on standard (gantry 608, 611, 601 against
+  1,128, 1,096, 1,100; arm 374, 384, 377 against 593, 586, 593).
+
+Same direction on all three seeds, but the pre-registered verdict differs by seed:
+- gantry latching, F ahead of C in discordant pairs (4/16, 4/19, 6/14; p = 0.012,
+  0.0026, 0.12);
+- arm heldout, I ahead (50/52, 43/58, 52/60; p = 0.92, 0.16, 0.51, so "matches" every
+  time).
+
+Mixed direction:
+- gantry heldout (C against I 60/39, 46/41, 48/60);
+- arm latching (23/17, 20/20, 19/37).
+
+C's p95 / median is above 1.5 on every run except gantry latch_spread.
+
+## Limits
+
+- Simulation only, on one simulator. Three seeds show which outcomes hold across draws
+  of scenarios. They do not test the simulator.
+- The per-condition and tolerance analyses are post hoc. They explain the pre-registered
+  verdicts; they do not replace them.
+- For some bad units in the committed runs, the failed check is partly unknown (per-axis
+  lateral, settled, latched), as `BAD_UNITS.md` marks. The replay settles this for seed
+  20261130 in the replayed conditions only.
+- The tolerance rescoring covers one seed, and it is post hoc.
+- Equal effort: F, H and I have no post-seat pose correction. J shows what F gains from
+  C's VERIFY. No fair baseline with a conventional seat-and-align step was built. That is
+  an open fairness item.

@@ -49,6 +49,14 @@ class TrialResult:
     peak_measured_torque_nm: float = 0.0  # filtered F/T torque magnitude (the stop's second criterion)
     sim_time_s: float = 0.0
     wall_time_s: float = 0.0
+    # Final pose and state behind gt_seated, logged since v0.2f so the seating checks can be
+    # recomputed offline: per-axis offset in the socket frame, TCP speed, latch flags
+    # (None on connectors without a latch).
+    final_x_mm: float = float("nan")
+    final_y_mm: float = float("nan")
+    final_tcp_speed_mm_s: float = float("nan")
+    final_latched: bool | None = None
+    final_latch_intact: bool | None = None
 
     def to_row(self) -> dict[str, Any]:
         row = asdict(self)
@@ -278,6 +286,10 @@ def write_json(obj: Any, path: Path) -> None:
     path.write_text(json.dumps(obj, indent=2, default=_json_default, allow_nan=True))
 
 
+def _opt_bool(v: str | None) -> bool | None:
+    return None if v in (None, "", "None") else v == "True"
+
+
 def read_trials_csv(path: Path) -> list[TrialResult]:
     """Load trial rows back into :class:`TrialResult` objects (for re-plotting)."""
     out = []
@@ -315,6 +327,11 @@ def read_trials_csv(path: Path) -> list[TrialResult]:
                     peak_contact_force_10ms_n=float(row.get("peak_contact_force_10ms_n", 0.0) or 0.0),
                     peak_measured_torque_nm=float(row.get("peak_measured_torque_nm", 0.0) or 0.0),
                     wall_time_s=float(row.get("wall_time_s", 0.0) or 0.0),
+                    final_x_mm=float(row.get("final_x_mm") or "nan"),
+                    final_y_mm=float(row.get("final_y_mm") or "nan"),
+                    final_tcp_speed_mm_s=float(row.get("final_tcp_speed_mm_s") or "nan"),
+                    final_latched=_opt_bool(row.get("final_latched")),
+                    final_latch_intact=_opt_bool(row.get("final_latch_intact")),
                 )
             )
     return out

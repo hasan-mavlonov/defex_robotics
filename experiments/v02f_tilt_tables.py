@@ -175,6 +175,21 @@ def item3(rows: list[dict]) -> list[str]:
     for (m, p), y in sorted(paths.items()):
         y = np.array(y)
         out.append(f"| {m} | {p} | {len(y)} | {pct(y, 50)} / {pct(y, 95)} / {y.max():.2f} | {(y > 2).sum()} |")
+    sweeps = defaultdict(list)
+    for r in rows:
+        if r["suite"] != "standard" or not r["declared_success"] or r["backend"] != "gantry":
+            continue
+        for _, k, d in r["ev"]:
+            m = re.search(r"limits \(([-+\d.]+),([-+\d.]+)\)", d) if k == "yaw_centering" else None
+            if m:
+                lim = max(abs(float(m.group(1))), abs(float(m.group(2))))
+                sweeps["one limit at the 7.0 deg sweep end" if lim >= 6.99 else "both limits found"].append(
+                    abs(r["final_yaw_deg"]))
+    if sweeps:
+        out += ["", "Gantry yaw sweeps of declared trials (events `yaw_centering`; the sweep always ends in SUCCESS):", "",
+                "| Sweep | Declared | final |yaw| p95 / max |", "|---|---|---|"]
+        for p, y in sorted(sweeps.items()):
+            out.append(f"| {p} | {len(y)} | {pct(y, 95)} / {max(y):.2f} |")
     out += ["", "Tilt evidence at the declared seat (housing only; no check uses it): plug axis against R_corr, "
             "against true tilt:", "", "| Machine | Ctrl | Seats | measured p50 / p95 | true p50 / p95 | true >= 2.5 | of which measured >= 2.5 |",
             "|---|---|---|---|---|---|---|"]

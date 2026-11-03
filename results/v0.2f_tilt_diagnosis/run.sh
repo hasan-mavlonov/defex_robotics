@@ -63,3 +63,33 @@ if [ "$STEP" = all ] || [ "$STEP" = validation ]; then
     PYTHONPATH=. $PY $D run --backend $B $V --controllers spiral_rcc_verify --j handover_window=true --out $R/runs/val_JW_$B.jsonl.gz
   done
 fi
+
+if [ "$STEP" = all ] || [ "$STEP" = identity ]; then
+  # Flags off against the v0.2e code: BASE = 4df8cae exported (git archive 4df8cae defex experiments assets pyproject.toml).
+  BASE=${BASE:?export 4df8cae first}
+  CT="--controllers adaptive,adaptive_learned,spiral_rcc_verify,spiral_rcc --trials 10 --seed 2026 --workers 2 --no-plots"
+  for B in arm gantry; do
+    for S in "latching mf_noise_1mm,mf_nominal,mf_half_latched" "standard noise_1mm,tilt_5deg,yaw_5deg"; do
+      set -- $S
+      (cd $BASE && PYTHONPATH=$BASE $PY -m experiments.robustness --suite $1 --backend $B --conditions $2 $CT --name identity/v02e_${B}_$1)
+      PYTHONPATH=. $PY -m experiments.robustness --suite $1 --backend $B --conditions $2 $CT --name v0.2f_tilt_diagnosis/identity/branch_${B}_$1
+      mkdir -p $R/identity/v02e_${B}_$1 && cp $BASE/results/identity/v02e_${B}_$1/{trials.csv,summary.json,summary.csv,config.json} $R/identity/v02e_${B}_$1/
+    done
+  done
+  $PY experiments/v02f_identity.py $R/identity $R/identity > $R/identity/IDENTITY.md
+fi
+
+if [ "$STEP" = all ] || [ "$STEP" = yaw ]; then
+  # Gantry standard again with the yaw_centering events kept (collector change 2702250); rows identical to the first run.
+  PYTHONPATH=. $PY $D run --backend gantry --suite standard --trials 25 --workers 2 --controllers adaptive,adaptive_learned \
+      --out $R/runs/gantry_standard_cg_yaw.jsonl.gz
+fi
+
+if [ "$STEP" = all ] || [ "$STEP" = tables ]; then
+  $PY experiments/v02f_tilt_tables.py $R/runs > $R/TABLES.md
+  X="$PY experiments/v02f_tilt_compare.py"
+  $X --base $R/runs/val_base_cg_arm.jsonl.gz,$R/runs/val_base_cg_gantry.jsonl.gz \
+     --cand $R/runs/val_P_arm.jsonl.gz,$R/runs/val_P_gantry.jsonl.gz --bound 1 --name "P, seed 4007" > $R/VAL_P.md
+  $X --base $R/runs/val_base_j_arm.jsonl.gz,$R/runs/val_base_j_gantry.jsonl.gz \
+     --cand $R/runs/val_JW_arm.jsonl.gz,$R/runs/val_JW_gantry.jsonl.gz --bound 1 --name "JW, seed 4007" > $R/VAL_JW.md
+fi

@@ -255,23 +255,24 @@ Partly, yes. The 3 deg limit on yaw and tilt is an assumed seating spec (README,
 yaw or tilt. Over three seeds, 392 of I's 433 housing-only bad units are at full depth
 and over 3 deg, median 3.45 deg (`hardware/RIG_POWER.md`).
 
-The rescoring below is POST HOC, on seed 20261130 only. It comes from an exact replay
-of the conditions that matter, 6,000 rows identical to the benchmark
+The rescoring below is POST HOC, on all three benchmark seeds (p per seed, not pooled).
+It comes from exact replays of the conditions that matter, with extra logging
 (`results/v0.2f_evidence/TOLERANCE.md`):
 
-| Yaw/tilt limit | 2 deg | 3 deg (as run) | 4 deg | 5 deg |
+| POST HOC; per seed 20261123 / 20261124 / 20261130 | 2 deg | 3 deg (as run) | 4 deg | 5 deg |
 |---|---|---|---|---|
-| gantry standard, C-only / I-only | 122 / 2 | 53 / 8 | 31 / 10 (p = 0.0015) | 26 / 10 (p = 0.011) |
-| arm standard, C-only / I-only | 119 / 7 | 54 / 16 | 30 / 17 (p = 0.079) | 27 / 18 (p = 0.23) |
-| I's bad units, gantry / arm standard | 110 / 107 | 32 / 32 | 8 / 7 | 3 / 3 |
-| C's bad units, gantry / arm standard | 3 / 1 | 0 / 0 | 0 / 0 | 0 / 0 |
+| gantry standard, C-only / I-only | 113/0, 114/1, 122/2 | 60/2, 62/3, 53/8 | 28/5, 32/3, 31/10 (p 6.6e-5, <1e-6, 0.0015) | 18/6, 26/4, 26/10 (p 0.023, 5.9e-5, 0.011) |
+| arm standard, C-only / I-only | 114/15, 111/9, 119/7 | 51/17, 51/11, 54/16 | 27/21, 24/13, 30/17 (p 0.47, 0.099, 0.079) | 22/27, 20/15, 27/18 (p 0.57, 0.5, 0.23) |
+| I's bad units, gantry standard | 104, 93, 110 | 48, 39, 32 | 13, 9, 8 | 2, 2, 3 |
+| I's bad units, arm standard | 109, 101, 107 | 43, 39, 32 | 15, 10, 7 | 4, 4, 3 |
+| C's bad units, gantry / arm standard | 1/1, 0/0, 3/1 | 0 | 0 | 0 |
 
-- A looser spec shrinks C's standard lead. On the arm the lead is no longer significant
-  at 4 deg.
+- A looser spec shrinks C's standard lead. On the gantry it holds at 4 and 5 deg on
+  every seed; on the arm it is not significant at 4 deg on any seed.
 - A tighter spec widens the lead, and at 2 deg C passes some bad units too.
 - On `heldout`, the comparison turns against C as the spec loosens (gantry C-only /
-  I-only 48/60 at 3 deg, 23/69 at 5 deg).
-- A 1.0 mm depth tolerance instead of 0.5 mm changes at most two trials per cell.
+  I-only at 5 deg: 32/44, 21/44, 23/69 on the three seeds).
+- A 1.0 mm depth tolerance instead of 0.5 mm changes any bad-unit count by at most 5.
 
 The rescored numbers do not replace the pre-registered ones. The question for a pilot
 customer is their real spec: angle and depth, and whether acceptance is by angle, by

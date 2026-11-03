@@ -89,16 +89,17 @@ What C's zero rests on:
   that is an open fairness item.
 - **An assumed 3 deg spec.** I's bad units on seed 20261130 sit just past it: gantry
   standard 32 plugs, 14.38-14.98 mm deep, 3.00-5.53 deg in yaw or tilt. A POST HOC
-  rescoring of seed 20261130 only, from an exact replay (6,000 rows, identical to the
-  benchmark), allowed looser and tighter limits
+  rescoring of all three seeds, from exact replays with extra logging (p per seed, not
+  pooled), allowed looser and tighter limits
   ([`TOLERANCE.md`](../results/v0.2f_evidence/TOLERANCE.md)):
 
-  | POST HOC, seed 20261130 | 2 deg | 3 deg (as run) | 4 deg | 5 deg |
+  | POST HOC; per seed 20261123 / 20261124 / 20261130 | 2 deg | 3 deg (as run) | 4 deg | 5 deg |
   |---|---|---|---|---|
-  | gantry standard, C-only / I-only | 122 / 2 | 53 / 8 | 31 / 10 (p = 0.0015) | 26 / 10 (p = 0.011) |
-  | arm standard, C-only / I-only | 119 / 7 | 54 / 16 | 30 / 17 (p = 0.079) | 27 / 18 (p = 0.23) |
-  | I's bad units, gantry / arm standard | 110 / 107 | 32 / 32 | 8 / 7 | 3 / 3 |
-  | C's bad units, gantry / arm standard | 3 / 1 | 0 / 0 | 0 / 0 | 0 / 0 |
+  | gantry standard, C-only / I-only | 113/0, 114/1, 122/2 | 60/2, 62/3, 53/8 | 28/5, 32/3, 31/10 (p 6.6e-5, <1e-6, 0.0015) | 18/6, 26/4, 26/10 (p 0.023, 5.9e-5, 0.011) |
+  | arm standard, C-only / I-only | 114/15, 111/9, 119/7 | 51/17, 51/11, 54/16 | 27/21, 24/13, 30/17 (p 0.47, 0.099, 0.079) | 22/27, 20/15, 27/18 (p 0.57, 0.5, 0.23) |
+  | I's bad units, gantry standard | 104, 93, 110 | 48, 39, 32 | 13, 9, 8 | 2, 2, 3 |
+  | I's bad units, arm standard | 109, 101, 107 | 43, 39, 32 | 15, 10, 7 | 4, 4, 3 |
+  | C's bad units, gantry / arm standard | 1/1, 0/0, 3/1 | 0 | 0 | 0 |
 
 - **A constant F/T bias.** In heldout2 the F/T zero drifts. C passed 8 bad units on the
   arm at 0.3 N/s; H passed 0 and I 1 (section 4). A POST HOC trace found the cause.

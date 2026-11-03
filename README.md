@@ -96,13 +96,14 @@ unit and no bad part, and made fewer good units per hour than F on `standard`
   the three seeds, against F's 197, 176 and 178. C's insertion adds a smaller edge
   over J (C-only / J-only on standard, seed 20261130: gantry 32/10, arm 43/16). No fair
   baseline has a seat-and-align step; that is an open fairness item.
-* **The 3 deg spec matters (POST HOC rescoring, seed 20261130 only).** An exact
-  replay (6,000 rows, identical to the benchmark) allowed rescoring at other yaw and
-  tilt limits ([`TOLERANCE.md`](results/v0.2f_evidence/TOLERANCE.md)). At 4 and 5 deg,
-  C-only / I-only on standard is 31/10 and 26/10 on the gantry (p = 0.0015, 0.011),
-  and 30/17 and 27/18 on the arm (p = 0.079, 0.23). I's bad units fall from 32 to 8
-  and 3 (gantry) and from 32 to 7 and 3 (arm); C's stay at 0. At 2 deg the lead widens
-  (122/2, 119/7) and C passes 3 and 1.
+* **The 3 deg spec matters (POST HOC rescoring, all three seeds, p per seed).** Exact
+  replays with extra logging allowed rescoring at other yaw and tilt limits
+  ([`TOLERANCE.md`](results/v0.2f_evidence/TOLERANCE.md) (4)-(5)). On gantry standard
+  C's lead over I holds at 4 deg on every seed (28/5, 32/3, 31/10) and at 5 deg. On arm
+  standard it is not significant at 4 deg on any seed (27/21, 24/13, 30/17; p = 0.47,
+  0.099, 0.079). I's standard bad units fall from 48/39/32 (gantry) and 43/39/32 (arm)
+  at 3 deg to 2-4 at 5 deg; C's stay at 0. At 2 deg the lead widens on every seed and C
+  passes 0-3.
 * **C loses where it runs out of retries or time.** On all three seeds I seats more
   than C on heldout_worst_case and the 1.5 mm hand-eye bias (both machines), arm
   friction_1 and gantry latching mf_noise_1mm.
@@ -220,7 +221,7 @@ the results were seen.
     seat exactly the same trials on every seed.
   - More than half of the lead is trials where I passed an out-of-tolerance plug.
   - Under a looser seating spec the lead shrinks: on the arm it is not significant at
-    4 deg (POST HOC rescoring, seed 20261130 only).
+    4 deg on any of the three seeds (POST HOC rescoring).
   - Across 12 randomized simulators, C's lead in the high-camera-error conditions holds
     on the gantry (12 of 12 against F, H and I). On the arm it holds narrowly against F
     and I (10 of 12, the minimum; pooled not significant, 8 / 7)
@@ -232,8 +233,8 @@ the results were seen.
     VERIFY, passed 2-3. Fair baselines have no seat-and-align step; that is an open
     fairness item.
   - It rests on an assumed 3 deg yaw and tilt spec. I's bad units sit just past it, and
-    at 4 and 5 deg they fall from 32 to 8 and 3 (gantry standard; POST HOC rescoring,
-    seed 20261130 only).
+    at 4 and 5 deg they fall to 8-13 and 2-3 (gantry standard, three seeds; POST HOC
+    rescoring).
   - It rests partly on the simulator's constant, tared-out F/T bias. Under F/T drift
     on the arm (heldout2), C passed 8 of the 40 trials at 0.3 N/s, because VERIFY's
     force-target preload lifted seated plugs (POST HOC trace).
@@ -855,7 +856,7 @@ value that has not been measured on real parts.
 | Protective stop | 30 N or 0.6 N m measured; Micro-Fit 48 N or 0.6 N m | assumed cobot-style cell limit; Micro-Fit 1.5 x the datasheet's 32 N maximum mating force |
 | Damage | 45 N contact force sustained over 10 ms; Micro-Fit 58 N | assumed conservative limit for a small plastic housing on a PCB; Micro-Fit: the datasheet's minimum latch strength |
 | Micro-Fit insert target and abort | 35.2 N and 40 N, every controller (30 N insert target in benchmark_v0.2c) | 1.1 x and 1.25 x the datasheet's 32 N maximum mating force; the margins are assumed |
-| Success tolerances | depth within 0.5 mm, lateral within clearance + 0.15 mm, tilt and yaw within 3 deg | assumed seating specification; a POST HOC rescoring of seed 20261130 at 2-5 deg is in [`results/v0.2f_evidence/TOLERANCE.md`](results/v0.2f_evidence/TOLERANCE.md) |
+| Success tolerances | depth within 0.5 mm, lateral within clearance + 0.15 mm, tilt and yaw within 3 deg | assumed seating specification; a POST HOC rescoring of all three seeds at 2-5 deg is in [`results/v0.2f_evidence/TOLERANCE.md`](results/v0.2f_evidence/TOLERANCE.md) |
 
 ## The controllers
 

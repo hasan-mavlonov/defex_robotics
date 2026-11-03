@@ -218,9 +218,9 @@ def prediction_tables(rows: dict, root: Path) -> list[str]:
                                f"{mcnemar(b, c):.2g} | {100 * t:+.1f} ({100 * lo:+.1f} to {100 * hi:+.1f}) points |")
     out += ["", "## Final pose of the bad units passed on good parts", "",
             "What the rig's pose measurement has to resolve. Depth is from the socket mouth (housing-only full "
-            "depth 15 mm, Micro-Fit 8 mm); the pass limits are depth >= full - 0.5 mm and |tilt|, |yaw| <= 3 deg.",
+            "depth 15 mm, Micro-Fit 8 mm); the pass limits are depth >= full - 0.5 mm and abs(tilt), abs(yaw) <= 3 deg.",
             "", "| Machine | Part | Ctrl | Bad units | At full depth | Of those, tilt > 3 deg / yaw > 3 deg | "
-            "max(|tilt|, |yaw|) range (deg) |", "|---|---|---|---|---|---|---|"]
+            "max of abs(tilt), abs(yaw), range (deg) |", "|---|---|---|---|---|---|---|"]
     for m in machines:
         for p in ("housing-only", "Micro-Fit good parts"):
             full = 14.5 if p == "housing-only" else 7.5

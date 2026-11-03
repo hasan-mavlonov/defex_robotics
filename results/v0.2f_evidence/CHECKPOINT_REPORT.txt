@@ -30,9 +30,31 @@ C loses to I on all three seeds in four places: the worst-case condition, the 1.
 hand-eye bias, arm friction 1.0, and gantry latching with 1 mm camera noise. In each,
 C runs out of retries or time, or (on the arm) hits a protective stop.
 
-Tolerance sensitivity could not be computed exactly from the logs, so no result was
-rescored (`TOLERANCE.md`). C's slow tail is its retries, and the retries sit in the same
-high-camera-error trials (`PHASES.md` (d), (d2)).
+Does the bad-unit edge survive a looser seating spec? This is a POST HOC rescoring of
+seed 20261130 only, from an exact replay with the per-axis offset, TCP speed and latch
+flags logged. All 6,000 replayed rows match the benchmark. It is not a replacement for any
+pre-registered result. With yaw and tilt allowed to 4 or 5 deg:
+- I's bad units on standard fall from 32 to 8 and 3 (gantry), and from 32 to 7 and 3
+  (arm). C stays at 0.
+- C's standard lead over I shrinks to 31/10 and 26/10 on the gantry (p = 0.0015, 0.011).
+  On the arm it shrinks to 30/17 and 27/18 (p = 0.079, 0.23), no longer significant.
+- On heldout, I seats more than C as the spec loosens (gantry 23/69 at 5 deg).
+- At 2 deg the lead widens: gantry 122/2, arm 119/7.
+- A depth tolerance of 1.0 mm instead of 0.5 mm changes at most two trials per cell.
+
+Full table: `TOLERANCE.md` (3) and `REPORT.txt` part 3. C's slow tail is its retries,
+and the retries sit in the same high-camera-error trials (`PHASES.md` (d), (d2)).
+
+| Seed 20261130, POST HOC rescore | Yaw/tilt 2 deg | 3 deg (as run) | 4 deg | 5 deg |
+|---|---|---|---|---|
+| gantry standard, C-only / I-only | 122 / 2 | 53 / 8 | 31 / 10 | 26 / 10 |
+| gantry standard, bad units C / I / J | 3 / 110 / 7 | 0 / 32 / 0 | 0 / 8 / 0 | 0 / 3 / 0 |
+| arm standard, C-only / I-only | 119 / 7 | 54 / 16 | 30 / 17 | 27 / 18 |
+| arm standard, bad units C / I / J | 1 / 107 / 5 | 0 / 32 / 0 | 0 / 7 / 0 | 0 / 3 / 0 |
+| gantry heldout, C-only / I-only | 88 / 46 | 48 / 60 | 30 / 68 | 23 / 69 |
+| arm heldout, C-only / I-only | 92 / 50 | 52 / 60 | 35 / 64 | 33 / 68 |
+
+On housing-only suites F equals I. Depth tolerance 0.5 mm (as run).
 
 ## Results (seed 20261130, benchmark_v0.2e, v0.2e code ddd0d34)
 
@@ -94,8 +116,10 @@ units and 572 good units/h.
   noise_0.5mm conditions, C and I seat exactly the same trials on every seed and both
   machines (`PERCOND.md`). On heldout and latching, a fair baseline matches or beats C.
 - **"Passes no out-of-spec connector."** This rests on the assumed 3 deg seating spec
-  (I's misses are 3.0-5.5 deg) and on C's VERIFY, which J shows another insertion can
-  use. Fair baselines have no seat-and-align step; that is an open fairness item.
+  and on C's VERIFY, which J shows another insertion can use. Fair baselines have no
+  seat-and-align step; that is an open fairness item. Under a 5 deg spec (POST HOC, one
+  seed), I passes 3 bad units per machine on standard instead of 32. Under a 2 deg spec it
+  passes 110 and 107, and C passes 3 and 1.
 - **"Rejects deliberately bad parts."** C shares this with H, I and J: each passed 0 of
   2,200 on every seed. D and F pass most of them.
 - **Throughput.** On every seed and both machines, C makes fewer good units per hour than
@@ -110,12 +134,14 @@ units and 572 good units/h.
    0.5 mm or less, C and I seat the same trials. With a 1.5 mm hand-eye bias, C loses.
 3. For a pilot customer: **what is the seating spec** for their connector? What angle and
    depth count as seated, and is acceptance by angle, by click, or by pull test? The
-   3 deg used here is assumed, and the bad-unit gap depends on it.
+   3 deg used here is assumed, and the rescoring shows the bad-unit gap and the arm lead
+   depend on it.
 4. Does the customer's current cell already square up the part after seating? If it
    does, J-like behaviour is the fair comparison for C's VERIFY.
-5. Should the next benchmark log the per-axis lateral offset, final TCP speed and latch
-   state in `trials.csv`? This changes no controller. It would make a tolerance rescoring
-   exact, which was not possible here (10,507 of 288,000 rows cannot be recomputed).
+5. The logging needed for exact rescoring now exists (commit 9197b9c, five new
+   trials.csv columns, no behaviour change). Should the next benchmark run on it, and
+   should a seating spec be pre-registered as a range (for example 2-5 deg), not one
+   assumed value?
 6. C's tail could shrink with fewer retries, but fewer retries would cost success in the
    high-noise conditions. Is meeting the W6 target worth that? This was not tested.
 

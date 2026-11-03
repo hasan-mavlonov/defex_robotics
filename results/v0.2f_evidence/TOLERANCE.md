@@ -46,7 +46,7 @@ Rule: depth and tilt and yaw as above, lateral radius <= limit (the only reading
 | 20261130 | arm heldout | 5000 | 4950 | {'in band': 50} | 0 |
 | 20261130 | arm latch_spread | 9000 | 8296 | 0 | {'seated_out_of_tolerance:latched': 355, 'false_accept': 349} |
 
-Rows: 288000. Mismatches: 10507. **The recomputation does not reproduce gt_seated.** Per the brief, this part stops here: no success, bad-unit or lead figure is rescored at any other tolerance.
+Rows: 288000. Mismatches: 10507. **The recomputation does not reproduce gt_seated.** So no figure is rescored from the four logged columns. The exact rescoring further down uses a replay with the missing values logged.
 
 Why it does not match:
 
@@ -54,7 +54,113 @@ Why it does not match:
 - 8717 rows on the latching suites pass every logged pose check but are not seated: the latched check (`seated_out_of_tolerance:latched`, and `false_accept` on bad parts) or the settled check; neither is logged.
 - 6 rows on the housing-only suites pass every logged pose check but are not seated: the settled (TCP speed) check, which is not logged.
 
-A reading of the radius that passes every row in the sqrt 2 band when depth, tilt and yaw pass (an assumption, not the code's rule) leaves these mismatches on the housing-only suites (standard and heldout): seed 20261123: 4, seed 20261124: 2, seed 20261130: 0. Zero on one seed does not make the rule exact: it only says no row in that seed's data sat in the band and failed per axis. This is reported so the lead can decide whether a bounded rescoring is worth doing; it is not done here.
+A reading of the radius that passes every row in the sqrt 2 band when depth, tilt and yaw pass (an assumption, not the code's rule) leaves these mismatches on the housing-only suites (standard and heldout): seed 20261123: 4, seed 20261124: 2, seed 20261130: 0. Zero on one seed does not make the rule exact: it only says no row in that seed's data sat in the band and failed per axis. This is reported so the lead can decide whether a bounded rescoring is worth doing; it is not used.
 
-What an exact rescoring would need, without new simulation: none is possible from these files. With a replay of the affected trials (simulation, and benchmark seeds may be replayed only to diagnose a named failure), or with trials.csv logging the per-axis offset, the TCP speed at the end and the latch state, gt_seated could be recomputed at any tolerance.
+## Exact rescoring from the replay (seed 20261130)
+
+POST HOC throughout. Every number in this section is a rescoring under tolerances that were not pre-registered. None replaces a pre-registered result.
+
+`results/v0.2f_evidence/replay_20261130`: the conditions whose rows the old logs cannot rescore, replayed for C, F, I and J on code that adds only five logged columns (`final_x_mm`, `final_y_mm`, `final_tcp_speed_mm_s`, `final_latched`, `final_latch_intact`). The plan, written before the run, is `RUN_PLAN.md` in that folder.
+
+### (1) The replay reproduces the committed rows
+
+| Run | replayed conditions | rows | rows identical in every committed column but wall_time_s | differing cells | gt_seated recomputed exactly (as-run tolerances) | commit | dirty |
+|---|---|---|---|---|---|---|---|
+| gantry standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1200 | 0 | 1200 | 2dc7009 | False |
+| gantry heldout | heldout_mischar_1mm, heldout_mischar_2mm, heldout_worst_case | 1200 | 1200 | 0 | 1200 | 2dc7009 | True |
+| gantry latching | mf_noise_1mm | 800 | 800 | 0 | 800 | 2dc7009 | True |
+| arm standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1200 | 0 | 1200 | 2dc7009 | True |
+| arm heldout | heldout_mischar_1mm, heldout_mischar_2mm | 800 | 800 | 0 | 800 | 2dc7009 | True |
+| arm latching | mf_noise_1mm | 800 | 800 | 0 | 800 | 2dc7009 | True |
+
+`dirty` is True for the five runs that started after the analysis files `experiments/v02f_evidence.py` and `tests/test_v02f_evidence.py` were edited during the replay (git_dirty counts any tracked change outside results/). Neither file is imported by the runner or the simulation; `git diff 2dc7009 -- . ':!results'` lists only those two files. The row identity above is the direct check.
+
+### (2) How every other row is rescored, and a check of that rule
+
+Rows in replayed conditions use the replayed values (`exact_seated`). All other rows use `logged_seated`: seated as run means the per-axis lateral, settled and latched checks passed, so only depth and angle decide; not seated as run with depth and angles passing means one of those checks failed, so the row stays unseated. Rows the rule cannot decide must all be in replayed conditions (asserted). Success = rescored seated and none of the logged outcome blockers (stop, penetration, damage, workspace limit, timeout, declared failure).
+
+Check on the replayed conditions: where the logged-columns rule decides, it agrees with the replayed exact rule on 70689 of 70689 (row, tolerance) cases. It could not decide 1311 cases there, which the replay settles. Undecided cases outside the replayed conditions: 0.
+
+### (3) Rescored seated counts, C's lead and bad units (POST HOC)
+
+Good-part trials of seed 20261130 only: standard 2,000, heldout 500, latching good parts 600 per machine. Yaw and tilt share one tolerance. Lateral margin and settled speed as run. The row marked `as run` is the pre-registered scoring and must equal benchmark_v0.2e; it is checked against the logged `success`. C-only / X-only are discordant pairs on the same trials, exact McNemar p, descriptive only (post hoc, no correction).
+
+| Machine | Suite | Depth tol (mm) | Yaw/tilt tol (deg) | Seated C / F / I / J | C-only / I-only (p) | C-only / F-only (p) | Bad units C / F / I / J |
+|---|---|---|---|---|---|---|---|
+| gantry | standard | 0.5 | 2.0 | 1978 / 1858 / 1858 / 1952 | 122 / 2 (<1e-6) | 122 / 2 (<1e-6) | 3 / 110 / 110 / 7 |
+| gantry | standard | 0.5 | 2.5 | 1981 / 1907 / 1907 / 1958 | 79 / 5 (<1e-6) | 79 / 5 (<1e-6) | 0 / 61 / 61 / 1 |
+| gantry | standard | 0.5 (as run) | 3.0 (as run) | 1981 / 1936 / 1936 / 1959 | 53 / 8 (<1e-6) | 53 / 8 (<1e-6) | 0 / 32 / 32 / 0 |
+| gantry | standard | 0.5 | 3.5 | 1981 / 1955 / 1955 / 1959 | 36 / 10 (0.00016) | 36 / 10 (0.00016) | 0 / 13 / 13 / 0 |
+| gantry | standard | 0.5 | 4.0 | 1981 / 1960 / 1960 / 1959 | 31 / 10 (0.0015) | 31 / 10 (0.0015) | 0 / 8 / 8 / 0 |
+| gantry | standard | 0.5 | 5.0 | 1981 / 1965 / 1965 / 1959 | 26 / 10 (0.011) | 26 / 10 (0.011) | 0 / 3 / 3 / 0 |
+| gantry | standard | 1.0 | 2.0 | 1978 / 1858 / 1858 / 1952 | 122 / 2 (<1e-6) | 122 / 2 (<1e-6) | 3 / 110 / 110 / 7 |
+| gantry | standard | 1.0 | 2.5 | 1981 / 1907 / 1907 / 1958 | 79 / 5 (<1e-6) | 79 / 5 (<1e-6) | 0 / 61 / 61 / 1 |
+| gantry | standard | 1.0 | 3.0 | 1981 / 1936 / 1936 / 1959 | 53 / 8 (<1e-6) | 53 / 8 (<1e-6) | 0 / 32 / 32 / 0 |
+| gantry | standard | 1.0 | 3.5 | 1981 / 1955 / 1955 / 1959 | 36 / 10 (0.00016) | 36 / 10 (0.00016) | 0 / 13 / 13 / 0 |
+| gantry | standard | 1.0 | 4.0 | 1981 / 1960 / 1960 / 1959 | 31 / 10 (0.0015) | 31 / 10 (0.0015) | 0 / 8 / 8 / 0 |
+| gantry | standard | 1.0 | 5.0 | 1981 / 1966 / 1966 / 1959 | 25 / 10 (0.017) | 25 / 10 (0.017) | 0 / 2 / 2 / 0 |
+| gantry | heldout | 0.5 | 2.0 | 407 / 365 / 365 / 439 | 88 / 46 (0.00036) | 88 / 46 (0.00036) | 0 / 91 / 91 / 6 |
+| gantry | heldout | 0.5 | 2.5 | 407 / 388 / 388 / 444 | 70 / 51 (0.1) | 70 / 51 (0.1) | 0 / 68 / 68 / 1 |
+| gantry | heldout | 0.5 (as run) | 3.0 (as run) | 407 / 419 / 419 / 444 | 48 / 60 (0.29) | 48 / 60 (0.29) | 0 / 37 / 37 / 1 |
+| gantry | heldout | 0.5 | 3.5 | 407 / 434 / 434 / 444 | 38 / 65 (0.01) | 38 / 65 (0.01) | 0 / 22 / 22 / 1 |
+| gantry | heldout | 0.5 | 4.0 | 407 / 445 / 445 / 445 | 30 / 68 (0.00016) | 30 / 68 (0.00016) | 0 / 11 / 11 / 0 |
+| gantry | heldout | 0.5 | 5.0 | 407 / 453 / 453 / 445 | 23 / 69 (1.7e-06) | 23 / 69 (1.7e-06) | 0 / 3 / 3 / 0 |
+| gantry | heldout | 1.0 | 2.0 | 407 / 365 / 365 / 439 | 88 / 46 (0.00036) | 88 / 46 (0.00036) | 0 / 91 / 91 / 6 |
+| gantry | heldout | 1.0 | 2.5 | 407 / 389 / 389 / 444 | 70 / 52 (0.12) | 70 / 52 (0.12) | 0 / 67 / 67 / 1 |
+| gantry | heldout | 1.0 | 3.0 | 407 / 420 / 420 / 444 | 48 / 61 (0.25) | 48 / 61 (0.25) | 0 / 36 / 36 / 1 |
+| gantry | heldout | 1.0 | 3.5 | 407 / 435 / 435 / 444 | 38 / 66 (0.0078) | 38 / 66 (0.0078) | 0 / 21 / 21 / 1 |
+| gantry | heldout | 1.0 | 4.0 | 407 / 446 / 446 / 445 | 30 / 69 (0.00011) | 30 / 69 (0.00011) | 0 / 10 / 10 / 0 |
+| gantry | heldout | 1.0 | 5.0 | 407 / 455 / 455 / 445 | 23 / 71 (<1e-6) | 23 / 71 (<1e-6) | 0 / 1 / 1 / 0 |
+| gantry | latching | 0.5 | 2.0 | 564 / 549 / 547 / 547 | 28 / 11 (0.0095) | 26 / 11 (0.02) | 21 / 44 / 45 / 45 |
+| gantry | latching | 0.5 | 2.5 | 577 / 584 / 583 / 583 | 11 / 17 (0.34) | 10 / 17 (0.25) | 8 / 9 / 9 / 9 |
+| gantry | latching | 0.5 (as run) | 3.0 (as run) | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| gantry | latching | 0.5 | 3.5 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| gantry | latching | 0.5 | 4.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| gantry | latching | 0.5 | 5.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| gantry | latching | 1.0 | 2.0 | 564 / 549 / 547 / 547 | 28 / 11 (0.0095) | 26 / 11 (0.02) | 21 / 44 / 45 / 45 |
+| gantry | latching | 1.0 | 2.5 | 577 / 584 / 583 / 583 | 11 / 17 (0.34) | 10 / 17 (0.25) | 8 / 9 / 9 / 9 |
+| gantry | latching | 1.0 | 3.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| gantry | latching | 1.0 | 3.5 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| gantry | latching | 1.0 | 4.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| gantry | latching | 1.0 | 5.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| arm | standard | 0.5 | 2.0 | 1961 / 1849 / 1849 / 1930 | 119 / 7 (<1e-6) | 119 / 7 (<1e-6) | 1 / 107 / 107 / 5 |
+| arm | standard | 0.5 | 2.5 | 1961 / 1900 / 1900 / 1934 | 72 / 11 (<1e-6) | 72 / 11 (<1e-6) | 1 / 56 / 56 / 1 |
+| arm | standard | 0.5 (as run) | 3.0 (as run) | 1962 / 1924 / 1924 / 1935 | 54 / 16 (5.9e-06) | 54 / 16 (5.9e-06) | 0 / 32 / 32 / 0 |
+| arm | standard | 0.5 | 3.5 | 1962 / 1944 / 1944 / 1935 | 35 / 17 (0.018) | 35 / 17 (0.018) | 0 / 12 / 12 / 0 |
+| arm | standard | 0.5 | 4.0 | 1962 / 1949 / 1949 / 1935 | 30 / 17 (0.079) | 30 / 17 (0.079) | 0 / 7 / 7 / 0 |
+| arm | standard | 0.5 | 5.0 | 1962 / 1953 / 1953 / 1935 | 27 / 18 (0.23) | 27 / 18 (0.23) | 0 / 3 / 3 / 0 |
+| arm | standard | 1.0 | 2.0 | 1961 / 1849 / 1849 / 1930 | 119 / 7 (<1e-6) | 119 / 7 (<1e-6) | 1 / 107 / 107 / 5 |
+| arm | standard | 1.0 | 2.5 | 1961 / 1900 / 1900 / 1934 | 72 / 11 (<1e-6) | 72 / 11 (<1e-6) | 1 / 56 / 56 / 1 |
+| arm | standard | 1.0 | 3.0 | 1962 / 1924 / 1924 / 1935 | 54 / 16 (5.9e-06) | 54 / 16 (5.9e-06) | 0 / 32 / 32 / 0 |
+| arm | standard | 1.0 | 3.5 | 1962 / 1944 / 1944 / 1935 | 35 / 17 (0.018) | 35 / 17 (0.018) | 0 / 12 / 12 / 0 |
+| arm | standard | 1.0 | 4.0 | 1962 / 1949 / 1949 / 1935 | 30 / 17 (0.079) | 30 / 17 (0.079) | 0 / 7 / 7 / 0 |
+| arm | standard | 1.0 | 5.0 | 1962 / 1954 / 1954 / 1935 | 26 / 18 (0.29) | 26 / 18 (0.29) | 0 / 2 / 2 / 0 |
+| arm | heldout | 0.5 | 2.0 | 384 / 342 / 342 / 376 | 92 / 50 (0.00053) | 92 / 50 (0.00053) | 0 / 84 / 84 / 3 |
+| arm | heldout | 0.5 | 2.5 | 384 / 364 / 364 / 379 | 74 / 54 (0.093) | 74 / 54 (0.093) | 0 / 62 / 62 / 0 |
+| arm | heldout | 0.5 (as run) | 3.0 (as run) | 384 / 392 / 392 / 379 | 52 / 60 (0.51) | 52 / 60 (0.51) | 0 / 34 / 34 / 0 |
+| arm | heldout | 0.5 | 3.5 | 384 / 406 / 406 / 379 | 41 / 63 (0.039) | 41 / 63 (0.039) | 0 / 20 / 20 / 0 |
+| arm | heldout | 0.5 | 4.0 | 384 / 413 / 413 / 379 | 35 / 64 (0.0046) | 35 / 64 (0.0046) | 0 / 13 / 13 / 0 |
+| arm | heldout | 0.5 | 5.0 | 384 / 419 / 419 / 379 | 33 / 68 (0.00064) | 33 / 68 (0.00064) | 0 / 7 / 7 / 0 |
+| arm | heldout | 1.0 | 2.0 | 384 / 342 / 342 / 376 | 92 / 50 (0.00053) | 92 / 50 (0.00053) | 0 / 84 / 84 / 3 |
+| arm | heldout | 1.0 | 2.5 | 384 / 364 / 364 / 379 | 74 / 54 (0.093) | 74 / 54 (0.093) | 0 / 62 / 62 / 0 |
+| arm | heldout | 1.0 | 3.0 | 384 / 392 / 392 / 379 | 52 / 60 (0.51) | 52 / 60 (0.51) | 0 / 34 / 34 / 0 |
+| arm | heldout | 1.0 | 3.5 | 384 / 406 / 406 / 379 | 41 / 63 (0.039) | 41 / 63 (0.039) | 0 / 20 / 20 / 0 |
+| arm | heldout | 1.0 | 4.0 | 384 / 413 / 413 / 379 | 35 / 64 (0.0046) | 35 / 64 (0.0046) | 0 / 13 / 13 / 0 |
+| arm | heldout | 1.0 | 5.0 | 384 / 421 / 421 / 379 | 32 / 69 (0.0003) | 32 / 69 (0.0003) | 0 / 5 / 5 / 0 |
+| arm | latching | 0.5 | 2.0 | 540 / 525 / 525 / 534 | 36 / 21 (0.063) | 36 / 21 (0.063) | 12 / 49 / 48 / 39 |
+| arm | latching | 0.5 | 2.5 | 552 / 561 / 562 / 568 | 23 / 33 (0.23) | 23 / 32 (0.28) | 0 / 13 / 11 / 5 |
+| arm | latching | 0.5 (as run) | 3.0 (as run) | 552 / 571 / 570 / 572 | 19 / 37 (0.022) | 18 / 37 (0.014) | 0 / 3 / 3 / 1 |
+| arm | latching | 0.5 | 3.5 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| arm | latching | 0.5 | 4.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| arm | latching | 0.5 | 5.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| arm | latching | 1.0 | 2.0 | 540 / 525 / 525 / 534 | 36 / 21 (0.063) | 36 / 21 (0.063) | 12 / 49 / 48 / 39 |
+| arm | latching | 1.0 | 2.5 | 552 / 561 / 562 / 568 | 23 / 33 (0.23) | 23 / 32 (0.28) | 0 / 13 / 11 / 5 |
+| arm | latching | 1.0 | 3.0 | 552 / 571 / 570 / 572 | 19 / 37 (0.022) | 18 / 37 (0.014) | 0 / 3 / 3 / 1 |
+| arm | latching | 1.0 | 3.5 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| arm | latching | 1.0 | 4.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| arm | latching | 1.0 | 5.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+
+### (4) In short (POST HOC)
+
+On standard, C's lead over I (C-only / I-only) goes from 53/8 (p <1e-6) at 3.0 deg, 31/10 (p 0.0015) at 4.0 deg, 26/10 (p 0.011) at 5.0 deg on the gantry, and from 54/16 (p 5.9e-06) at 3.0 deg, 30/17 (p 0.079) at 4.0 deg, 27/18 (p 0.23) at 5.0 deg on the arm. Bad units at 3 / 4 / 5 deg: gantry C 0, I 32, J 0 / C 0, I 8, J 0 / C 0, I 3, J 0; arm C 0, I 32, J 0 / C 0, I 7, J 0 / C 0, I 3, J 0. On heldout at 5 deg, C-only / I-only is 23/69 (p 1.7e-06) (gantry) and 33/68 (p 0.00064) (arm). At 2 deg the lead widens: 122/2 (p <1e-6) (gantry standard), with bad units C 3, I 110, J 7. A 1.0 mm depth tolerance changes almost nothing: compare the 0.5 and 1.0 mm rows. F equals I on housing-only suites.
 

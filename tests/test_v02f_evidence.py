@@ -150,3 +150,37 @@ def test_trial_result_new_columns_round_trip(tmp_path):
     back = read_trials_csv(tmp_path / "t.csv")[0]
     assert (back.final_x_mm, back.final_y_mm, back.final_tcp_speed_mm_s) == (0.1, -0.2, 0.5)
     assert back.final_latched is True and back.final_latch_intact is False
+
+
+def test_logged_seated_decides_only_what_the_old_columns_can():
+    crit = {**CRIT, "max_final_speed_mm_s": 2.0}
+    seated_row = row(yaw=2.6, gt_seated="True")
+    assert ev.logged_seated(seated_row, HOUSING, crit, 0.5, 2.5) is False
+    assert ev.logged_seated(seated_row, HOUSING, crit, 0.5, 3.0) is True
+    # not seated although depth and angles pass as run: an unlogged check failed, stays unseated
+    assert ev.logged_seated(row(gt_seated="False"), HOUSING, crit, 1.0, 5.0) is False
+    # not seated, yaw 3.4 deg: still unseated at 3 deg, undecidable at 3.5 deg
+    r = row(yaw=3.4, gt_seated="False")
+    assert ev.logged_seated(r, HOUSING, crit, 0.5, 3.0) is False
+    assert ev.logged_seated(r, HOUSING, crit, 0.5, 3.5) is None
+    # ... unless the radius already fails the lateral check on any axis reading
+    assert ev.logged_seated(row(yaw=3.4, lat=1.0, gt_seated="False"), HOUSING, crit, 0.5, 3.5) is False
+    # depth 14.2 mm: unseated at 0.5 mm, undecidable at 1.0 mm
+    assert ev.logged_seated(row(depth=14.2, gt_seated="False"), HOUSING, crit, 1.0, 3.0) is None
+
+
+def test_exact_seated_uses_per_axis_speed_and_latch():
+    crit = {**CRIT, "max_final_speed_mm_s": 2.0}
+    base = dict(final_x_mm="0.6", final_y_mm="-0.6", final_tcp_speed_mm_s="0.1", final_latched="",
+                final_latch_intact="")
+    assert ev.exact_seated(row(lat=0.85, **base), HOUSING, crit, 0.5, 3.0)
+    assert not ev.exact_seated(row(**{**base, "final_tcp_speed_mm_s": "2.5"}), HOUSING, crit, 0.5, 3.0)
+    assert ev.exact_seated(row(yaw=3.4, **base), HOUSING, crit, 0.5, 3.5)
+    mf = {**HOUSING, "connector": "microfit3_4ckt", "depth_mm": 8.0, "lat_limit_mm": 0.3}
+    latch = dict(final_x_mm="0.1", final_y_mm="0.1", final_tcp_speed_mm_s="0.1")
+    assert ev.exact_seated(row(depth=7.9, final_latched="True", final_latch_intact="True", **latch), mf, crit, 0.5, 3.0)
+    assert not ev.exact_seated(row(depth=7.9, final_latched="True", final_latch_intact="False", **latch), mf, crit,
+                               0.5, 3.0)
+    assert ev.rescored_success(row(failure_reason="false_accept"), True)
+    assert not ev.rescored_success(row(failure_reason="timeout"), True)
+    assert not ev.rescored_success(row(declared_success="False"), True)

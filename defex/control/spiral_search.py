@@ -107,6 +107,16 @@ class SpiralSearchController(InsertionController):
         self._fail_reason = ""
         self._pulled = False
         self._pull_retries_left = c.pull_retries
+        # v0.2f retract cap (off unless cfg.retract_pull_cap): C's gentle-retract threshold, from the same budget.
+        m = ctx.connector.mating
+        a = AdaptiveConfig()
+        budget = ctx.connector.force_budget
+        stop = budget.protective_stop_n if budget is not None else a.max_force_n * a.retract_stuck_force_factor
+        self._retract_pull_cap = a.retract_pull_cap_fraction * stop
+        self._cap_on = bool(c.retract_pull_cap and m is not None and m.latch_retention_force_n > 0.0)
+        self._retry_retract = False
+        self._held_reseated = False
+        self._no_retract = False
         s = contact_speed_scale(ctx)  # W5: same fixture-aware limit as C
         self._v_descent = c.descent_speed_mm_s * MM * s
         self._v_insert = c.insert_speed_mm_s * MM * s
@@ -200,7 +210,19 @@ class SpiralSearchController(InsertionController):
         return handler(obs)
 
     def _approach_step(self, obs: Observation) -> Command:
+        if self._retry_retract and self._pull_capped(obs):
+            if not self._held_reseated:
+                # As C: the plug may have latched as the attempt was cut short. Push it back and run the end check
+                # (INSERT's seat rule; H and I then pull), once per trial.
+                self._held_reseated = True
+                self._retry_retract = False
+                self._no_retract = False
+                self.log(obs.t, "gentle_retract", "held while backing out: re-seat and check")
+                self._enter(obs.t, INSERT, "held_reseat")
+                return self._cmd(30.0)
+            return self._fail(obs, "stuck_during_retract")
         if self._reached(obs):
+            self._retry_retract = False
             self._tare = []
             self._enter(obs.t, TARE)
         return self._cmd(self.cfg.transit_speed_mm_s)
@@ -344,6 +366,7 @@ class SpiralSearchController(InsertionController):
         self.xy = self.xy + self.adm.x
         self.adm.reset()
         self.z = self._mouth_z() + self.cfg.retract_clearance_mm * MM
+        self._retry_retract = True
         self._enter(obs.t, APPROACH, "retry")
         return self._cmd(self.cfg.retract_speed_mm_s)
 
@@ -432,10 +455,31 @@ class SpiralSearchController(InsertionController):
         return self._cmd(10.0)
 
     def _failure_step(self, obs: Observation) -> Command:
+        if not self._no_retract and self._pull_capped(obs):
+            self.log(obs.t, "abort", "plug held while backing out: left in place")
+        if self._no_retract:
+            # As C: command the plug where it is, so the servo stops pulling, and leave it for the operator.
+            if not self.done and self._reached(obs, tol=5e-6):
+                self.finish(obs.t, False, self._fail_reason or "unknown")
+            return self._cmd(self.cfg.retract_speed_mm_s)
         self.z = self._mouth_z() + self.cfg.retract_clearance_mm * MM
         if not self.done and self._reached(obs, tol=5e-6):
             self.finish(obs.t, False, self._fail_reason or "unknown")
         return self._cmd(self.cfg.retract_speed_mm_s)
+
+
+    def _pull_capped(self, obs: Observation) -> bool:
+        """v0.2f, C's gentle retract (latching parts, cfg.retract_pull_cap): stop pulling a plug that holds."""
+        if not self._cap_on:
+            return False
+        f_ax = float(self._wrench(obs)[0][2])
+        if f_ax >= -self._retract_pull_cap:
+            return False
+        self._no_retract = True
+        self.z = float(obs.rel_pose.p[2])
+        self.log(obs.t, "gentle_retract", f"pull {-f_ax:.1f} N above {self._retract_pull_cap:.1f} N: "
+                                          f"stop pulling, plug held at {obs.depth / MM:.2f} mm")
+        return True
 
 
 class CompliantSpiralSearchController(SpiralSearchController):

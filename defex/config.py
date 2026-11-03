@@ -536,6 +536,12 @@ class SpiralSearchConfig:
     # admittance keeps running through the pull, re-push and re-seat (before: frozen at its INSERT value).
     repush_seat_gate: bool = False
     verify_lateral_compliance: bool = False
+    # v0.2f (results/v0.2f_baseline_retract_cap): C's gentle retract on every retract of a latching part. The cap
+    # is C's: AdaptiveConfig.retract_pull_cap_fraction x the connector's protective stop (0.75 x 48 N = 36 N).
+    # A retract pull past it stops pulling and holds the plug. On a retry retract, once per trial, the plug is
+    # pushed back and INSERT's seat rule runs again (H, I: then their latch check), as C re-seats and checks the
+    # latch; otherwise (a second hold, or the failure retract) the plug is left in place and the part failed.
+    retract_pull_cap: bool = False
 
 
 @dataclass(frozen=True)

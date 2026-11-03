@@ -541,3 +541,212 @@ Sub-timers (inclusive, in-loop wall time, per tick that called them):
 | J | AdaptiveInsertionController._click_in_trace | 17 | 13.9 | 25.5 | 25.5 |
 | J | AdaptiveInsertionController._tilt_verdict | 17 | 4.7 | 41.6 | 42.0 |
 
+## run5_arm_quiet (loaded)
+
+180 trials, 800460 ticks, commit ff75d45, 1-min load average per trial: min 8.4, mean 9.8, max 10.7. Controller reset (before the cycle, outside the loop), ms p50/max: C 0.14/146.80, G 0.24/1.67, J 0.17/0.35, F 0.02/0.05, I 0.02/0.05.
+
+| ctrl | state | ticks | total p50 | p99 | p99.9 | max | total > 2 ms (with GC) | cpu p99.9 | cpu max nogc | cpu > 2 ms (with GC) | best p50 | p99 | p99.9 | max | best > 0.5 ms | > 1 ms | > 2 ms | ticks with GC |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| C | ALL | 191939 | 46.5 | 126.8 | 306.9 | 5335.4 | 8 (1) | 220.8 | 1307.4 | 0 (0) | 17.6 | 27.8 | 51.7 | 642.4 | 15 | 0 | 0 | 142 |
+| C | ALIGN | 5179 | 36.7 | 121.4 | 287.4 | 604.2 | 0 (0) | 208.9 | 347.7 | 0 (0) | 11.7 | 37.4 | 60.5 | 82.2 | 0 | 0 | 0 | 4 |
+| C | APPROACH | 26508 | 47.4 | 124.1 | 174.9 | 730.3 | 0 (0) | 174.9 | 202.5 | 0 (0) | 23.2 | 26.5 | 52.4 | 53.6 | 0 | 0 | 0 | 18 |
+| C | DETECT | 14024 | 55.2 | 158.1 | 516.1 | 1128.8 | 0 (0) | 525.2 | 797.8 | 0 (0) | 25.0 | 31.6 | 223.7 | 304.6 | 0 | 0 | 0 | 18 |
+| C | FAILURE | 1907 | 50.4 | 132.2 | 175.9 | 307.8 | 0 (0) | 185.8 | 185.9 | 0 (0) | 24.1 | 27.7 | 29.4 | 29.7 | 0 | 0 | 0 | 1 |
+| C | IDLE | 36 | 63.4 | 201.7 | 216.4 | 218.1 | 0 (0) | 196.0 | 197.0 | 0 (0) | 32.7 | 36.3 | 36.7 | 36.8 | 0 | 0 | 0 | 0 |
+| C | INSERT | 88082 | 40.1 | 118.0 | 306.3 | 5335.4 | 8 (1) | 181.9 | 343.4 | 0 (0) | 15.2 | 25.8 | 45.2 | 130.3 | 0 | 0 | 0 | 60 |
+| C | RECOVER | 4134 | 49.9 | 139.1 | 1176.7 | 1301.5 | 0 (0) | 1187.0 | 1307.4 | 0 (0) | 24.5 | 26.6 | 628.3 | 642.4 | 15 | 0 | 0 | 5 |
+| C | VERIFY | 52069 | 46.3 | 126.8 | 216.9 | 978.8 | 0 (0) | 187.5 | 470.9 | 0 (0) | 17.9 | 27.3 | 40.2 | 159.7 | 0 | 0 | 0 | 36 |
+| G | ALL | 190328 | 46.5 | 126.2 | 284.3 | 9849.7 | 5 (3) | 201.6 | 1428.9 | 3 (3) | 17.6 | 27.7 | 52.1 | 811.5 | 12 | 0 | 0 | 135 |
+| G | ALIGN | 4413 | 33.7 | 118.5 | 154.3 | 9849.7 | 1 (1) | 167.5 | 368.2 | 1 (1) | 11.7 | 39.7 | 64.2 | 89.2 | 0 | 0 | 0 | 2 |
+| G | APPROACH | 26508 | 47.6 | 128.8 | 271.1 | 3179.8 | 2 (0) | 178.7 | 338.3 | 0 (0) | 23.2 | 26.0 | 51.8 | 54.7 | 0 | 0 | 0 | 22 |
+| G | DETECT | 11190 | 55.5 | 158.4 | 386.0 | 945.5 | 0 (0) | 390.4 | 783.0 | 0 (0) | 24.5 | 43.3 | 242.6 | 324.9 | 0 | 0 | 0 | 19 |
+| G | FAILURE | 1770 | 49.9 | 126.4 | 147.6 | 171.5 | 0 (0) | 151.5 | 186.4 | 0 (0) | 23.8 | 25.8 | 26.9 | 27.6 | 0 | 0 | 0 | 0 |
+| G | IDLE | 36 | 65.7 | 128.9 | 129.5 | 129.5 | 0 (0) | 143.8 | 143.9 | 0 (0) | 36.4 | 59.1 | 68.3 | 69.4 | 0 | 0 | 0 | 0 |
+| G | INSERT | 87690 | 40.2 | 116.5 | 196.7 | 7764.2 | 2 (2) | 172.1 | 327.9 | 2 (2) | 15.1 | 23.8 | 34.6 | 132.7 | 0 | 0 | 0 | 53 |
+| G | RECOVER | 3722 | 50.9 | 135.5 | 875.1 | 1424.7 | 0 (0) | 880.1 | 1428.9 | 0 (0) | 24.5 | 26.9 | 774.3 | 811.5 | 12 | 0 | 0 | 1 |
+| G | VERIFY | 54999 | 46.8 | 128.3 | 237.0 | 1018.9 | 0 (0) | 190.2 | 254.3 | 0 (0) | 17.9 | 27.8 | 51.2 | 184.2 | 0 | 0 | 0 | 38 |
+| J | ALL | 174251 | 42.8 | 128.8 | 263.1 | 7707.9 | 7 (2) | 199.3 | 523.3 | 2 (2) | 10.5 | 29.3 | 44.5 | 233.6 | 0 | 0 | 0 | 125 |
+| J | APPROACH | 27314 | 32.3 | 91.7 | 143.4 | 3444.2 | 2 (1) | 136.0 | 149.9 | 1 (1) | 9.0 | 11.2 | 21.8 | 35.4 | 0 | 0 | 0 | 12 |
+| J | DESCEND | 52568 | 30.3 | 89.7 | 231.9 | 7707.9 | 1 (1) | 144.3 | 221.6 | 1 (1) | 7.2 | 9.1 | 17.0 | 85.5 | 0 | 0 | 0 | 37 |
+| J | FAILURE | 996 | 34.1 | 352.6 | 2411.4 | 4804.3 | 3 (0) | 171.1 | 174.5 | 0 (0) | 8.7 | 9.3 | 10.7 | 11.1 | 0 | 0 | 0 | 0 |
+| J | IDLE | 36 | 48.4 | 105.0 | 107.5 | 107.8 | 0 (0) | 127.7 | 128.0 | 0 (0) | 17.4 | 19.9 | 19.9 | 19.9 | 0 | 0 | 0 | 0 |
+| J | INSERT | 15833 | 36.2 | 109.4 | 352.2 | 1754.8 | 0 (0) | 307.8 | 523.3 | 0 (0) | 10.8 | 12.5 | 121.2 | 233.6 | 0 | 0 | 0 | 22 |
+| J | RECOVER | 3154 | 55.2 | 150.5 | 191.9 | 479.7 | 0 (0) | 203.4 | 287.8 | 0 (0) | 27.6 | 29.0 | 47.2 | 51.2 | 0 | 0 | 0 | 2 |
+| J | SPIRAL | 12383 | 38.1 | 110.8 | 164.4 | 800.2 | 0 (0) | 161.7 | 176.9 | 0 (0) | 12.5 | 13.3 | 19.1 | 23.7 | 0 | 0 | 0 | 8 |
+| J | TARE | 2684 | 27.0 | 85.5 | 138.1 | 255.8 | 0 (0) | 136.5 | 172.9 | 0 (0) | 5.4 | 32.6 | 38.1 | 64.9 | 0 | 0 | 0 | 2 |
+| J | VERIFY | 59283 | 51.2 | 146.6 | 266.2 | 7164.7 | 1 (0) | 210.4 | 267.2 | 0 (0) | 20.6 | 30.4 | 54.0 | 188.9 | 0 | 0 | 0 | 42 |
+| F | ALL | 104015 | 32.5 | 94.6 | 181.7 | 7337.7 | 2 (1) | 151.4 | 197.3 | 1 (1) | 8.6 | 13.1 | 21.1 | 36.3 | 0 | 0 | 0 | 69 |
+| F | APPROACH | 27064 | 32.0 | 91.7 | 152.5 | 1411.4 | 0 (0) | 140.8 | 166.9 | 0 (0) | 8.9 | 9.7 | 20.9 | 21.5 | 0 | 0 | 0 | 19 |
+| F | DESCEND | 47297 | 29.8 | 88.1 | 225.6 | 7337.7 | 1 (1) | 147.1 | 169.9 | 1 (1) | 7.1 | 9.1 | 17.3 | 18.5 | 0 | 0 | 0 | 34 |
+| F | FAILURE | 757 | 33.6 | 97.9 | 329.6 | 366.0 | 0 (0) | 234.3 | 190.2 | 0 (0) | 9.1 | 9.5 | 10.3 | 10.7 | 0 | 0 | 0 | 1 |
+| F | IDLE | 36 | 44.8 | 101.7 | 104.1 | 104.4 | 0 (0) | 121.7 | 122.1 | 0 (0) | 13.3 | 18.7 | 19.6 | 19.7 | 0 | 0 | 0 | 0 |
+| F | INSERT | 14099 | 35.4 | 101.4 | 195.3 | 1810.0 | 0 (0) | 156.9 | 197.3 | 0 (0) | 10.7 | 12.9 | 19.9 | 28.5 | 0 | 0 | 0 | 7 |
+| F | SPIRAL | 12383 | 37.6 | 110.1 | 235.7 | 2092.1 | 1 (0) | 166.5 | 183.2 | 0 (0) | 12.3 | 13.9 | 29.1 | 30.6 | 0 | 0 | 0 | 8 |
+| F | TARE | 2379 | 26.4 | 81.8 | 150.5 | 310.5 | 0 (0) | 135.0 | 164.5 | 0 (0) | 5.3 | 30.4 | 34.7 | 36.3 | 0 | 0 | 0 | 0 |
+| I | ALL | 139927 | 34.0 | 94.8 | 164.5 | 7324.3 | 3 (3) | 147.2 | 205.6 | 3 (3) | 9.1 | 13.1 | 21.5 | 40.0 | 0 | 0 | 0 | 92 |
+| I | APPROACH | 27064 | 32.1 | 89.6 | 135.6 | 4507.0 | 2 (2) | 134.9 | 163.4 | 2 (2) | 9.0 | 10.8 | 21.3 | 22.3 | 0 | 0 | 0 | 16 |
+| I | DESCEND | 47297 | 29.9 | 85.2 | 181.2 | 7324.3 | 1 (1) | 140.8 | 159.3 | 1 (1) | 7.1 | 9.1 | 16.7 | 17.3 | 0 | 0 | 0 | 36 |
+| I | FAILURE | 2179 | 33.5 | 92.9 | 153.6 | 302.3 | 0 (0) | 127.0 | 138.2 | 0 (0) | 9.3 | 21.4 | 21.7 | 21.8 | 0 | 0 | 0 | 1 |
+| I | IDLE | 36 | 44.7 | 92.7 | 93.0 | 93.0 | 0 (0) | 107.5 | 107.5 | 0 (0) | 14.2 | 16.7 | 16.9 | 17.0 | 0 | 0 | 0 | 0 |
+| I | INSERT | 14099 | 35.4 | 102.5 | 159.8 | 882.5 | 0 (0) | 142.2 | 177.5 | 0 (0) | 10.7 | 13.3 | 25.4 | 27.5 | 0 | 0 | 0 | 7 |
+| I | SPIRAL | 12383 | 37.7 | 110.8 | 192.2 | 1038.1 | 0 (0) | 160.2 | 205.6 | 0 (0) | 12.5 | 14.6 | 18.6 | 23.3 | 0 | 0 | 0 | 7 |
+| I | TARE | 2379 | 26.7 | 76.1 | 118.3 | 140.9 | 0 (0) | 127.1 | 153.6 | 0 (0) | 5.3 | 31.3 | 37.1 | 40.0 | 0 | 0 | 0 | 1 |
+| I | VERIFY | 34490 | 34.9 | 99.1 | 173.4 | 1419.0 | 0 (0) | 158.0 | 180.4 | 0 (0) | 9.6 | 11.6 | 19.9 | 26.2 | 0 | 0 | 0 | 24 |
+
+Slowest ticks by best controller.step time (intrinsic cost):
+
+| ctrl | condition | seed | trial | t s | state -> after | best ms | in-loop total ms | cpu ms | GC | largest sub-timers ms |
+|---|---|---|---|---|---|---|---|---|---|---|
+| G | mf_moderate | 2027 | 0 | 5.35 | RECOVER -> ALIGN | 0.811 | 0.838 | 0.843 | 0 | _plan_correction 0.794; update_blocked 0.326; _contact_prior_update 0.145 |
+| G | mf_wrong_polarization | 2027 | 0 | 6.56 | RECOVER -> ALIGN | 0.796 | 0.899 | 0.904 | 0 | _plan_correction 0.855; update_blocked 0.362; _contact_prior_update 0.154 |
+| G | noise_2mm | 2027 | 0 | 6.964 | RECOVER -> ALIGN | 0.792 | 0.906 | 0.914 | 0 | _plan_correction 0.849; update_blocked 0.322; _contact_prior_update 0.184 |
+| G | mf_noise_1mm | 2027 | 0 | 5.664 | RECOVER -> ALIGN | 0.775 | 0.803 | 0.808 | 0 | _plan_correction 0.761; update_blocked 0.288; _contact_prior_update 0.146 |
+| G | mf_terminal_max_broken_latch | 2027 | 0 | 5.174 | RECOVER -> ALIGN | 0.774 | 0.806 | 0.811 | 0 | _plan_correction 0.762; update_blocked 0.289; _contact_prior_update 0.144 |
+| G | noise_2mm | 2027 | 0 | 15.79 | RECOVER -> ALIGN | 0.773 | 0.849 | 0.854 | 0 | _plan_correction 0.808; update_blocked 0.291; best_probe 0.166 |
+| G | mf_latch_early | 2027 | 0 | 5.268 | RECOVER -> ALIGN | 0.771 | 0.836 | 0.841 | 0 | _plan_correction 0.793; update_blocked 0.317; _contact_prior_update 0.146 |
+| G | mf_spread_half_latched | 2027 | 0 | 5.126 | RECOVER -> ALIGN | 0.763 | 0.788 | 0.794 | 0 | _plan_correction 0.746; update_blocked 0.283; _contact_prior_update 0.143 |
+| G | noise_2mm | 2027 | 0 | 13.464 | RECOVER -> ALIGN | 0.759 | 0.883 | 0.888 | 0 | _plan_correction 0.841; update_blocked 0.343; _contact_prior_update 0.155 |
+| G | generalization_combined | 2027 | 0 | 4.81 | RECOVER -> ALIGN | 0.758 | 0.872 | 0.877 | 0 | _plan_correction 0.830; update_blocked 0.349; _contact_prior_update 0.152 |
+| G | noise_2mm | 2027 | 0 | 10.952 | RECOVER -> ALIGN | 0.750 | 0.848 | 0.853 | 0 | _plan_correction 0.806; update_blocked 0.300; best_probe 0.153 |
+| G | noise_2mm | 2027 | 0 | 9.076 | RECOVER -> ALIGN | 0.736 | 1.425 | 1.429 | 0 | _plan_correction 1.350; update_blocked 0.438; _contact_prior_update 0.289 |
+| C | noise_2mm | 2027 | 0 | 6.964 | RECOVER -> ALIGN | 0.642 | 0.840 | 0.845 | 0 | _plan_correction 0.798; update_blocked 0.391; entry_probability_at 0.172 |
+| C | mf_moderate | 2027 | 0 | 5.35 | RECOVER -> ALIGN | 0.642 | 1.197 | 1.208 | 0 | _plan_correction 1.108; update_blocked 0.437; best_probe 0.287 |
+| C | generalization_combined | 2027 | 0 | 4.81 | RECOVER -> ALIGN | 0.641 | 1.241 | 1.251 | 1 | _plan_correction 1.153; update_blocked 0.439; entry_probability_at 0.284 |
+
+Sub-timers (inclusive, in-loop wall time, per tick that called them):
+
+| ctrl | function | ticks | p50 us | p99 us | max us |
+|---|---|---|---|---|---|
+| C | AdaptiveInsertionController._begin_latch_verify | 22 | 205.2 | 424.4 | 425.0 |
+| C | AdaptiveInsertionController._begin_verify | 42 | 57.9 | 406.3 | 424.3 |
+| C | AdaptiveInsertionController._click_in_trace | 22 | 122.0 | 290.1 | 294.5 |
+| C | AdaptiveInsertionController._diagnose | 63 | 147.9 | 364.6 | 367.0 |
+| C | AdaptiveInsertionController._plan_correction | 22 | 646.3 | 1204.3 | 1218.1 |
+| C | AdaptiveInsertionController._record_contact | 63 | 13.6 | 26.1 | 26.8 |
+| C | AdaptiveInsertionController._tilt_verdict | 22 | 40.5 | 82.5 | 82.7 |
+| C | HoleLocalizer.best_probe | 15 | 165.4 | 338.0 | 346.2 |
+| C | HoleLocalizer.entry_probability_at | 15 | 125.0 | 278.5 | 284.1 |
+| C | HoleLocalizer.update_blocked | 15 | 322.6 | 490.9 | 491.4 |
+| G | AdaptiveInsertionController._begin_latch_verify | 22 | 171.8 | 454.7 | 465.2 |
+| G | AdaptiveInsertionController._begin_verify | 43 | 55.3 | 446.1 | 467.2 |
+| G | AdaptiveInsertionController._click_in_trace | 22 | 109.1 | 322.6 | 333.7 |
+| G | AdaptiveInsertionController._diagnose | 61 | 100.3 | 302.4 | 310.0 |
+| G | AdaptiveInsertionController._plan_correction | 19 | 762.1 | 1261.3 | 1350.4 |
+| G | AdaptiveInsertionController._record_contact | 61 | 12.3 | 28.3 | 28.9 |
+| G | AdaptiveInsertionController._tilt_verdict | 22 | 32.5 | 66.0 | 66.4 |
+| G | AdaptiveLearnedController._contact_prior_update | 12 | 151.3 | 277.1 | 288.6 |
+| G | ContactPrior.localizer_term | 12 | 51.3 | 89.9 | 91.8 |
+| G | HoleLocalizer.best_probe | 12 | 144.1 | 254.2 | 265.1 |
+| G | HoleLocalizer.entry_probability_at | 12 | 119.3 | 222.6 | 234.9 |
+| G | HoleLocalizer.update_blocked | 12 | 319.4 | 429.6 | 438.0 |
+| G | HoleLocalizer.update_gaussian | 12 | 81.3 | 153.0 | 160.8 |
+| J | AdaptiveInsertionController._begin_latch_verify | 18 | 133.6 | 1174.9 | 1310.1 |
+| J | AdaptiveInsertionController._begin_verify | 38 | 57.4 | 915.9 | 1313.2 |
+| J | AdaptiveInsertionController._click_in_trace | 18 | 76.0 | 1064.9 | 1209.8 |
+| J | AdaptiveInsertionController._tilt_verdict | 18 | 6.4 | 87.8 | 96.9 |
+
+## run5_gantry_quiet (loaded)
+
+180 trials, 500282 ticks, commit ff75d45, 1-min load average per trial: min 7.3, mean 8.0, max 8.6. Controller reset (before the cycle, outside the loop), ms p50/max: C 0.13/131.69, G 0.20/1.60, J 0.14/0.28, F 0.02/0.08, I 0.02/0.05.
+
+| ctrl | state | ticks | total p50 | p99 | p99.9 | max | total > 2 ms (with GC) | cpu p99.9 | cpu max nogc | cpu > 2 ms (with GC) | best p50 | p99 | p99.9 | max | best > 0.5 ms | > 1 ms | > 2 ms | ticks with GC |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| C | ALL | 114199 | 43.2 | 111.8 | 228.2 | 8993.0 | 9 (7) | 202.4 | 1207.3 | 7 (7) | 15.9 | 26.5 | 38.2 | 619.0 | 9 | 0 | 0 | 282 |
+| C | ALIGN | 3820 | 32.4 | 103.3 | 145.1 | 203.3 | 0 (0) | 151.6 | 208.9 | 0 (0) | 11.4 | 36.9 | 42.1 | 53.9 | 0 | 0 | 0 | 2 |
+| C | APPROACH | 26508 | 44.7 | 110.9 | 174.5 | 3154.5 | 1 (1) | 173.1 | 231.1 | 1 (1) | 22.8 | 24.0 | 25.2 | 27.4 | 0 | 0 | 0 | 55 |
+| C | DETECT | 4384 | 45.1 | 169.4 | 365.5 | 4675.1 | 2 (0) | 329.2 | 471.0 | 0 (0) | 21.1 | 119.2 | 202.9 | 212.6 | 0 | 0 | 0 | 10 |
+| C | FAILURE | 1349 | 46.5 | 130.6 | 179.1 | 333.6 | 0 (0) | 167.1 | 169.8 | 0 (0) | 23.6 | 24.7 | 25.5 | 25.7 | 0 | 0 | 0 | 1 |
+| C | IDLE | 36 | 58.7 | 148.2 | 157.3 | 158.3 | 0 (0) | 172.0 | 173.1 | 0 (0) | 31.1 | 34.4 | 34.9 | 35.0 | 0 | 0 | 0 | 0 |
+| C | INSERT | 36336 | 37.7 | 106.0 | 192.1 | 4335.5 | 3 (3) | 185.5 | 268.0 | 3 (3) | 15.0 | 21.7 | 29.0 | 126.3 | 0 | 0 | 0 | 111 |
+| C | RECOVER | 2961 | 47.0 | 130.0 | 1171.1 | 4539.2 | 1 (1) | 1181.4 | 1207.3 | 1 (1) | 24.3 | 25.9 | 599.1 | 619.0 | 9 | 0 | 0 | 5 |
+| C | VERIFY | 38805 | 37.5 | 113.2 | 192.0 | 8993.0 | 2 (2) | 184.6 | 375.0 | 2 (2) | 13.8 | 26.9 | 30.8 | 80.0 | 0 | 0 | 0 | 98 |
+| G | ALL | 118738 | 43.7 | 113.5 | 238.9 | 9096.8 | 9 (8) | 216.0 | 1043.6 | 8 (8) | 16.2 | 26.8 | 36.6 | 891.2 | 14 | 0 | 0 | 280 |
+| G | ALIGN | 4484 | 33.5 | 106.3 | 179.4 | 9096.8 | 1 (0) | 185.6 | 215.6 | 0 (0) | 11.7 | 35.2 | 42.2 | 53.6 | 0 | 0 | 0 | 3 |
+| G | APPROACH | 26508 | 45.3 | 112.0 | 162.7 | 620.0 | 0 (0) | 170.6 | 225.7 | 0 (0) | 23.0 | 24.7 | 25.6 | 28.0 | 0 | 0 | 0 | 60 |
+| G | DETECT | 5285 | 47.5 | 162.8 | 437.8 | 619.0 | 0 (0) | 441.8 | 625.4 | 0 (0) | 22.0 | 40.5 | 207.0 | 217.0 | 0 | 0 | 0 | 8 |
+| G | FAILURE | 1466 | 48.0 | 127.6 | 200.0 | 720.3 | 0 (0) | 189.3 | 200.0 | 0 (0) | 24.3 | 25.8 | 27.0 | 27.2 | 0 | 0 | 0 | 1 |
+| G | IDLE | 36 | 61.2 | 68.6 | 68.9 | 68.9 | 0 (0) | 77.0 | 77.1 | 0 (0) | 34.2 | 37.3 | 37.4 | 37.4 | 0 | 0 | 0 | 0 |
+| G | INSERT | 38262 | 38.7 | 110.0 | 194.6 | 9024.2 | 1 (1) | 187.0 | 210.0 | 1 (1) | 15.2 | 22.2 | 26.9 | 123.2 | 0 | 0 | 0 | 108 |
+| G | RECOVER | 3877 | 48.6 | 132.0 | 970.5 | 1038.4 | 0 (0) | 975.2 | 1043.6 | 0 (0) | 25.0 | 27.6 | 827.4 | 891.2 | 14 | 0 | 0 | 3 |
+| G | VERIFY | 38820 | 38.1 | 113.0 | 222.0 | 5067.7 | 7 (7) | 184.8 | 333.0 | 7 (7) | 14.1 | 27.2 | 30.9 | 85.1 | 0 | 0 | 0 | 97 |
+| J | ALL | 113143 | 37.6 | 114.5 | 198.5 | 4645.4 | 6 (6) | 182.4 | 276.7 | 6 (6) | 10.5 | 29.2 | 30.7 | 84.0 | 0 | 0 | 0 | 290 |
+| J | APPROACH | 26906 | 30.6 | 83.2 | 169.3 | 3494.7 | 2 (2) | 140.5 | 262.8 | 2 (2) | 8.9 | 9.6 | 10.4 | 14.9 | 0 | 0 | 0 | 55 |
+| J | DESCEND | 13023 | 29.0 | 75.5 | 133.6 | 917.1 | 0 (0) | 152.0 | 157.7 | 0 (0) | 7.0 | 9.4 | 44.7 | 48.2 | 0 | 0 | 0 | 36 |
+| J | FAILURE | 772 | 31.7 | 74.9 | 312.8 | 316.7 | 0 (0) | 316.4 | 129.3 | 0 (0) | 9.0 | 9.2 | 10.6 | 10.6 | 0 | 0 | 0 | 2 |
+| J | IDLE | 36 | 45.2 | 91.4 | 94.4 | 94.7 | 0 (0) | 109.0 | 109.4 | 0 (0) | 15.7 | 17.6 | 17.8 | 17.8 | 0 | 0 | 0 | 0 |
+| J | INSERT | 6668 | 34.0 | 92.6 | 248.7 | 458.6 | 0 (0) | 256.8 | 276.7 | 0 (0) | 10.8 | 12.2 | 72.2 | 84.0 | 0 | 0 | 0 | 19 |
+| J | RECOVER | 3337 | 50.6 | 124.4 | 162.7 | 338.5 | 0 (0) | 179.8 | 197.8 | 0 (0) | 26.5 | 28.2 | 44.0 | 48.3 | 0 | 0 | 0 | 1 |
+| J | SPIRAL | 13722 | 32.6 | 83.9 | 145.3 | 3653.6 | 1 (1) | 154.0 | 163.1 | 1 (1) | 10.1 | 11.0 | 12.6 | 22.3 | 0 | 0 | 0 | 39 |
+| J | TARE | 2683 | 25.9 | 71.6 | 130.2 | 190.0 | 0 (0) | 136.4 | 164.9 | 0 (0) | 5.3 | 25.9 | 30.6 | 32.0 | 0 | 0 | 0 | 6 |
+| J | VERIFY | 45996 | 41.1 | 122.1 | 234.6 | 4645.4 | 3 (3) | 197.2 | 253.3 | 3 (3) | 16.5 | 29.5 | 32.8 | 82.6 | 0 | 0 | 0 | 132 |
+| F | ALL | 61011 | 30.5 | 87.3 | 273.5 | 3933.7 | 7 (4) | 153.4 | 259.2 | 4 (4) | 8.8 | 11.0 | 20.9 | 44.8 | 0 | 0 | 0 | 150 |
+| F | APPROACH | 26862 | 30.0 | 90.9 | 414.2 | 3609.3 | 2 (2) | 149.8 | 259.2 | 2 (2) | 8.8 | 10.0 | 20.8 | 21.4 | 0 | 0 | 0 | 59 |
+| F | DESCEND | 11510 | 28.2 | 84.9 | 279.2 | 3475.9 | 3 (1) | 176.2 | 242.0 | 1 (1) | 6.8 | 9.0 | 14.0 | 17.3 | 0 | 0 | 0 | 36 |
+| F | FAILURE | 772 | 30.9 | 87.2 | 109.3 | 110.0 | 0 (0) | 116.9 | 117.7 | 0 (0) | 9.0 | 9.7 | 10.2 | 11.1 | 0 | 0 | 0 | 0 |
+| F | IDLE | 36 | 40.6 | 2592.1 | 3799.6 | 3933.7 | 1 (0) | 175.7 | 177.8 | 0 (0) | 11.8 | 15.8 | 16.3 | 16.4 | 0 | 0 | 0 | 0 |
+| F | INSERT | 5792 | 33.1 | 97.2 | 151.8 | 947.0 | 0 (0) | 154.6 | 161.3 | 0 (0) | 10.5 | 12.5 | 16.8 | 27.6 | 0 | 0 | 0 | 13 |
+| F | SPIRAL | 13722 | 31.9 | 80.5 | 133.4 | 3331.6 | 1 (1) | 136.9 | 180.5 | 1 (1) | 10.0 | 10.7 | 12.2 | 21.6 | 0 | 0 | 0 | 41 |
+| F | TARE | 2317 | 25.0 | 63.8 | 120.5 | 163.0 | 0 (0) | 128.9 | 154.6 | 0 (0) | 5.2 | 22.6 | 40.6 | 44.8 | 0 | 0 | 0 | 1 |
+| I | ALL | 93191 | 31.5 | 80.4 | 135.5 | 7684.6 | 6 (5) | 143.7 | 172.9 | 5 (5) | 9.1 | 11.6 | 23.8 | 45.2 | 0 | 0 | 0 | 182 |
+| I | APPROACH | 26862 | 30.3 | 77.3 | 128.2 | 5839.1 | 1 (1) | 138.2 | 169.4 | 1 (1) | 8.8 | 9.4 | 9.9 | 11.8 | 0 | 0 | 0 | 63 |
+| I | DESCEND | 11510 | 28.5 | 79.3 | 161.3 | 5047.8 | 1 (1) | 142.6 | 157.5 | 1 (1) | 6.9 | 9.3 | 13.6 | 15.8 | 0 | 0 | 0 | 33 |
+| I | FAILURE | 2335 | 30.1 | 73.3 | 118.4 | 274.4 | 0 (0) | 132.3 | 139.8 | 0 (0) | 8.8 | 10.7 | 20.8 | 21.5 | 0 | 0 | 0 | 1 |
+| I | IDLE | 36 | 42.4 | 328.8 | 433.2 | 444.7 | 0 (0) | 155.3 | 156.0 | 0 (0) | 13.2 | 14.6 | 14.7 | 14.7 | 0 | 0 | 0 | 0 |
+| I | INSERT | 5792 | 33.2 | 82.6 | 130.3 | 308.5 | 0 (0) | 137.7 | 163.1 | 0 (0) | 10.6 | 12.8 | 21.4 | 21.8 | 0 | 0 | 0 | 13 |
+| I | SPIRAL | 13722 | 32.1 | 85.9 | 244.4 | 7684.6 | 2 (1) | 156.6 | 172.9 | 1 (1) | 10.0 | 23.0 | 24.0 | 24.8 | 0 | 0 | 0 | 44 |
+| I | TARE | 2317 | 25.5 | 64.9 | 116.2 | 143.4 | 0 (0) | 125.6 | 156.3 | 0 (0) | 5.2 | 27.3 | 33.2 | 33.8 | 0 | 0 | 0 | 2 |
+| I | VERIFY | 30617 | 32.1 | 79.8 | 135.4 | 4374.1 | 2 (2) | 147.0 | 162.9 | 2 (2) | 9.3 | 11.9 | 24.5 | 45.2 | 0 | 0 | 0 | 26 |
+
+Slowest ticks by best controller.step time (intrinsic cost):
+
+| ctrl | condition | seed | trial | t s | state -> after | best ms | in-loop total ms | cpu ms | GC | largest sub-timers ms |
+|---|---|---|---|---|---|---|---|---|---|---|
+| G | mf_terminal_max_broken_latch | 2027 | 0 | 3.41 | RECOVER -> ALIGN | 0.891 | 1.019 | 1.024 | 0 | _plan_correction 0.977; update_blocked 0.361; _contact_prior_update 0.267 |
+| G | mf_latch_early | 2027 | 0 | 3.422 | RECOVER -> ALIGN | 0.868 | 0.893 | 0.897 | 0 | _plan_correction 0.853; update_blocked 0.281; _contact_prior_update 0.251 |
+| G | mf_moderate | 2027 | 0 | 3.448 | RECOVER -> ALIGN | 0.841 | 0.949 | 0.955 | 0 | _plan_correction 0.909; update_blocked 0.311; _contact_prior_update 0.253 |
+| G | generalization_combined | 2027 | 0 | 3.302 | RECOVER -> ALIGN | 0.829 | 0.968 | 0.973 | 0 | _plan_correction 0.927; update_blocked 0.322; _contact_prior_update 0.262 |
+| G | mf_wrong_polarization | 2027 | 0 | 3.272 | RECOVER -> ALIGN | 0.827 | 0.940 | 0.945 | 0 | _plan_correction 0.899; update_blocked 0.299; _contact_prior_update 0.256 |
+| G | mf_wrong_polarization | 2027 | 0 | 7.74 | RECOVER -> ALIGN | 0.827 | 0.893 | 0.898 | 0 | _plan_correction 0.852; update_blocked 0.277; _contact_prior_update 0.225 |
+| G | mf_wrong_polarization | 2027 | 0 | 11.102 | RECOVER -> ALIGN | 0.825 | 0.939 | 0.945 | 0 | _plan_correction 0.895; update_blocked 0.281; _contact_prior_update 0.236 |
+| G | mf_wrong_polarization | 2027 | 0 | 12.922 | RECOVER -> ALIGN | 0.824 | 0.922 | 0.927 | 0 | _plan_correction 0.883; update_blocked 0.283; _contact_prior_update 0.238 |
+| G | mf_spread_half_latched | 2027 | 0 | 3.54 | RECOVER -> ALIGN | 0.819 | 0.933 | 0.937 | 0 | _plan_correction 0.894; update_blocked 0.309; _contact_prior_update 0.254 |
+| G | mf_wrong_polarization | 2027 | 0 | 9.452 | RECOVER -> ALIGN | 0.798 | 0.887 | 0.892 | 0 | _plan_correction 0.846; update_blocked 0.284; _contact_prior_update 0.220 |
+| G | mf_moderate | 2027 | 0 | 5.266 | RECOVER -> ALIGN | 0.794 | 1.038 | 1.044 | 0 | _plan_correction 0.996; update_blocked 0.366; _contact_prior_update 0.271 |
+| G | noise_2mm | 2027 | 0 | 4.28 | RECOVER -> ALIGN | 0.790 | 1.003 | 1.008 | 0 | _plan_correction 0.964; update_blocked 0.334; _contact_prior_update 0.314 |
+| G | mf_noise_1mm | 2027 | 0 | 4.276 | RECOVER -> ALIGN | 0.782 | 0.986 | 0.991 | 0 | _plan_correction 0.942; update_blocked 0.311; _contact_prior_update 0.298 |
+| G | mf_wrong_polarization | 2027 | 0 | 5.138 | RECOVER -> ALIGN | 0.759 | 0.845 | 0.849 | 0 | _plan_correction 0.804; update_blocked 0.251; _contact_prior_update 0.223 |
+| C | generalization_combined | 2027 | 0 | 3.302 | RECOVER -> ALIGN | 0.619 | 1.186 | 1.194 | 0 | _plan_correction 1.103; update_blocked 0.462; best_probe 0.270 |
+
+Sub-timers (inclusive, in-loop wall time, per tick that called them):
+
+| ctrl | function | ticks | p50 us | p99 us | max us |
+|---|---|---|---|---|---|
+| C | AdaptiveInsertionController._begin_latch_verify | 18 | 88.8 | 278.6 | 299.5 |
+| C | AdaptiveInsertionController._begin_verify | 39 | 35.9 | 171.6 | 178.1 |
+| C | AdaptiveInsertionController._click_in_trace | 18 | 31.1 | 148.2 | 164.6 |
+| C | AdaptiveInsertionController._diagnose | 49 | 89.4 | 203.1 | 205.5 |
+| C | AdaptiveInsertionController._plan_correction | 14 | 622.3 | 1112.9 | 1114.4 |
+| C | AdaptiveInsertionController._record_contact | 49 | 11.4 | 22.3 | 23.4 |
+| C | AdaptiveInsertionController._tilt_verdict | 18 | 32.3 | 79.8 | 83.5 |
+| C | HoleLocalizer.best_probe | 9 | 144.5 | 291.6 | 292.5 |
+| C | HoleLocalizer.entry_probability_at | 9 | 126.8 | 240.9 | 241.4 |
+| C | HoleLocalizer.update_blocked | 9 | 310.0 | 460.1 | 462.2 |
+| G | AdaptiveInsertionController._begin_latch_verify | 18 | 94.9 | 281.5 | 284.6 |
+| G | AdaptiveInsertionController._begin_verify | 39 | 34.7 | 264.2 | 286.4 |
+| G | AdaptiveInsertionController._click_in_trace | 18 | 34.8 | 140.5 | 141.5 |
+| G | AdaptiveInsertionController._diagnose | 55 | 91.3 | 322.6 | 323.2 |
+| G | AdaptiveInsertionController._plan_correction | 19 | 882.6 | 992.8 | 996.3 |
+| G | AdaptiveInsertionController._record_contact | 55 | 11.5 | 26.7 | 30.7 |
+| G | AdaptiveInsertionController._tilt_verdict | 18 | 32.9 | 79.6 | 79.9 |
+| G | AdaptiveLearnedController._contact_prior_update | 14 | 253.4 | 312.2 | 314.4 |
+| G | ContactLikelihood.localizer_log_term | 14 | 209.5 | 262.7 | 264.3 |
+| G | ContactLikelihood.mixture_mean_mm | 14 | 23.2 | 28.3 | 28.6 |
+| G | HoleLocalizer.best_probe | 14 | 149.0 | 173.2 | 173.4 |
+| G | HoleLocalizer.entry_probability_at | 14 | 116.7 | 132.6 | 133.2 |
+| G | HoleLocalizer.update_blocked | 14 | 303.6 | 365.1 | 365.8 |
+| G | HoleLocalizer.update_log_term | 14 | 3.0 | 3.9 | 4.0 |
+| J | AdaptiveInsertionController._begin_latch_verify | 20 | 71.4 | 341.7 | 379.9 |
+| J | AdaptiveInsertionController._begin_verify | 40 | 34.1 | 268.8 | 380.8 |
+| J | AdaptiveInsertionController._click_in_trace | 20 | 17.5 | 58.5 | 64.0 |
+| J | AdaptiveInsertionController._tilt_verdict | 20 | 6.8 | 292.2 | 342.9 |
+

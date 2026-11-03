@@ -68,6 +68,14 @@ it fails.
    - The gantry housing-only VERIFY has no yaw check.
    (`results/v0.2f_tilt_diagnosis`)
 
+8. **Real-time fit and pull test** (development measurements, `results/v0.2f_realtime`).
+   - C's per-tick work fits a 2 ms loop on this laptop: median about 45 us, worst
+     0.6-0.9 ms. Misses came from Python garbage collection and preemption.
+   - The gantry pull's force ringing is the simulator's undamped latch hook.
+   - Fairness item against the baselines: C caps its retract pull on a latching part
+     at 36 N, and D, F, H and I do not. H's retry retract tore 2 good latches on the
+     development seeds.
+
 ## Results table
 
 benchmark_v0.2e, seed 20261130 (unchanged; `results/v0.2f_evidence/CHECKPOINT_TABLE.md`):
@@ -105,7 +113,7 @@ Most of the pooled heldout2 lead comes from the unseen-yaw family.
 
 ## Open questions for you
 
-1. The pitch, given items 1-7.
+1. The pitch, given items 1-8.
 2. Customer facts that decide the claim:
    - their camera's real position error at the insertion point;
    - their seating spec (angle, depth, and whether acceptance is by click, pull or

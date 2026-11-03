@@ -1,0 +1,41 @@
+{
+ "script": "experiments/v02f_pull_overshoot.py",
+ "args": {
+  "backend": "arm",
+  "suite": "latching",
+  "seed": 2026,
+  "trials": 20,
+  "first": 0,
+  "conditions": "",
+  "controllers": "adaptive,adaptive_learned,spiral_pull,spiral_rcc_pull,spiral_rcc_verify",
+  "post_s": 0.1,
+  "hook_damping": 0.0,
+  "hook_stiffness": null,
+  "traces": 3,
+  "out": "results/v0.2f_realtime/pull/arm_latching_s2026"
+ },
+ "environment": {
+  "python": "3.12.11",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "mujoco": "3.17.0",
+  "numpy": "2.5.4",
+  "matplotlib": "3.11.2",
+  "git_commit": "4df8cae10a96b41db9fa1a805bf26153c1601a75",
+  "git_dirty": false,
+  "cpu_count": 10
+ },
+ "load_avg_start": [
+  45.29296875,
+  26.2451171875,
+  21.0205078125
+ ],
+ "load_avg_end": [
+  49.0888671875,
+  53.408203125,
+  50.77734375
+ ],
+ "wall_s": 1817.268610715866,
+ "counterfactual": false,
+ "label": "development measurement"
+}

@@ -1,0 +1,79 @@
+{
+ "script": "experiments/v02f_tick_timing.py",
+ "args": {
+  "backend": "gantry",
+  "seeds": "2026,2027",
+  "suites": "standard,latching,latch_spread",
+  "trials": 2,
+  "controllers": "adaptive,adaptive_learned,spiral_rcc_verify,spiral_rcc,spiral_rcc_pull",
+  "conditions": "",
+  "replays": 3,
+  "out": "results/v0.2f_realtime/timing/run1_gantry",
+  "raw": "/private/tmp/claude-501/-Users-husanmavlonov/2427a78b-fce8-475a-9ad9-65cc418293e3/scratchpad/raw/run1_gantry.npz"
+ },
+ "environment": {
+  "python": "3.12.11",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "mujoco": "3.17.0",
+  "numpy": "2.5.4",
+  "matplotlib": "3.11.2",
+  "git_commit": "4df8cae10a96b41db9fa1a805bf26153c1601a75",
+  "git_dirty": false,
+  "cpu_count": 10
+ },
+ "trials": 720,
+ "ticks": 1996009,
+ "wall_s": 865.6987900733948,
+ "load1_min": 31.38916015625,
+ "load1_max": 73.955078125,
+ "load1_mean": 48.35079413519965,
+ "loaded": true,
+ "controller_reset_ms": {
+  "adaptive": {
+   "p50": 0.14033348998054862,
+   "max": 250.59579097433016
+  },
+  "adaptive_learned": {
+   "p50": 0.26739598251879215,
+   "max": 7.129875011742115
+  },
+  "spiral_rcc_verify": {
+   "p50": 0.16422898625023663,
+   "max": 8.170667046215385
+  },
+  "spiral_rcc": {
+   "p50": 0.025104498490691185,
+   "max": 0.18999999156221747
+  },
+  "spiral_rcc_pull": {
+   "p50": 0.024854496587067842,
+   "max": 0.8607920026406646
+  }
+ },
+ "subtimers_installed": [
+  "HoleLocalizer.update_blocked",
+  "HoleLocalizer.update_entered",
+  "HoleLocalizer.best_probe",
+  "HoleLocalizer.update_gaussian",
+  "HoleLocalizer.update_log_term",
+  "HoleLocalizer.entry_probability_at",
+  "YawHoleLocalizer.update_blocked",
+  "YawHoleLocalizer.update_entered",
+  "YawHoleLocalizer.best_probe",
+  "ContactPrior.localizer_term",
+  "ContactLikelihood.localizer_log_term",
+  "ContactLikelihood.mixture_mean_mm",
+  "ContactDiagnoser.diagnose",
+  "AdaptiveInsertionController._diagnose",
+  "AdaptiveInsertionController._plan_correction",
+  "AdaptiveInsertionController._click_in_trace",
+  "AdaptiveInsertionController._tilt_verdict",
+  "AdaptiveInsertionController._begin_verify",
+  "AdaptiveInsertionController._begin_latch_verify",
+  "AdaptiveInsertionController._record_contact",
+  "AdaptiveLearnedController._contact_prior_update"
+ ],
+ "budget_s": 0.002,
+ "label": "development measurement, Apple M5 laptop shared with other jobs, not the rig PC"
+}

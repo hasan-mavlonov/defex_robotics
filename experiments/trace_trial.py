@@ -27,12 +27,18 @@ def run_trace(backend: str, condition: str, controller: str, index: int, seed: i
     from dataclasses import replace
 
     from defex.control.registry import make_controller
-    from defex.tasks.conditions import heldout_conditions, latching_conditions, standard_conditions
+    from defex.tasks.conditions import (
+        heldout2_conditions,
+        heldout_conditions,
+        latching_conditions,
+        standard_conditions,
+    )
     from defex.tasks.insertion import InsertionTask
     from defex.tasks.scenarios import sample_scenario
     from experiments.runner import make_backend, nominal_socket_pose
 
-    conds = {c.name: c for c in (*standard_conditions(), *latching_conditions(), *heldout_conditions())}
+    conds = {c.name: c for c in (*standard_conditions(), *latching_conditions(), *heldout_conditions(),
+                                  *heldout2_conditions())}
     cond = conds[condition]
     task = InsertionTask(backend=make_backend())
     scenario = sample_scenario(cond, index, seed, nominal_socket_pose(cond, task.fixture))

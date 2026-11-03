@@ -1,6 +1,5 @@
 # v0.2f latch fit: fitting the terminal and latch model to logged force-depth curves
 
-(Written as REPORT.txt because writing REPORT.md was blocked in this session.)
 
 Result: the fitter recovers 13 of the 14 judged quantities within the pre-committed
 tolerance on the nominal part and on at least 9 of 10 off-nominal parts. The latch

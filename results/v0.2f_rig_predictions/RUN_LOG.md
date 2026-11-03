@@ -62,6 +62,6 @@
   237,600 fields, **0 differences**; `wall_time_s` was not compared. So the extension
   is used, as item 7 says.
 - `TABLES.md` was regenerated from `ext100/` with the pre-registered `tables.py`. The
-  50-trial tables and report are kept as `TABLES_50.md` and `REPORT_50.txt`.
-  `REPORT.txt` is the 100-trial report.
+  50-trial tables and report are kept as `TABLES_50.md` and `REPORT_50.md`.
+  `REPORT.md` is the 100-trial report.
 - `events.json.gz` is not committed.

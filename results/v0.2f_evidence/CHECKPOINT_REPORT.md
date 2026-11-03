@@ -1,12 +1,10 @@
 # Checkpoint report: C's remaining edge, made exact (v0.2f)
 
-(Written as CHECKPOINT_REPORT.txt because report files named .md were blocked in this
-session. The text is the intended CHECKPOINT_REPORT.md.)
 
 Simulation only. This is an analysis of committed results; nothing was rerun. Sources:
 benchmark_v0.2d (seed 20261123), benchmark_v0.2d_rep (20261124) and benchmark_v0.2e
 (20261130). Numbers come from `experiments/v02f_evidence.py`, and each is listed in
-`KEY_NUMBERS.md` with its table. Details are in `REPORT.txt`.
+`KEY_NUMBERS.md` with its table. Details are in `REPORT.md`.
 
 ## Result
 
@@ -42,7 +40,7 @@ pre-registered result. With yaw and tilt allowed to 4 or 5 deg:
 - At 2 deg the lead widens: gantry 122/2, arm 119/7.
 - A depth tolerance of 1.0 mm instead of 0.5 mm changes at most two trials per cell.
 
-Full table: `TOLERANCE.md` (3) and `REPORT.txt` part 3. C's slow tail is its retries,
+Full table: `TOLERANCE.md` (3) and `REPORT.md` part 3. C's slow tail is its retries,
 and the retries sit in the same high-camera-error trials (`PHASES.md` (d), (d2)).
 
 | Seed 20261130, POST HOC rescore | Yaw/tilt 2 deg | 3 deg (as run) | 4 deg | 5 deg |

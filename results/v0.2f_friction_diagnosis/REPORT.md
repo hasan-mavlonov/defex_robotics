@@ -1,5 +1,4 @@
 v0.2f friction diagnosis: why C loses arm friction_1 under the pyramidal cone
-(Written as REPORT.txt because writing REPORT.md was blocked in this session.)
 
 POST HOC throughout. Every analysis here was chosen after the sim_randomization_v0.2f and
 benchmark results were seen. Nothing here was pre-registered. No controller was changed, nothing

@@ -1,5 +1,4 @@
 v0.2f rig predictions: report
-(Written as REPORT.txt because writing REPORT.md was blocked in this session.)
 
 These are the simulation's predictions for the conditions of hardware/TEST_PROTOCOL.md,
 frozen before any rig exists.

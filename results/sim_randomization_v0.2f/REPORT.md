@@ -1,5 +1,4 @@
 sim_randomization_v0.2f report
-(Written as REPORT.txt because writing REPORT.md was blocked in this session.)
 
 Run details
 - Seed 20261205. Code frozen at c87f942. Run from 69cbaa4, which adds only results/.

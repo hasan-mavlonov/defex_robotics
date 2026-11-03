@@ -1,6 +1,5 @@
 # v0.2f h2 diagnosis: why C fails on Micro-Fit unseen grasp and on arm F/T drift
 
-(Written as REPORT.txt: writing REPORT.md was blocked.)
 
 All of this report is post hoc: it was decided after the heldout2 results
 (`results/heldout2_v0.2f`) were read. It is diagnosis only. No controller code changed, no reported

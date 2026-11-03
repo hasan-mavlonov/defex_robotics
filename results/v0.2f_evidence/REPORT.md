@@ -1,7 +1,5 @@
 # v0.2f evidence: where C's remaining edge comes from
 
-(Written as REPORT.txt because writing REPORT.md was blocked in this session. The text is
-the intended REPORT.md.)
 
 Analysis of committed results only; no simulation was run. Inputs: `results/benchmark_v0.2d`
 (seed 20261123), `results/benchmark_v0.2d_rep` (seed 20261124), both on the v0.2d code

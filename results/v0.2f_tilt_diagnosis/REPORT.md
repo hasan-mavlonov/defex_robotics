@@ -1,6 +1,5 @@
 # v0.2f tilt diagnosis: report
 
-(Written as REPORT.txt: creating REPORT.md was blocked for this agent. Same text as the final message.)
 
 Branch `v0.2f/tilt` from 4df8cae. Simulation only. Development seeds 2026 and 2027; seed 4007 once
 for validation; seed 20261130 only to replay the three trials the v0.2e report names. Commands:

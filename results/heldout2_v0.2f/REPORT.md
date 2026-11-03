@@ -1,6 +1,5 @@
 # heldout2_v0.2f report
 
-(Written as REPORT.txt: writing REPORT.md was blocked.)
 
 Seed 20261207. Controllers frozen at ddd0d34 (v0.2e). Suite code 6ccb8ea. Run from 6ea164e,
 which adds only the pre-registration. 8,000 paired trials: ten controllers and ten

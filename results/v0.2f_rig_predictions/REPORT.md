@@ -1,6 +1,5 @@
 v0.2f rig predictions: report, 100 trials per condition
-(Written as REPORT.txt because writing REPORT.md was blocked in this session. The
-50-trial version is kept as REPORT_50.txt, with its tables in TABLES_50.md.)
+(The 50-trial version is kept as REPORT_50.md, with its tables in TABLES_50.md.)
 
 These are the simulation's predictions for the conditions of hardware/TEST_PROTOCOL.md,
 frozen before any rig exists.
@@ -102,7 +101,7 @@ Micro-Fit good parts:
 Micro-Fit bad parts:
   vs F: gantry 0/252, p = 2.8e-76; arm 0/227, p = 9.3e-69
 
-WHAT CHANGED FROM THE 50-TRIAL VERSION (REPORT_50.txt)
+WHAT CHANGED FROM THE 50-TRIAL VERSION (REPORT_50.md)
 - The first 50 trials of every cell are unchanged (0 differences). Everything below
   comes from adding indices 50-99.
 - Gantry Micro-Fit good parts: C below F, I and J is now significant. Against F it was

@@ -79,7 +79,7 @@ unit and no bad part, and made fewer good units per hour than F on `standard`
 (gantry 608, 611, 601 against 1,128, 1,096, 1,100).
 
 **Where C's standard lead and its zero bad units come from (POST HOC,
-[`results/v0.2f_evidence/REPORT.txt`](results/v0.2f_evidence/REPORT.txt)).**
+[`results/v0.2f_evidence/REPORT.md`](results/v0.2f_evidence/REPORT.md)).**
 
 * **Three high-camera-error conditions.** The trials C seats and I does not are in
   noise_1mm, noise_2mm (camera sigma 1 and 2 mm) and generalization_combined (0.8 mm
@@ -118,7 +118,7 @@ developed against. Each is one error no sensor reports, on nominal vision. It is
 pre-registered
 ([`PREREGISTRATION.md`](results/heldout2_v0.2f/PREREGISTRATION.md)) and ran seed
 20261207 on the frozen ddd0d34 controllers: 8,000 paired trials, 40 per condition
-([`REPORT.txt`](results/heldout2_v0.2f/REPORT.txt),
+([`REPORT.md`](results/heldout2_v0.2f/REPORT.md),
 [`HELDOUT2_TABLES.md`](results/heldout2_v0.2f/HELDOUT2_TABLES.md)).
 
 | Family (80 paired trials per cell) | gantry: C vs best fair, p | arm: C vs best fair, p |
@@ -137,7 +137,7 @@ pre-registered
   96-100% there, so most of C's lead there likely comes from VERIFY (POST HOC).
 * **C passed 8 bad units**, all on the arm at 0.3 N/s drift (H 0, I 1; p = 0.0078 and
   0.016). They are C's first in a reported run since Checkpoint 2. A POST HOC trace
-  ([`results/v0.2f_h2_diagnosis/REPORT.txt`](results/v0.2f_h2_diagnosis/REPORT.txt))
+  ([`results/v0.2f_h2_diagnosis/REPORT.md`](results/v0.2f_h2_diagnosis/REPORT.md))
   found the mechanism. The plug was at the floor when C saw the bottoming force.
   VERIFY then holds a 1 N preload on the *read* axial force. With more than 1 N of
   push-out drift since C's last tare, that is about 0 N or a pull in truth, and the
@@ -152,7 +152,7 @@ pre-registered
 * G gave no measurable gain in any cell. One seed and 40 trials per condition: a
   "matches" verdict here is weak evidence of equality.
 
-**Across simulators.** [`results/sim_randomization_v0.2f`](results/sim_randomization_v0.2f/REPORT.txt)
+**Across simulators.** [`results/sim_randomization_v0.2f`](results/sim_randomization_v0.2f/REPORT.md)
 is pre-registered. It ran seed 20261205 on code c87f942 (controllers unchanged since
 ddd0d34): 12
 randomized MuJoCo simulators plus the nominal one per machine, controllers C, F, H, I,
@@ -184,7 +184,7 @@ comparisons; the arm holds 24 of 29
   There, on friction_1, C seats 1 of 90 against 89-90 of 90 for F, H and I. With the
   elliptic cone it seats 81 of 90. On the gantry, with the same contact draws, C seats
   90 of 90 under the pyramidal cone (counted from `arm/trials.csv` and
-  `gantry/trials.csv`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.txt`): C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
+  `gantry/trials.csv`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
 * The v0.2a statement "C leads in all 13 simulators" is not repeated in that form.
 
 **Rig plan.** Nothing has been bought. [`hardware/TEST_PROTOCOL.md`](hardware/TEST_PROTOCOL.md)
@@ -196,11 +196,11 @@ paired trials in all for 80% power on success and 90-100 on bad units, so 400 pe
 controller covers it. On Micro-Fit good parts it would take 780-1,200 pairs (gantry)
 or 7,800 or more (arm), so the rig reports rates only there. The simulation's
 predictions for these conditions are frozen
-([`results/v0.2f_rig_predictions`](results/v0.2f_rig_predictions/REPORT.txt), seed
+([`results/v0.2f_rig_predictions`](results/v0.2f_rig_predictions/REPORT.md), seed
 20261201, code ddd0d34). At 100 trials per condition (extension on the same commit; trials 0-49 identical), housing-only C seats 387/400 against F/I 336/400 on the gantry and 370/400 against 329/400 on the arm. Its bad units are 0/400 against 33/400 and 39/400. On gantry Micro-Fit good parts C is predicted below F (284 against 297 of 300, p = 0.00024). The latch-model
 fitter for rig force-depth curves fails its own synthetic rule on hook stiffness and
 has not seen a real curve
-([`results/v0.2f_latch_fit/REPORT.txt`](results/v0.2f_latch_fit/REPORT.txt)).
+([`results/v0.2f_latch_fit/REPORT.md`](results/v0.2f_latch_fit/REPORT.md)).
 
 ## What we can claim / what we cannot claim yet
 
@@ -239,7 +239,7 @@ the results were seen.
   - Across 12 randomized simulators it is not exactly zero: C passed 1 bad unit per
     machine, both in variant 10. C still passed fewer than F, H and I in all 12
     variants on both machines (`results/sim_randomization_v0.2f`).
-  - Tilt check, POST HOC diagnosis (`results/v0.2f_tilt_diagnosis/REPORT.txt`, development seeds 2026/2027): the latching tilt check compares the plug with C's own socket-axis estimate, the axis C aimed it along, so it cannot see tilt that comes from an error in that estimate. G's 3.01 deg unit is this case (estimate 2.87 deg off the true axis after a wrong 'flat' fold). On the development seeds 234 of 8,320 C/G verdicts read more than 1 deg under the true tilt; none became a bad unit. What keeps tilted bad units rare is the Micro-Fit cavity, which stops a latched plug at about 3.2 deg, and a camera tilt error rarely over 3 deg. Near misses (declared, 2.5-3.0 deg) were 5 in about 3,540 declared latching trials. J's empty first tilt window comes from its hand-over code and cannot happen to C. On the gantry the housing-only VERIFY has no yaw check (its sweep always ends in SUCCESS); on the arm the wall-yaw check bounds |yaw| at 2.0 deg. Two default-off options (push below the force floor; J's hand-over window) passed a no-harm rule on validation seed 4007 but changed no outcome; whether to use them is Hasan's call.
+  - Tilt check, POST HOC diagnosis (`results/v0.2f_tilt_diagnosis/REPORT.md`, development seeds 2026/2027): the latching tilt check compares the plug with C's own socket-axis estimate, the axis C aimed it along, so it cannot see tilt that comes from an error in that estimate. G's 3.01 deg unit is this case (estimate 2.87 deg off the true axis after a wrong 'flat' fold). On the development seeds 234 of 8,320 C/G verdicts read more than 1 deg under the true tilt; none became a bad unit. What keeps tilted bad units rare is the Micro-Fit cavity, which stops a latched plug at about 3.2 deg, and a camera tilt error rarely over 3 deg. Near misses (declared, 2.5-3.0 deg) were 5 in about 3,540 declared latching trials. J's empty first tilt window comes from its hand-over code and cannot happen to C. On the gantry the housing-only VERIFY has no yaw check (its sweep always ends in SUCCESS); on the arm the wall-yaw check bounds |yaw| at 2.0 deg. Two default-off options (push below the force floor; J's hand-over window) passed a no-harm rule on validation seed 4007 but changed no outcome; whether to use them is Hasan's call.
 * **On heldout2, a clean held-out test, C seats more than every fair baseline on unseen
   receptacle tilt and yaw** on both machines, and on the tighter Micro-Fit on the arm.
   Scope: one seed and 80 trials per cell. J matches C on tilt and yaw, so VERIFY likely
@@ -274,7 +274,7 @@ the results were seen.
   friction cone C seats 1 of 90 friction_1 parts against 89-90 of 90 for F, H and I
   (the split by cone is POST HOC). The arm's "C below F" on latching is not confirmed
   per simulator either (9 of 12; pooled still C below F, p = 0.038)
-  (`results/sim_randomization_v0.2f`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.txt`): a VERIFY false reject; floor friction stops C's wall probe before the wall, and recovery repeats it.
+  (`results/sim_randomization_v0.2f`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): a VERIFY false reject; floor friction stops C's wall probe before the wall, and recovery repeats it.
 * **Anything on hardware.** The latch snap force and the latch spread are assumed.
   There is one latching connector and one simulated arm, and no rig yet.
 
@@ -609,7 +609,7 @@ worst case, and C passed 29 bad units (details below).
   families for that development
   ([`results/w4_development/REPORT.md`](results/w4_development/REPORT.md), lines
   7-10), so `heldout` has not been out of sample since. The clean held-out test is
-  now heldout2 ([`results/heldout2_v0.2f`](results/heldout2_v0.2f/REPORT.txt)).
+  now heldout2 ([`results/heldout2_v0.2f`](results/heldout2_v0.2f/REPORT.md)).
 * **The comparison does not hinge on one MuJoCo tuning.** On 12 randomized
   simulators plus the nominal one (contact stiffness and damping, solver
   softness, elliptic or pyramidal friction cone, servo stiffness 7-19 N/mm),
@@ -617,7 +617,7 @@ worst case, and C passed 29 bad units (details below).
   ([`results/sim_randomization_v0.2`](results/sim_randomization_v0.2/REPORT.md)).
   That run used the v0.2a code (frozen at fe48eca), before the baseline re-tuning,
   the latching parts, the arm and H, I and J. The rerun on the v0.2e controllers,
-  [`results/sim_randomization_v0.2f`](results/sim_randomization_v0.2f/REPORT.txt), does
+  [`results/sim_randomization_v0.2f`](results/sim_randomization_v0.2f/REPORT.md), does
   not repeat it in that form; see
   [Current results](#current-results-benchmark_v02e-on-three-seeds-and-heldout2).
 * **No cliffs in C's own constants.** Every one of 113 configured constants,
@@ -792,7 +792,7 @@ camera's real accuracy. `heldout` was pre-registered as held out, but it was the
 used in W4 development
 ([`results/w4_development/REPORT.md`](results/w4_development/REPORT.md), lines
 7-10), so it is no longer an out-of-sample test. The clean held-out test is
-heldout2 ([`results/heldout2_v0.2f`](results/heldout2_v0.2f/REPORT.txt)). It hands
+heldout2 ([`results/heldout2_v0.2f`](results/heldout2_v0.2f/REPORT.md)). It hands
 every controller the nominal accuracy and adds one error that no sensor reports.
 
 Ground truth (true poses, contact forces, penetration, contact count) lives in a
@@ -949,7 +949,7 @@ cycle since W4 (`yaw_center_policy` "always"; V0.1 did this only when the vision
 yaw sigma was above 1 degree). During the probes VERIFY holds a 1 N axial preload
 on the measured force, and it does not re-check depth before SUCCESS. Under F/T
 drift that preload can lift a seated plug
-([`results/v0.2f_h2_diagnosis`](results/v0.2f_h2_diagnosis/REPORT.txt), POST HOC).
+([`results/v0.2f_h2_diagnosis`](results/v0.2f_h2_diagnosis/REPORT.md), POST HOC).
 
 On a latching connector VERIFY is the latch check: a retention pull at 1.1 x the
 datasheet's 32 N maximum mating force, which the plug must hold before it has
@@ -960,7 +960,7 @@ beyond 0.875 of the plug's half-width, which a plug latched wedged at the
 cavity's tilt limit produces
 ([`results/v0.2d_tilt_check`](results/v0.2d_tilt_check/REPORT.md)). A failed check
 takes the normal failed-VERIFY path. The housing-only VERIFY has no tilt check.
-Tilt check, POST HOC diagnosis (`results/v0.2f_tilt_diagnosis/REPORT.txt`, development seeds 2026/2027): the latching tilt check compares the plug with C's own socket-axis estimate, the axis C aimed it along, so it cannot see tilt that comes from an error in that estimate. G's 3.01 deg unit is this case (estimate 2.87 deg off the true axis after a wrong 'flat' fold). On the development seeds 234 of 8,320 C/G verdicts read more than 1 deg under the true tilt; none became a bad unit. What keeps tilted bad units rare is the Micro-Fit cavity, which stops a latched plug at about 3.2 deg, and a camera tilt error rarely over 3 deg. Near misses (declared, 2.5-3.0 deg) were 5 in about 3,540 declared latching trials. J's empty first tilt window comes from its hand-over code and cannot happen to C. On the gantry the housing-only VERIFY has no yaw check (its sweep always ends in SUCCESS); on the arm the wall-yaw check bounds |yaw| at 2.0 deg. Two default-off options (push below the force floor; J's hand-over window) passed a no-harm rule on validation seed 4007 but changed no outcome; whether to use them is Hasan's call.
+Tilt check, POST HOC diagnosis (`results/v0.2f_tilt_diagnosis/REPORT.md`, development seeds 2026/2027): the latching tilt check compares the plug with C's own socket-axis estimate, the axis C aimed it along, so it cannot see tilt that comes from an error in that estimate. G's 3.01 deg unit is this case (estimate 2.87 deg off the true axis after a wrong 'flat' fold). On the development seeds 234 of 8,320 C/G verdicts read more than 1 deg under the true tilt; none became a bad unit. What keeps tilted bad units rare is the Micro-Fit cavity, which stops a latched plug at about 3.2 deg, and a camera tilt error rarely over 3 deg. Near misses (declared, 2.5-3.0 deg) were 5 in about 3,540 declared latching trials. J's empty first tilt window comes from its hand-over code and cannot happen to C. On the gantry the housing-only VERIFY has no yaw check (its sweep always ends in SUCCESS); on the arm the wall-yaw check bounds |yaw| at 2.0 deg. Two default-off options (push below the force floor; J's hand-over window) passed a no-harm rule on validation seed 4007 but changed no outcome; whether to use them is Hasan's call.
 
 **D: spiral search** ([`defex/control/spiral_search.py`](defex/control/spiral_search.py)).
 The conventional force-controlled routine cobot vendors ship (Flexiv Adaptive
@@ -1350,7 +1350,7 @@ Open after v0.2f, none of it implemented:
   one.
 - On the arm under MuJoCo's pyramidal friction cone, C fails friction_1 (1 of 90
   seated), while F, H and I do not (`results/sim_randomization_v0.2f`, POST HOC
-  split). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.txt`): a VERIFY false reject; floor friction stops C's wall probe before the wall, and recovery repeats it. Fix options (C design changes, text only) are in that report.
+  split). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): a VERIFY false reject; floor friction stops C's wall probe before the wall, and recovery repeats it. Fix options (C design changes, text only) are in that report.
 - Any fix to C needs a new pre-registration and a fresh seed.
 
 ## Porting to another simulator

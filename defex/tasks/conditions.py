@@ -234,3 +234,52 @@ def latch_spread_conditions() -> list[Condition]:
         one("mf_terminal_max_broken_latch", PartSpread(terminal_scale=(1.6, 1.6)),
             "bad part, broken latch, terminal forces at the datasheet maximum", "broken_latch"),
     ]
+
+
+# --------------------------------------------------------------------------------------
+# v0.2f held-out families (heldout2). Defined before any run of them, for a clean
+# out-of-sample test of the frozen v0.2e code (the W2 `heldout` families were used in W4
+# development). Each family is an error a real cell sees that no sensor reports and no
+# controller is told; all are new to every earlier suite. Bases and levels:
+# results/heldout2_v0.2f/PREREGISTRATION.md. Never used for development or tuning.
+# --------------------------------------------------------------------------------------
+
+HELDOUT2_FAMILIES = ("h2_tilt_unseen", "h2_yaw_unseen", "h2_ft_drift", "h2_mf_tolerance", "h2_mf_grasp_unseen")
+
+
+def heldout2_conditions() -> list[Condition]:
+    conds: list[Condition] = []
+    for deg in (2.0, 3.0):
+        conds.append(Condition(
+            f"h2_tilt_unseen_{deg:g}deg", "h2_tilt_unseen", replace(MODERATE, unseen_tilt_deg=deg), NOMINAL_NOISE,
+            characterized_noise=NOMINAL_NOISE,
+            description=f"Receptacle tilted {deg:g} deg on its board (random axis); the camera does not see it"))
+    for deg in (2.5, 4.0):
+        conds.append(Condition(
+            f"h2_yaw_unseen_{deg:g}deg", "h2_yaw_unseen", replace(MODERATE, unseen_yaw_deg=deg), NOMINAL_NOISE,
+            characterized_noise=NOMINAL_NOISE,
+            description=f"Receptacle rotated {deg:g} deg about its axis (random sign); the camera does not see it"))
+    for rate in (0.1, 0.3):
+        conds.append(Condition(
+            f"h2_ft_drift_{rate:g}", "h2_ft_drift", MODERATE,
+            replace(NOMINAL_NOISE, ft_drift_force_n_per_s=rate, ft_drift_torque_nm_per_s=rate * 0.01),
+            characterized_noise=NOMINAL_NOISE,
+            description=f"F/T zero drifts {rate:g} N/s and {rate * 0.01:g} N m/s after the tare (random directions)"))
+    for clearance, chamfer in ((0.10, 0.3), (0.05, 0.2)):
+        conds.append(Condition(
+            f"h2_mf_tol_{clearance:.2f}mm", "h2_mf_tolerance", MODERATE, NOMINAL_NOISE, connector=LATCHING_CONNECTOR,
+            actual_clearance_mm=clearance, actual_chamfer_mm=chamfer,
+            description=(f"Micro-Fit 3.0 at a tight tolerance stack: clearance {clearance:.2f} mm, lead-in "
+                         f"{chamfer:g} mm (controllers told the drawing, 0.15 mm and 0.4 mm)")))
+    for lat, tilt in ((0.2, 1.0), (0.4, 2.0)):
+        conds.append(Condition(
+            f"h2_mf_grasp_unseen_{tilt:g}deg", "h2_mf_grasp_unseen",
+            replace(MODERATE, grasp_unseen_lateral_mm=lat, grasp_unseen_tilt_deg=tilt), NOMINAL_NOISE,
+            connector=LATCHING_CONNECTOR, characterized_noise=NOMINAL_NOISE,
+            description=(f"Micro-Fit 3.0 sits {lat:g} mm off along y and {tilt:g} deg about x in the fingers; "
+                         f"the in-hand estimate does not see it")))
+    return conds
+
+
+def heldout2_conditions_by_name() -> dict[str, Condition]:
+    return {c.name: c for c in heldout2_conditions()}

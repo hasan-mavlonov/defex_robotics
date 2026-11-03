@@ -23,6 +23,7 @@ from pathlib import Path
 from defex.config import REPO_ROOT
 from defex.control.registry import BENCHMARK_CONTROLLERS
 from defex.tasks.conditions import (
+    heldout2_conditions,
     heldout_conditions,
     latch_spread_conditions,
     latching_conditions,
@@ -45,16 +46,17 @@ def main() -> None:
     ap.add_argument("--no-plots", action="store_true")
     ap.add_argument("--backend", choices=["gantry", "arm"], default="gantry",
                     help="arm: UR5e serial arm (W5; run scripts/fetch_menagerie.py first)")
-    ap.add_argument("--suite", choices=["standard", "heldout", "latching", "latch_spread"], default="standard",
+    ap.add_argument("--suite", choices=["standard", "heldout", "latching", "latch_spread", "heldout2"], default="standard",
                     help="heldout: the W2 held-out families (pre-registered runs only); "
-                         "latch_spread: Micro-Fit mating values off nominal (v0.2c review)")
+                         "latch_spread: Micro-Fit mating values off nominal (v0.2c review); "
+                         "heldout2: the v0.2f held-out families (pre-registered runs only)")
     args = ap.parse_args()
     os.environ["DEFEX_BACKEND"] = args.backend
 
-    if args.suite == "heldout" and "--seed" not in sys.argv:
-        raise SystemExit("--suite heldout needs an explicit --seed (the default 2026 is the tuning seed)")
+    if args.suite in ("heldout", "heldout2") and "--seed" not in sys.argv and not args.list:
+        raise SystemExit(f"--suite {args.suite} needs an explicit --seed (the default 2026 is the tuning seed)")
     conds = {"standard": standard_conditions, "heldout": heldout_conditions, "latching": latching_conditions,
-             "latch_spread": latch_spread_conditions}[args.suite]()
+             "latch_spread": latch_spread_conditions, "heldout2": heldout2_conditions}[args.suite]()
     if args.list:
         for c in conds:
             print(f"{c.name:26s} [{c.group}] {c.description}")

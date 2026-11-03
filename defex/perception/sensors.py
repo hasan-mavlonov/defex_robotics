@@ -7,7 +7,8 @@ These models turn noise-free backend signals into what real hardware would repor
   systematic calibration bias.
 * **In-hand estimate**: the connector pose in the gripper (e.g. an up-looking
   camera), with Gaussian noise.
-* **Wrist F/T sensor**: white noise plus a per-trial bias (removed by taring).
+* **Wrist F/T sensor**: white noise plus a per-trial bias (removed by taring) and, in the
+  heldout2 suite only, a zero drift that grows after the tare.
 * **Encoders**: tiny white noise on the forward-kinematics TCP pose.
 
 Each trial owns independent random streams derived from its seed, so the vision
@@ -49,6 +50,18 @@ class SensorSuite:
         self._enc_rot_sigma = noise.encoder_rot_sigma_deg * DEG
         bias_dir = self._rng_vision.uniform(0.0, 2.0 * np.pi)
         self.vision_bias = noise.vision_bias_mm * MM * np.array([np.cos(bias_dir), np.sin(bias_dir), 0.0])
+        # heldout2 (v0.2f): zero drift, linear in time from the first reading, in a fixed random
+        # direction per trial. Its own stream (a fifth child, spawned only when drift is on), so
+        # every other stream is unchanged.
+        self.ft_force_drift = np.zeros(3)
+        self.ft_torque_drift = np.zeros(3)
+        self._t_first: float | None = None
+        if noise.ft_drift_force_n_per_s > 0.0 or noise.ft_drift_torque_nm_per_s > 0.0:
+            rng = np.random.default_rng(ss.spawn(1)[0])
+            u_f = rng.standard_normal(3)
+            u_t = rng.standard_normal(3)
+            self.ft_force_drift = noise.ft_drift_force_n_per_s * u_f / np.linalg.norm(u_f)
+            self.ft_torque_drift = noise.ft_drift_torque_nm_per_s * u_t / np.linalg.norm(u_t)
 
     # -------------------------------------------------------------- one-shot estimates
     def vision_measurement(self, true_socket_pose: Pose) -> Pose:
@@ -87,4 +100,10 @@ class SensorSuite:
         tcp = Pose(raw.tcp_pose.p + dp, raw.tcp_pose.R @ dR)
         f = raw.ft_force + self.ft_force_bias + w[:3] * self.noise.ft_force_sigma_n
         t = raw.ft_torque + self.ft_torque_bias + w[3:] * self.noise.ft_torque_sigma_nm
+        if self._t_first is None:
+            self._t_first = raw.t
+        if self.noise.ft_drift_force_n_per_s > 0.0 or self.noise.ft_drift_torque_nm_per_s > 0.0:
+            elapsed = raw.t - self._t_first
+            f = f + self.ft_force_drift * elapsed
+            t = t + self.ft_torque_drift * elapsed
         return SensorReadings(t=raw.t, tcp_pose=tcp, ft_force=f, ft_torque=t)

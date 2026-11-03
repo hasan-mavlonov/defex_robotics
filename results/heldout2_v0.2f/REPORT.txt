@@ -1,0 +1,192 @@
+# heldout2_v0.2f report
+
+(Written as REPORT.txt: writing REPORT.md was blocked.)
+
+Seed 20261207. Controllers frozen at ddd0d34 (v0.2e). Suite code 6ccb8ea. Run from 6ea164e,
+which adds only the pre-registration. 8,000 paired trials: ten controllers and ten
+conditions (five families, two levels each), 40 trials per condition, on the gantry and the
+UR5e arm. Run details are in RUN_LOG.md. Every number below comes from HELDOUT2_TABLES.md or
+TABLES.md in this folder, or from */trials.csv where a line says so. Simulation only.
+
+## Result in one paragraph
+
+These families were new: nobody had developed against them. In 5 of 10 machine-family cells
+C is ahead of every fair baseline (D, E, F, H, I). In 2 a fair baseline matches C, and in 3 C
+is below the best fair baseline. C is ahead on unseen receptacle tilt and yaw on both
+machines, and on the tight Micro-Fit part on the arm. C is below F on the unseen in-hand
+offset of the Micro-Fit on both machines, and below D on F/T drift on the arm. Over each
+machine's whole suite C is ahead (gantry 94.0% vs F 83.2%, arm 88.8% vs F 79.2%), but most of
+that pooled lead comes from the yaw family. C passed no bad units on the gantry. On the arm C
+passed 8, all at 0.3 N/s F/T drift. That is more than H (0) and I (1). These are the first bad
+units C has passed on housing-only parts in any reported run. G gave no measurable gain in
+any cell. The pre-registered expectation ("matches in most cells") was wrong. Hasan decides
+what this means for the pitch.
+
+## Pre-registered verdicts: C against the best fair baseline
+
+Source: HELDOUT2_TABLES.md (a). A family cell has 80 paired trials; a whole-suite cell
+has 400.
+
+| Machine, cell | C | Best fair baseline | C-only / other-only | p | Verdict |
+|---|---|---|---|---|---|
+| gantry, unseen tilt (2, 3 deg) | 100.0% | E 92.5% | 6 / 0 | 0.031 * | C ahead |
+| gantry, unseen yaw (2.5, 4 deg) | 100.0% | D 37.5% | 50 / 0 | < 1e-6 | C ahead |
+| gantry, F/T drift (0.1, 0.3 N/s) | 100.0% | D 100.0% | 0 / 0 | 1 | a fair baseline matches C |
+| gantry, Micro-Fit tolerance | 95.0% | F 88.8% | 6 / 1 | 0.12 | a fair baseline matches C |
+| gantry, Micro-Fit unseen grasp | 75.0% | F 98.8% | 0 / 19 | 3.8e-6 | C below F |
+| gantry, whole suite | 94.0% | F 83.2% | 63 / 20 | 2.4e-6 | C ahead |
+| arm, unseen tilt | 100.0% | E 85.0% | 12 / 0 | 0.00049 | C ahead |
+| arm, unseen yaw | 97.5% | F 37.5% | 48 / 0 | < 1e-6 | C ahead |
+| arm, F/T drift | 76.2% | D 100.0% | 0 / 19 | 3.8e-6 | C below D |
+| arm, Micro-Fit tolerance | 93.8% | F 80.0% | 12 / 1 | 0.0034 | C ahead |
+| arm, Micro-Fit unseen grasp | 76.2% | F 95.0% | 2 / 17 | 0.00073 | C below F |
+| arm, whole suite | 88.8% | F 79.2% | 74 / 36 | 0.00037 | C ahead |
+
+* marks 0.01 <= p < 0.05. There is no multiple-comparison correction (HELDOUT2_TABLES.md
+applies about 84 tests).
+
+Per condition: successes of 40, from trials.csv. Controller order: A B E D F H I J C G.
+
+| Condition | gantry | arm |
+|---|---|---|
+| h2_tilt_unseen_2deg | 2 38 39 38 39 38 39 40 40 40 | 1 38 38 37 38 37 38 40 40 40 |
+| h2_tilt_unseen_3deg | 0 32 35 29 34 29 34 39 40 40 | 0 30 30 30 30 30 30 40 40 40 |
+| h2_yaw_unseen_2.5deg | 3 29 29 29 29 29 29 40 40 40 | 2 26 28 28 29 28 29 40 40 40 |
+| h2_yaw_unseen_4deg | 2 1 1 1 1 1 1 40 40 40 | 2 1 1 1 1 1 1 37 38 40 |
+| h2_ft_drift_0.1 | 8 40 40 40 40 40 40 40 40 40 | 7 40 40 40 40 40 40 40 40 40 |
+| h2_ft_drift_0.3 | 6 40 40 40 40 40 40 40 40 40 | 2 39 40 40 39 40 39 26 21 21 |
+| h2_mf_tol_0.10mm | 1 22 23 38 40 38 40 40 40 40 | 0 21 24 38 36 38 36 36 40 40 |
+| h2_mf_tol_0.05mm | 0 9 10 29 31 29 31 31 36 36 | 0 6 18 17 28 17 28 28 35 35 |
+| h2_mf_grasp_unseen_1deg | 2 25 26 38 40 38 40 40 38 36 | 2 22 30 36 39 36 39 39 39 39 |
+| h2_mf_grasp_unseen_2deg | 0 15 16 37 39 37 39 39 22 22 | 0 10 17 19 37 19 37 38 22 22 |
+
+## Bad units on good-part trials: C against H and I
+
+Source: HELDOUT2_TABLES.md (b). Every heldout2 trial is a good part.
+
+| Machine, cell | C | H | I | p, C vs H / C vs I | Outcome |
+|---|---|---|---|---|---|
+| gantry, unseen tilt | 0 (<= 4.6%) | 12 | 7 | 0.00049 / 0.016 * | C fewer than H and I |
+| gantry, unseen yaw | 0 (<= 4.6%) | 47 | 50 | < 1e-6 / < 1e-6 | C fewer than H and I |
+| gantry, F/T drift | 0 | 0 | 0 | 1 / 1 | no difference |
+| gantry, Micro-Fit tolerance | 0 | 0 | 0 | 1 / 1 | no difference |
+| gantry, Micro-Fit unseen grasp | 0 | 0 | 0 | 1 / 1 | no difference |
+| gantry, whole suite (400) | 0 (<= 1.0%) | 59 | 57 | < 1e-6 / < 1e-6 | C fewer than H and I |
+| arm, unseen tilt | 0 (<= 4.6%) | 11 | 12 | 0.00098 / 0.00049 | C fewer than H and I |
+| arm, unseen yaw | 0 (<= 4.6%) | 41 | 49 | < 1e-6 / < 1e-6 | C fewer than H and I |
+| arm, F/T drift | 8 (<= 18.5%) | 0 | 1 | 0.0078 / 0.016 * | C more than H and I |
+| arm, Micro-Fit tolerance | 0 | 0 | 0 | 1 / 1 | no difference |
+| arm, Micro-Fit unseen grasp | 0 | 0 | 1 | 1 / 1 | no difference |
+| arm, whole suite (400) | 8 (<= 3.9%) | 52 | 63 | < 1e-6 / < 1e-6 | C fewer than H and I |
+
+All 8 of C's bad units are false accepts on arm h2_ft_drift_0.3. In each, C declared the plug
+seated at 13.05-14.40 mm depth, short of the 14.5 mm limit. They are trials 4, 12, 18, 19, 21,
+28, 29 and 30 in arm_heldout2/trials.csv. In benchmark_v0.2e C passed 0 of 7,400 good-part
+trials. One such trial appeared in the seed-2026 smoke test, and the pre-registration
+disclosed it.
+
+The H and I bad units on unseen tilt and yaw are plugs at full depth whose tilt or yaw is
+just over the 3 deg score limit. F's are an example: yaw 3.03-4.87 deg, tilt 3.01-3.91 deg,
+depth at least 14.90 mm (trials.csv, post hoc). Those verdicts depend on the 3 deg limits.
+
+## G and J
+
+- G against C: no measurable gain in any of the 12 cells (HELDOUT2_TABLES.md (a)). In
+  benchmark_v0.2e, G helped in 6 of 8 cells.
+- J (F's insertion plus C's VERIFY) against C, seated parts:
+  - J is ahead on the gantry whole suite: 97.2% vs 94.0%, p = 0.019 *.
+  - J is ahead on Micro-Fit unseen grasp: gantry 98.8% vs 75.0%, p = 3.8e-6; arm 96.2% vs
+    76.2%, p = 0.0004.
+  - J is below C on arm Micro-Fit tolerance: 80.0% vs 93.8%, p = 0.0034.
+  - J matches C in every other cell.
+  - Bad units: no significant J-C difference in any cell (arm drift: J 5, C 8).
+- J against I, seated parts:
+  - J is ahead on unseen yaw on both machines, on unseen tilt on the arm, and on both whole
+    suites.
+  - J is below I on arm F/T drift: 82.5% vs 98.8%, p = 0.00024.
+  - J matches I elsewhere.
+  - Bad units: J passed fewer than I on tilt (gantry p = 0.016 *, arm p = 0.00049), on yaw,
+    and on both whole suites.
+
+## Throughput
+
+Source: HELDOUT2_TABLES.md (d). Cycle times are p50 / p95 of successful cycles. Good
+units per hour are given at 0 s / 60 s per protective stop.
+
+| Machine, whole suite | C | J | F | I |
+|---|---|---|---|---|
+| gantry, success | 94.0% | 97.2% | 83.2% | 83.2% |
+| gantry, cycle p50 / p95 (s) | 5.76 / 8.66 | 5.24 / 7.34 | 2.43 / 4.25 | 2.44 / 7.26 |
+| gantry, good units/h | 503 / 503 | 596 / 596 | 907 / 907 | 675 / 675 |
+| arm, success | 88.8% | 91.0% | 79.2% | 79.2% |
+| arm, cycle p50 / p95 (s) | 9.52 / 14.75 | 9.01 / 12.26 | 4.73 / 7.72 | 4.84 / 11.55 |
+| arm, good units/h | 280 / 269 | 311 / 303 | 463 / 442 | 378 / 364 |
+
+C makes fewer good units per hour than F in every family cell except unseen yaw (gantry 714
+vs 490, arm 356 vs 227). On arm Micro-Fit tolerance, C makes 279 against F's 301 at 0 s per
+stop, and 263 against 301 at 60 s, so F is ahead there too. C's protective stops: 0 on the
+gantry and 3 on the arm (2 in F/T drift, 1 in Micro-Fit tolerance). F's: 0 and 2.
+
+## Against expectation
+
+The pre-registered expectations came from the published results only.
+
+- Expected: matches in most cells. This was wrong: only 2 of 10 family cells match. In
+  benchmark_v0.2e, C's lead sat in high camera error. Here the camera is nominal (sigma
+  0.3 mm), yet C is still ahead on unseen socket rotation and on the tight Micro-Fit part on
+  the arm.
+- Expected: unseen tilt and yaw would behave like the hand-eye bias family (I 100 of 100).
+  This was wrong: I seated 37.5% on unseen yaw and 85-91% on unseen tilt. A spiral search
+  finds an unseen lateral error such as the hand-eye bias. It does not find unseen yaw or
+  tilt: F's and I's plugs go to full depth still rotated (see the bad units above).
+- Expected: C passes fewer bad units than H and I on the housing-only families. True on
+  tilt and yaw. Not true on F/T drift: on the gantry no controller passed one, and on the arm
+  C passed more.
+- Expected: no bad-unit difference on Micro-Fit. True.
+- The published pattern that C loses to I under an unseen lateral error held on the
+  Micro-Fit unseen in-hand offset: C is below F on both machines.
+
+## Post-hoc observations (decided after seeing the results; not pre-registered)
+
+- Post hoc, unseen grasp:
+  - C's Micro-Fit failures fall where the slip and the tilt have the same sign, so the
+    tip offsets add (0.4 mm + 0.42 mm).
+  - At 2 deg with the same sign, C seated 6 of 24 on each machine; F seated 23 and 21 of
+    24. With opposite signs, C and F both seated 16 of 16 (trials.csv).
+  - Of C's 36 failures at 2 deg, 35 end above the mouth (depth -2.3 to -4.5 mm). One, on the
+    arm, ends at 7.4 mm.
+  - The gantry failures stop at the retry limit after 7 retries; the arm failures stop at
+    the time limit after 5-7 retries.
+  - C sizes its search prior from the told accuracy (0.3 mm sigma), so a 0.8 mm offset sits
+    at about 2.7 sigma. This is a reading of the design, not a traced cause.
+- Post hoc, F/T drift:
+  - C fails only at 0.3 N/s on the arm, where its cycles are longer: median 8.9 s over the
+    40 trials, against 5.3 s on the gantry. 14 of C's 40 arm cycles there ran 15.8-27.4 s.
+  - The false accepts are short plugs, so the drifting axial reading probably looked like
+    a seat. This was not traced.
+  - No controller re-tares the F/T sensor before contact.
+- Post hoc, yaw and tilt: J, which is F's insertion plus C's VERIFY, seats 96-100% on unseen
+  yaw and tilt, where F seats 37.5-91.2%. So most of C's lead there likely comes from C's
+  VERIFY (its yaw re-centring), not from C's search.
+- Post hoc, G: G and C give identical or nearly identical results in most cells, so G's
+  learned prior gave nothing measurable here.
+
+## Limits and open fairness items
+
+- One seed and 40 trials per condition. A family cell needs a discordant split of about
+  9 / 1 to reach p < 0.05, so a "matches" verdict (for example gantry Micro-Fit tolerance,
+  6 / 1) is weak evidence of equality.
+- Two of the bases are assumed: the F/T drift rate and the Micro-Fit tolerance.
+- The unseen socket rotation turns the socket about its mouth centre, not about the board
+  edge.
+- The in-hand slip is fixed for the whole cycle.
+- The tilt and yaw verdicts rest on the 3 deg score limits, fixed in V0.1. The cavity
+  admits about 3.8 deg of tilt and 4.7 deg of yaw.
+- Fairness: no fair baseline checks yaw or tilt after insertion. J shows what C's VERIFY
+  adds to F. A conventional cell could add a vision or probe check of the seated part; that
+  is not modelled.
+- Fairness: none of A-J re-zeroes the F/T sensor just before contact. Doing so would likely
+  remove most of the drift family's effect for every controller. This is an open item, not
+  a fix to make in this round.
+- heldout2 has now been used once, on seed 20261207. Any development against these families
+  from now on makes them in-sample, as happened to `heldout`.

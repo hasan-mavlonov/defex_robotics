@@ -1,0 +1,30 @@
+benchmark_v0.2d adaptive: 93/100 seated
+   # 0 aborted:time_limit     last state INSERT                   VERIFY failed x3 wall-yaw half travel [0.022, 0.04, 0.014, 0.042] 
+   # 2 aborted:time_limit     last state INSERT                   VERIFY failed x3 wall-yaw half travel [0.154, 0.031, 0.038] 
+   #14 aborted:time_limit     last state INSERT                   VERIFY failed x3 wall-yaw half travel [0.023, 0.053, 0.088, 0.019] 
+   #23 protective_stop        last state INSERT                   VERIFY failed x1 wall-yaw half travel [0.006, 0.152] |F|=6.3 N |T|=0.69 N m
+   #48 aborted:time_limit     last state VERIFY                   VERIFY failed x2 wall-yaw half travel [0.219, 0.096] 
+   #98 protective_stop        last state VERIFY                   VERIFY failed x0 wall-yaw half travel [] |F|=4.9 N |T|=0.61 N m
+   #99 protective_stop        last state DETECT: excess_torque    VERIFY failed x0 wall-yaw half travel [] |F|=8.2 N |T|=0.65 N m
+   every wall-yaw check on friction_1: n=110, below 0.293 mm: 17
+benchmark_v0.2d spiral_rcc_verify: 100/100 seated
+   every wall-yaw check on friction_1: n=100, below 0.293 mm: 0
+benchmark_v0.2d_rep adaptive: 94/100 seated
+   #13 aborted:time_limit     last state INSERT                   VERIFY failed x3 wall-yaw half travel [0.031, 0.019, 0.036] 
+   #15 aborted:retry_limit    last state RECOVER: surface_block   VERIFY failed x0 wall-yaw half travel [] 
+   #23 protective_stop        last state INSERT                   VERIFY failed x0 wall-yaw half travel [] |F|=6.7 N |T|=0.68 N m
+   #25 protective_stop        last state VERIFY                   VERIFY failed x0 wall-yaw half travel [] |F|=4.7 N |T|=0.62 N m
+   #55 protective_stop        last state VERIFY                   VERIFY failed x0 wall-yaw half travel [] |F|=4.5 N |T|=0.61 N m
+   #61 protective_stop        last state INSERT                   VERIFY failed x1 wall-yaw half travel [0.204, 0.027] |F|=7.6 N |T|=0.71 N m
+   every wall-yaw check on friction_1: n=100, below 0.293 mm: 6
+benchmark_v0.2d_rep spiral_rcc_verify: 100/100 seated
+   every wall-yaw check on friction_1: n=100, below 0.293 mm: 0
+benchmark_v0.2e adaptive: 95/100 seated
+   # 8 protective_stop        last state DETECT: excess_torque    VERIFY failed x0 wall-yaw half travel [] |F|=9.1 N |T|=0.65 N m
+   #21 aborted:time_limit     last state INSERT                   VERIFY failed x2 wall-yaw half travel [0.016, 0.026, 0.025] 
+   #51 protective_stop        last state VERIFY                   VERIFY failed x0 wall-yaw half travel [] |F|=5.0 N |T|=0.62 N m
+   #56 protective_stop        last state VERIFY                   VERIFY failed x0 wall-yaw half travel [] |F|=4.7 N |T|=0.62 N m
+   #73 protective_stop        last state DETECT: excess_torque    VERIFY failed x0 wall-yaw half travel [] |F|=9.6 N |T|=0.65 N m
+   every wall-yaw check on friction_1: n=100, below 0.293 mm: 5
+benchmark_v0.2e spiral_rcc_verify: 100/100 seated
+   every wall-yaw check on friction_1: n=100, below 0.293 mm: 0

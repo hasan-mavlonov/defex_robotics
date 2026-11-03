@@ -1,0 +1,56 @@
+nominal variant - cone elliptic impratio 10 solreffriction 0.02 s seed 20261130 friction_1 adaptive #21: success=False reason=aborted:time_limit depth=-2.00 mm retries=4
+    0.200 state              APPROACH
+    1.680 state              ALIGN
+    1.802 attempt            #1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg
+    1.802 state              INSERT
+    3.406 state              DETECT: stall
+    5.124 conform            tipped, rotation=(-3.89,+1.13) deg
+    5.124 touch_calibration  mouth +0.95 mm below vision estimate
+    5.124 detect             surface_block [stall] depth=0.26 mm Fax=8.0 N Flat=(+0.0,+0.1) N CoP=(+0.00,-3.89) mm at (+0.00,+0.12) mm
+    5.124 state              RECOVER: surface_block
+    5.414 recover            localizer -> probe (+0.00,+1.25) mm, P(entry)=0.92
+    5.414 state              ALIGN: retry 1
+    5.690 attempt            #2 probe=(+0.00,+1.25) mm yaw_corr=+0.0 deg
+    5.690 state              INSERT
+    7.014 state              DETECT: stall
+    7.404 conform            tipped, rotation=(+0.26,-0.27) deg
+    7.404 detect             no_contact [stall] depth=0.62 mm Fax=0.0 N Flat=(-0.0,-0.0) N CoP=n/a at (+0.05,+1.15) mm
+    7.404 state              RECOVER: no_contact
+    7.736 recover            yaw search +3 deg; localizer -> probe (+0.00,+0.75) mm, P(entry)=0.70
+    7.736 state              ALIGN: retry 2
+    7.988 attempt            #3 probe=(+0.00,+0.75) mm yaw_corr=+3.0 deg
+    7.988 state              INSERT
+    9.334 state              DETECT: stall
+    9.964 conform            plug slid into the lead-in: resuming insertion
+    9.964 state              INSERT
+   13.940 state              DETECT: excess_torque
+   13.940 detect             excess_torque at the floor: holding at the measured depth to settle
+   14.060 detect             seated_candidate [floor_impact] depth=14.11 mm Fax=2.5 N Flat=(+0.1,+0.0) N CoP=(-6.17,+3.77) mm at (-0.05,+0.80) mm
+   14.060 state              VERIFY
+   14.966 seat_conform       tilt aligned to floor by (-0.23,-0.31) deg
+   15.888 verify             wall reactions [2.1, 2.8] N at travel [0.38, 0.36] mm -> PASS
+   15.892 wall_yaw           half free travel 0.016 mm (>= 0.293 for 2.0 deg), levers (-2.3,+16.2) mm -> inconsistent levers, probe again
+   16.498 verify             wall reactions [2.5, 2.7] N at travel [0.42, 0.38] mm -> PASS
+   16.502 wall_yaw           half free travel 0.026 mm (>= 0.293 for 2.0 deg), levers (+47.3,+23.6) mm -> FAIL
+   16.502 state              RECOVER: verify_failed
+   17.678 recover            verify failed: re-aim tilt=(+1.4,-0.6) yaw=+2.8 deg
+   17.678 state              ALIGN: retry 3
+   17.814 attempt            #4 probe=(-0.03,+0.96) mm yaw_corr=+2.8 deg
+   17.814 state              INSERT
+   19.172 state              DETECT: stall
+   19.768 conform            plug slid into the lead-in: resuming insertion
+   19.768 state              INSERT
+   22.784 state              DETECT: bottomed
+   22.836 detect             seated_candidate [bottomed] depth=14.13 mm Fax=7.2 N Flat=(+0.1,-0.2) N CoP=(-5.45,-4.15) mm at (-0.04,+1.00) mm
+   22.836 state              VERIFY
+   23.534 seat_conform       tilt aligned to floor by (+0.61,-0.54) deg
+   24.476 verify             wall reactions [2.0, 2.1] N at travel [0.35, 0.42] mm -> PASS
+   24.490 wall_yaw           half free travel 0.025 mm (>= 0.293 for 2.0 deg), levers (+0.3,+13.7) mm -> FAIL
+   24.490 state              RECOVER: verify_failed
+   25.666 recover            verify failed: re-aim tilt=(+0.8,-0.8) yaw=+2.7 deg
+   25.666 state              ALIGN: retry 4
+   25.794 attempt            #5 probe=(-0.03,+0.89) mm yaw_corr=+2.7 deg
+   25.794 state              INSERT
+   26.202 abort              time_limit
+   26.202 state              FAILURE: time_limit
+   26.340 finish             success=False reason=time_limit

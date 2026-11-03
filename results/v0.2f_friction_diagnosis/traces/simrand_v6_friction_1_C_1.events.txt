@@ -1,0 +1,17 @@
+simrand variant 6 cone pyramidal impratio 3.38379 solreffriction 0.0112253 s seed 20261205 friction_1 adaptive #1: success=False reason=protective_stop depth=11.43 mm retries=0
+    0.200 state              APPROACH
+    1.694 state              ALIGN
+    1.816 attempt            #1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg
+    1.816 state              INSERT
+    5.846 state              DETECT: bottomed
+    5.898 detect             seated_candidate [bottomed] depth=14.66 mm Fax=6.8 N Flat=(-0.2,-0.4) N CoP=(-6.04,-4.03) mm at (-0.10,+0.03) mm
+    5.898 state              VERIFY
+    6.334 seat_conform       tilt aligned to floor by (-0.18,+0.04) deg
+    7.176 verify             wall reactions [2.2, 2.0] N at travel [0.37, 0.28] mm -> PASS
+    7.188 wall_yaw           half free travel 0.022 mm (>= 0.293 for 2.0 deg), levers (+8.6,-6.2) mm -> inconsistent levers, probe again
+    7.762 verify             wall reactions [2.2, 2.1] N at travel [0.27, 0.48] mm -> PASS
+    7.794 wall_yaw           half free travel 0.054 mm (>= 0.293 for 2.0 deg), levers (+9.4,-6.0) mm -> FAIL
+    7.794 state              RECOVER: verify_failed
+    8.096 abort              stuck_during_retract
+    8.096 state              FAILURE: stuck_during_retract
+    8.108 protective_stop    |F|=30.1 N |T|=0.18 N m

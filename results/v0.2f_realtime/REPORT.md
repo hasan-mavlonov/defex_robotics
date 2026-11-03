@@ -1,6 +1,5 @@
 # v0.2f: real-time fit of the controller step, and pull-test force overshoot
 
-(Written as REPORT.txt: writing REPORT.md was blocked in this session. Markdown format.)
 
 Development measurements only, on development seeds 2026 and 2027, at commit 4df8cae (the
 v0.2e code). No controller behaviour was changed. Every timing number comes from an Apple M5

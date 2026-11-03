@@ -272,3 +272,21 @@ of the conditions that matter, 6,000 rows identical to the benchmark
 The rescored numbers do not replace the pre-registered ones. The question for a pilot
 customer is their real spec: angle and depth, and whether acceptance is by angle, by
 click or by pull test.
+
+## 12. "Does a Python state machine fit a 2 ms control loop?"
+
+On this development laptop (Apple M5, shared with other jobs; not the rig PC), the
+controller's own per-tick work takes about 43-50 us at the median for C and G. In about
+12.6 million ticks its replayed cost never exceeded 2 ms; the slowest tick (0.6-0.9 ms at
+low load) is the planning tick after a blocked attempt (hole-localizer update), taken
+with the tool at rest. Wall-clock misses of 2 ms came from Python garbage collection and
+operating-system preemption, not controller logic (66 of 1.0 million gantry ticks at low
+load). On a rig: run the loop on an isolated core, keep garbage collection out of the
+cycle, and measure the planning tick on the rig PC
+(`results/v0.2f_realtime/REPORT.md`, development measurement).
+
+Related, same report: the gantry pull test's force ringing (up to 1.11 x the 35.2 N
+command) comes from the simulator's undamped latch hook. No pull exceeded the 58 N
+retention force. One fairness item runs against the baselines: C caps any retract pull
+on a latching part at 36 N, and D, F, H and I have no such cap. H's retry retract tore
+the latch of 2 good gantry parts on the development seeds (POST HOC observation).

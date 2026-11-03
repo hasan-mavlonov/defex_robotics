@@ -207,7 +207,7 @@ force and a movement limit of 0.6 x the 1.75 mm terminal wipe.
   relies partly on that simulator assumption. A real sensor drifts. A depth re-check
   before SUCCESS is a candidate fix for a later, pre-registered round. It is not
   implemented.
-- <!-- PENDING: tilt diagnosis -->
+- Tilt check, POST HOC diagnosis (`results/v0.2f_tilt_diagnosis/REPORT.txt`, development seeds 2026/2027): the latching tilt check compares the plug with C's own socket-axis estimate, the axis C aimed it along, so it cannot see tilt that comes from an error in that estimate. G's 3.01 deg unit is this case (estimate 2.87 deg off the true axis after a wrong 'flat' fold). On the development seeds 234 of 8,320 C/G verdicts read more than 1 deg under the true tilt; none became a bad unit. What keeps tilted bad units rare is the Micro-Fit cavity, which stops a latched plug at about 3.2 deg, and a camera tilt error rarely over 3 deg. Near misses (declared, 2.5-3.0 deg) were 5 in about 3,540 declared latching trials. J's empty first tilt window comes from its hand-over code and cannot happen to C. On the gantry the housing-only VERIFY has no yaw check (its sweep always ends in SUCCESS); on the arm the wall-yaw check bounds |yaw| at 2.0 deg. Two default-off options (push below the force floor; J's hand-over window) passed a no-harm rule on validation seed 4007 but changed no outcome; whether to use them is Hasan's call.
 - The housing-only VERIFY has no tilt check. Squaring the plug to the floor is what
   keeps housing-only tilt in spec.
 
@@ -228,9 +228,9 @@ The test is fixed in `hardware/TEST_PROTOCOL.md`.
   only there.
 - **Predictions.** The simulation's predictions are frozen
   (`results/v0.2f_rig_predictions`, seed 20261201) with the rule for judging a rig
-  result. At 50 trials per condition, the housing-only prediction is C 194/200 against
-  F/I 175/200 on the gantry, with 0 against 13 bad units.
-  <!-- RIGPRED: update to 100 -->
+  result. At 100 trials per condition, the housing-only prediction is C 387/400 against
+  F/I 336/400 on the gantry, with 0 against 33 bad units; on gantry Micro-Fit good parts C is
+  predicted below F (284 against 297 of 300).
 
 Rig options in `hardware/BOM.md`. A desk gantry is about $23.3k plus the F/T sensor. A
 UR3e with a Bota SensONE T5 is about $39.8k, and a UFactory 850 hybrid about $13.6k.

@@ -111,7 +111,7 @@ What C's zero rests on:
 - **The latching tilt check.** G's one bad unit (seed 20261130) was a latched plug at
   3.01 deg tilt that the tilt check passed. J's arm latching bad unit came from a first
   latch check with an empty tilt window.
-  <!-- PENDING: tilt diagnosis -->
+  Tilt check, POST HOC diagnosis (`results/v0.2f_tilt_diagnosis/REPORT.txt`, development seeds 2026/2027): the latching tilt check compares the plug with C's own socket-axis estimate, the axis C aimed it along, so it cannot see tilt that comes from an error in that estimate. G's 3.01 deg unit is this case (estimate 2.87 deg off the true axis after a wrong 'flat' fold). On the development seeds 234 of 8,320 C/G verdicts read more than 1 deg under the true tilt; none became a bad unit. What keeps tilted bad units rare is the Micro-Fit cavity, which stops a latched plug at about 3.2 deg, and a camera tilt error rarely over 3 deg. Near misses (declared, 2.5-3.0 deg) were 5 in about 3,540 declared latching trials. J's empty first tilt window comes from its hand-over code and cannot happen to C. On the gantry the housing-only VERIFY has no yaw check (its sweep always ends in SUCCESS); on the arm the wall-yaw check bounds |yaw| at 2.0 deg. Two default-off options (push below the force floor; J's hand-over window) passed a no-harm rule on validation seed 4007 but changed no outcome; whether to use them is Hasan's call.
 
 ## 4. heldout2: a clean held-out test
 
@@ -172,11 +172,8 @@ Nothing has been bought and no vendor contacted.
   only there and makes no between-controller claim.
 - Frozen simulation predictions for those conditions: seed 20261201, code ddd0d34,
   [`v0.2f_rig_predictions/REPORT.txt`](../results/v0.2f_rig_predictions/REPORT.txt).
-  At 50 trials per condition, housing-only: gantry C 194/200 against F/I 175/200,
-  arm 190/200 against 168/200. Bad units: C 0/200, F/I 13/200 (gantry) and 18/200
-  (arm). Micro-Fit good parts: no difference reaches p < 0.05. The rule for judging
+  At 100 trials per condition (extension on the same commit; trials 0-49 identical), housing-only C seats 387/400 against F/I 336/400 on the gantry and 370/400 against 329/400 on the arm. Its bad units are 0/400 against 33/400 and 39/400. On gantry Micro-Fit good parts C is predicted below F (284 against 297 of 300, p = 0.00024). Arm Micro-Fit good parts: no difference (p = 0.20-0.36). The rule for judging
   a rig result against these predictions is fixed there.
-  <!-- RIGPRED: update to 100 -->
 - The latch-model fitter for rig curves
   ([`v0.2f_latch_fit/REPORT.txt`](../results/v0.2f_latch_fit/REPORT.txt)) recovers 13
   of 14 quantities on synthetic curves. It fails its own rule on hook stiffness (6 of

@@ -197,9 +197,7 @@ controller covers it. On Micro-Fit good parts it would take 780-1,200 pairs (gan
 or 7,800 or more (arm), so the rig reports rates only there. The simulation's
 predictions for these conditions are frozen
 ([`results/v0.2f_rig_predictions`](results/v0.2f_rig_predictions/REPORT.txt), seed
-20261201, code ddd0d34). At 50 trials per condition, housing-only C seats 194/200
-against F/I 175/200 on the gantry and 190/200 against 168/200 on the arm. Its bad units
-are 0/200 against 13/200 and 18/200. <!-- RIGPRED: update to 100 --> The latch-model
+20261201, code ddd0d34). At 100 trials per condition (extension on the same commit; trials 0-49 identical), housing-only C seats 387/400 against F/I 336/400 on the gantry and 370/400 against 329/400 on the arm. Its bad units are 0/400 against 33/400 and 39/400. On gantry Micro-Fit good parts C is predicted below F (284 against 297 of 300, p = 0.00024). The latch-model
 fitter for rig force-depth curves fails its own synthetic rule on hook stiffness and
 has not seen a real curve
 ([`results/v0.2f_latch_fit/REPORT.txt`](results/v0.2f_latch_fit/REPORT.txt)).
@@ -241,7 +239,7 @@ the results were seen.
   - Across 12 randomized simulators it is not exactly zero: C passed 1 bad unit per
     machine, both in variant 10. C still passed fewer than F, H and I in all 12
     variants on both machines (`results/sim_randomization_v0.2f`).
-  - <!-- PENDING: tilt diagnosis -->
+  - Tilt check, POST HOC diagnosis (`results/v0.2f_tilt_diagnosis/REPORT.txt`, development seeds 2026/2027): the latching tilt check compares the plug with C's own socket-axis estimate, the axis C aimed it along, so it cannot see tilt that comes from an error in that estimate. G's 3.01 deg unit is this case (estimate 2.87 deg off the true axis after a wrong 'flat' fold). On the development seeds 234 of 8,320 C/G verdicts read more than 1 deg under the true tilt; none became a bad unit. What keeps tilted bad units rare is the Micro-Fit cavity, which stops a latched plug at about 3.2 deg, and a camera tilt error rarely over 3 deg. Near misses (declared, 2.5-3.0 deg) were 5 in about 3,540 declared latching trials. J's empty first tilt window comes from its hand-over code and cannot happen to C. On the gantry the housing-only VERIFY has no yaw check (its sweep always ends in SUCCESS); on the arm the wall-yaw check bounds |yaw| at 2.0 deg. Two default-off options (push below the force floor; J's hand-over window) passed a no-harm rule on validation seed 4007 but changed no outcome; whether to use them is Hasan's call.
 * **On heldout2, a clean held-out test, C seats more than every fair baseline on unseen
   receptacle tilt and yaw** on both machines, and on the tighter Micro-Fit on the arm.
   Scope: one seed and 80 trials per cell. J matches C on tilt and yaw, so VERIFY likely
@@ -962,7 +960,7 @@ beyond 0.875 of the plug's half-width, which a plug latched wedged at the
 cavity's tilt limit produces
 ([`results/v0.2d_tilt_check`](results/v0.2d_tilt_check/REPORT.md)). A failed check
 takes the normal failed-VERIFY path. The housing-only VERIFY has no tilt check.
-<!-- PENDING: tilt diagnosis -->
+Tilt check, POST HOC diagnosis (`results/v0.2f_tilt_diagnosis/REPORT.txt`, development seeds 2026/2027): the latching tilt check compares the plug with C's own socket-axis estimate, the axis C aimed it along, so it cannot see tilt that comes from an error in that estimate. G's 3.01 deg unit is this case (estimate 2.87 deg off the true axis after a wrong 'flat' fold). On the development seeds 234 of 8,320 C/G verdicts read more than 1 deg under the true tilt; none became a bad unit. What keeps tilted bad units rare is the Micro-Fit cavity, which stops a latched plug at about 3.2 deg, and a camera tilt error rarely over 3 deg. Near misses (declared, 2.5-3.0 deg) were 5 in about 3,540 declared latching trials. J's empty first tilt window comes from its hand-over code and cannot happen to C. On the gantry the housing-only VERIFY has no yaw check (its sweep always ends in SUCCESS); on the arm the wall-yaw check bounds |yaw| at 2.0 deg. Two default-off options (push below the force floor; J's hand-over window) passed a no-harm rule on validation seed 4007 but changed no outcome; whether to use them is Hasan's call.
 
 **D: spiral search** ([`defex/control/spiral_search.py`](defex/control/spiral_search.py)).
 The conventional force-controlled routine cobot vendors ship (Flexiv Adaptive
@@ -1123,8 +1121,8 @@ The project targets the existing `.venv` on the Mac mini (Python 3.12, MuJoCo
 source .venv/bin/activate
 pip install -e ".[dev,video]"     # mujoco, numpy, matplotlib; pytest; imageio + ffmpeg for MP4
 
-pytest -q                         # 280 tests (physics, geometry, sensing, controllers, reports)
-pytest -q -m "not slow"           # 239 tests: skips the closed-loop controller tests
+pytest -q                         # 296 tests (physics, geometry, sensing, controllers, reports)
+pytest -q -m "not slow"           # 254 tests: skips the closed-loop controller tests
 python -m experiments.baseline    # one-minute check: all controllers at 100% on easy conditions
 ```
 
@@ -1220,7 +1218,7 @@ experiments/              baseline check, robustness benchmark, evaluation + plo
 demos/                    live viewer, video recorder, replay, investor video
   media/                  rendered investor video and its README still
 simulations/              generated workcell MJCF, original prototype, viewer script
-tests/                    280 tests: geometry, physics, sensing, controllers, metrics
+tests/                    296 tests: geometry, physics, sensing, controllers, metrics
 results/benchmark_v0.1/   the reported benchmark: trials.csv, summary.json/.csv, report.md,
                           plots/, events.json.gz, trajectories/ (replayable),
                           earlier_runs/ (superseded reports)

@@ -89,14 +89,22 @@ conventional cell.
    - More than half of those wins are trials where I declared a bad unit. On seed
      20261130 that is 30 of 53 (gantry) and 30 of 54 (arm).
    - C loses arm friction_1 (nominal camera) on all three seeds.
-2. **The bad-unit gap depends on the seating spec** (POST HOC, exact replay of seed
-   20261130, `results/v0.2f_evidence/TOLERANCE.md`).
-   - At a 4 deg spec, I's standard bad units fall from 32 to 8 (gantry) and from 32 to 7
-     (arm).
-   - C's standard lead over I becomes 31/10 (p = 0.0015) on the gantry and 30/17
-     (p = 0.079, not significant) on the arm.
-   - At 2 deg the lead widens: 122/2 and 119/7.
-   <!-- TOLERANCE-3SEEDS: the replay on seeds 20261123 and 20261124 is being added -->
+2. **The bad-unit gap depends on the seating spec** (POST HOC, exact replays of all three
+   benchmark seeds, `results/v0.2f_evidence/TOLERANCE.md` (4)-(5); p per seed, not pooled).
+   - I's standard bad units at 3 / 4 / 5 deg: gantry 48/13/2, 39/9/2, 32/8/3; arm
+     43/15/4, 39/10/4, 32/7/3 (seeds 20261123, 20261124, 20261130). C passes none at
+     2.5-5 deg, except 1 on the arm at 2.5 deg on one seed.
+   - Gantry standard: C's lead over I holds at 4 deg on every seed (C-only / I-only
+     28/5, 32/3, 31/10) and at 5 deg (18/6, 26/4, 26/10; p = 0.023, 5.9e-5, 0.011).
+   - Arm standard: the lead is still significant at 3.5 deg, but not at 4 deg on any
+     seed (27/21, 24/13, 30/17; p = 0.47, 0.099, 0.079).
+   - At 2 deg the lead widens on every seed (gantry 113/0, 114/1, 122/2), and C then
+     passes 0-3 bad units.
+   - Old `heldout` at 5 deg: I has more discordant wins than C on both machines and all
+     seeds.
+   - The v0.2d-code replays reproduce 12,400 of 12,800 rows exactly; the other 400 (I and
+     J, arm generalization_combined) differ only in final-digit drift that the v0.2d
+     pre-registration disclosed, with identical outcomes.
 3. **C's zero bad units rests partly on the simulator.**
    - Under F/T drift (heldout2, arm), VERIFY's 1 N force-target preload lifts a seated
      plug, and nothing re-checks depth (`results/v0.2f_h2_diagnosis`).

@@ -184,3 +184,16 @@ def test_exact_seated_uses_per_axis_speed_and_latch():
     assert ev.rescored_success(row(failure_reason="false_accept"), True)
     assert not ev.rescored_success(row(failure_reason="timeout"), True)
     assert not ev.rescored_success(row(declared_success="False"), True)
+
+
+def test_drift_margin_ratio_over_undecided_rows():
+    crit = {**CRIT, "max_final_speed_mm_s": 2.0}
+    run = object.__new__(ev.Run)
+    run.cond = {"g": HOUSING}
+    run.crit = crit
+    old = row(yaw=3.4, gt_seated="False", condition="g", controller="spiral_rcc_pull", trial_index="1")
+    new = {**old, "final_yaw_deg": "3.41", "final_x_mm": "0.1", "final_y_mm": "0.1", "final_tcp_speed_mm_s": "0.1"}
+    ratio, n = ev._drift_margin([("arm", "standard", new, old)], run)
+    assert n == 1
+    assert ratio == pytest.approx(0.09 / 0.01, rel=1e-6)  # closest threshold 3.5 deg, drift 0.01 deg
+    assert ev._drift_margin([], run) is None

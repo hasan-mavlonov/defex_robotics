@@ -769,8 +769,7 @@ def part3(runs, out: Out) -> bool:
 # Part 3b: exact rescoring from the seed-20261130 replay with the missing values logged
 # ------------------------------------------------------------------------------------------
 
-REPLAY = "results/v0.2f_evidence/replay_20261130"
-RESCORE_SEED = "20261130"
+REPLAYS = {seed: f"results/v0.2f_evidence/replay_{seed}" for seed in SEEDS}
 RESCORE_SUITES = ("standard", "heldout", "latching")
 RESCORE_CTRLS = (C, F, I, J)
 ANGLE_TOLS = (2.0, 2.5, 3.0, 3.5, 4.0, 5.0)
@@ -816,70 +815,13 @@ def rescored_success(r: dict, seated_: bool) -> bool:
     return seated_ and r["failure_reason"] not in BLOCKERS and r["declared_success"] != "False"
 
 
-def part3b(runs, repo: Path, out: Out) -> None:
-    f = "TOLERANCE.md"
-    base = repo / REPLAY
-    rep = {}
-    for m in MACHINES:
-        for s in RESCORE_SUITES:
-            p = base / f"{m}_{s}"
-            if (p / "trials.csv").exists():
-                rep[(m, s)] = Run(p, connector_specs(repo))
-    if not rep:
-        return
-    out.w(f, "## Exact rescoring from the replay (seed 20261130)", "",
-          "POST HOC throughout. Every number in this section is a rescoring under tolerances that were not "
-          "pre-registered. None replaces a pre-registered result.", "",
-          f"`{REPLAY}`: the conditions whose rows the old logs cannot rescore, replayed for C, F, I and J "
-          "on code that adds only five logged columns (`" + "`, `".join(NEW_COLS) + "`). The plan, written "
-          "before the run, is `RUN_PLAN.md` in that folder.", "")
-    # (1) identity with the committed rows
-    out.w(f, "### (1) The replay reproduces the committed rows", "",
-          "| Run | replayed conditions | rows | rows identical in every committed column but wall_time_s | "
-          "differing cells | gt_seated recomputed exactly (as-run tolerances) | commit | dirty |",
-          "|---|---|---|---|---|---|---|---|")
-    tot_rows = tot_same = tot_exact = 0
-    for (m, s), rr in rep.items():
-        old = runs[(RESCORE_SEED, m, s)]
-        assert rr.base_seed == RESCORE_SEED
-        same = diff_cells = exact = 0
-        for r in rr.rows:
-            o = old.by[(r["condition"], r["controller"], r["trial_index"])]
-            d = sum(1 for k in o if k != "wall_time_s" and o[k] != r[k])
-            same += d == 0
-            diff_cells += d
-            cond = rr.cond[r["condition"]]
-            exact += exact_seated(r, cond, rr.crit, rr.crit["depth_tolerance_mm"], rr.crit["max_tilt_deg"]) == \
-                (r["gt_seated"] == "True")
-        n = len(rr.rows)
-        tot_rows += n
-        tot_same += same
-        tot_exact += exact
-        conds = sorted({r["condition"] for r in rr.rows})
-        out.w(f, f"| {m} {s} | {', '.join(conds)} | {n} | {same} | {diff_cells} | {exact} | {rr.commit[:7]} | {rr.dirty} |")
-    out.w(f, "", "`dirty` is True for the five runs that started after the analysis files "
-          "`experiments/v02f_evidence.py` and `tests/test_v02f_evidence.py` were edited during the replay "
-          "(git_dirty counts any tracked change outside results/). Neither file is imported by the runner or "
-          "the simulation; `git diff 2dc7009 -- . ':!results'` lists only those two files. The row identity "
-          "above is the direct check.", "")
-    out.k(f"replay seed 20261130: {tot_same} of {tot_rows} rows identical to benchmark_v0.2e in every committed "
-          f"column but wall_time_s; gt_seated recomputed exactly on {tot_exact} of {tot_rows} (TOLERANCE.md (1))")
-    assert tot_same == tot_rows and tot_exact == tot_rows, "replay does not reproduce the committed rows"
-
-    # (2) rescore every good-part row of C, F, I, J
-    out.w(f, "### (2) How every other row is rescored, and a check of that rule", "",
-          "Rows in replayed conditions use the replayed values (`exact_seated`). All other rows use "
-          "`logged_seated`: seated as run means the per-axis lateral, settled and latched checks passed, "
-          "so only depth and angle decide; not seated as run with depth and angles passing means one of "
-          "those checks failed, so the row stays unseated. Rows the rule cannot decide must all be in "
-          "replayed conditions (asserted). Success = rescored seated and none of the logged outcome "
-          "blockers (stop, penetration, damage, workspace limit, timeout, declared failure).", "")
-    undecided_outside = 0
-    agree = disagree = decided_in_rep = undecided_in_rep = 0
+def _rescore_seed(runs, rep: dict, seed: str) -> tuple[dict, tuple[int, int, int, int]]:
+    """Rescored seated value of every good-part C/F/I/J row of one seed, at every tolerance."""
+    undecided_outside = agree = disagree = undecided_in_rep = 0
     seated_t = {}
     for m in MACHINES:
         for s in RESCORE_SUITES:
-            old = runs[(RESCORE_SEED, m, s)]
+            old = runs[(seed, m, s)]
             rr = rep.get((m, s))
             repconds = {r["condition"] for r in rr.rows} if rr else set()
             for c in RESCORE_CTRLS:
@@ -897,7 +839,6 @@ def part3b(runs, repo: Path, out: Out) -> None:
                                 if lg is None:
                                     undecided_in_rep += 1
                                 else:
-                                    decided_in_rep += 1
                                     agree += lg == ex
                                     disagree += lg != ex
                                 val = ex
@@ -907,84 +848,279 @@ def part3b(runs, repo: Path, out: Out) -> None:
                                     continue
                                 val = lg
                             seated_t[key + (dt, at)] = (val, r)
-    out.w(f, f"Check on the replayed conditions: where the logged-columns rule decides, it agrees with the "
-          f"replayed exact rule on {agree} of {agree + disagree} (row, tolerance) cases. It could not decide "
-          f"{undecided_in_rep} cases there, which the replay settles. Undecided cases outside the replayed "
-          f"conditions: {undecided_outside}.", "")
-    out.k(f"rescoring rule check: logged-columns rule agrees with the replay on {agree} of {agree + disagree} "
-          f"(row, tolerance) cases; {undecided_in_rep} settled only by the replay; {undecided_outside} undecided "
-          "outside it (TOLERANCE.md (2))")
-    if undecided_outside or disagree:
-        out.w(f, "**Rescoring incomplete: the table below is not exact.**", "")
-        return
+    return seated_t, (agree, disagree, undecided_in_rep, undecided_outside)
 
-    # (3) the table
-    out.w(f, "### (3) Rescored seated counts, C's lead and bad units (POST HOC)", "",
-          "Good-part trials of seed 20261130 only: standard 2,000, heldout 500, latching good parts 600 "
-          "per machine. Yaw and tilt share one tolerance. Lateral margin and settled speed as run. The row "
-          "marked `as run` is the pre-registered scoring and must equal benchmark_v0.2e; it is checked "
-          "against the logged `success`. C-only / X-only are discordant pairs on the same trials, exact "
-          "McNemar p, descriptive only (post hoc, no correction).", "",
-          "| Machine | Suite | Depth tol (mm) | Yaw/tilt tol (deg) | Seated C / F / I / J | C-only / I-only (p) | "
-          "C-only / F-only (p) | Bad units C / F / I / J |", "|---|---|---|---|---|---|---|---|")
+
+def _drift_margin(lst, old) -> tuple[float, int] | None:
+    """Smallest (distance to a threshold) / (pose drift) over drifted rows the old columns cannot decide."""
+    worst, rows = None, set()
+    for m, s, r, o in lst:
+        cond = old.cond[r["condition"]]
+        drift = max(abs(float(o[k]) - float(r[k]))
+                    for k in ("final_depth_mm", "final_tilt_deg", "final_yaw_deg", "final_lateral_mm"))
+        for dt in DEPTH_TOLS:
+            for at in ANGLE_TOLS:
+                if logged_seated(o, cond, old.crit, dt, at) is not None:
+                    continue
+                rows.add((r["controller"], r["trial_index"]))
+                lim = cond["lat_limit_mm"]
+                margin = min(abs(float(r["final_tilt_deg"]) - at), abs(abs(float(r["final_yaw_deg"])) - at),
+                             abs(float(r["final_depth_mm"]) - (cond["depth_mm"] - dt)),
+                             abs(abs(float(r["final_x_mm"])) - lim), abs(abs(float(r["final_y_mm"])) - lim),
+                             abs(float(r["final_tcp_speed_mm_s"]) - old.crit["max_final_speed_mm_s"]))
+                if drift > 0:
+                    worst = margin / drift if worst is None else min(worst, margin / drift)
+    return None if worst is None else (worst, len(rows))
+
+
+def _rescore_cell(runs, seated_t, seed, m, s, dt, at):
+    """Rescored success per controller, (C-only, I-only), (C-only, F-only), bad units per controller."""
+    old = runs[(seed, m, s)]
+    trials = sorted({(r["condition"], r["trial_index"]) for r in old.ctrl_rows[C] if old.good(r["condition"])})
+    succ, bu = {}, {}
+    for c in RESCORE_CTRLS:
+        sc, b = {}, 0
+        for cd, ti in trials:
+            val, r = seated_t[(m, s, c, cd, ti, dt, at)]
+            sc[(cd, ti)] = rescored_success(r, val)
+            b += r["declared_success"] == "True" and not val
+            if dt == 0.5 and at == 3.0:
+                assert sc[(cd, ti)] == ok(r) and (r["declared_success"] == "True" and not val) == bad_unit(r)
+        succ[c], bu[c] = sc, b
+    pairs = []
+    for x in (I, F):
+        a = sum(succ[C][k] and not succ[x][k] for k in trials)
+        b_ = sum(succ[x][k] and not succ[C][k] for k in trials)
+        pairs.append((a, b_))
+    return succ, pairs, bu
+
+
+def part3b(runs, repo: Path, out: Out) -> None:
+    f = "TOLERANCE.md"
+    reps = {}
+    for seed, folder in REPLAYS.items():
+        rep = {}
+        for m in MACHINES:
+            for s in RESCORE_SUITES:
+                p = repo / folder / f"{m}_{s}"
+                if (p / "trials.csv").exists():
+                    rep[(m, s)] = Run(p, connector_specs(repo))
+        if rep:
+            reps[seed] = rep
+    if not reps:
+        return
+    seeds = [sd for sd in SEEDS if sd in reps]
+    out.w(f, "## Exact rescoring from replays (seeds " + ", ".join(seeds) + ")", "",
+          "POST HOC throughout. Every number in this section is a rescoring under tolerances that were not "
+          "pre-registered. None replaces a pre-registered result. p-values are exact McNemar per seed, "
+          "descriptive, never pooled across seeds (seeds 20261123 and 20261124 ran the v0.2d code 42df5c8, "
+          "seed 20261130 the v0.2e code ddd0d34).", "",
+          "`results/v0.2f_evidence/replay_<seed>/`: the conditions whose rows the old logs cannot rescore, "
+          "replayed for C, F, I and J on the benchmark's own code plus a logging-only commit that adds five "
+          "columns (`" + "`, `".join(NEW_COLS) + "`): 9197b9c on the v0.2e code for seed 20261130 (branch "
+          "v0.2f/pack), its cherry-pick 22ef683 on 42df5c8 for the other two (branch v0.2f/replay-v02d). Each "
+          "plan was written before its run (`RUN_PLAN.md` in replay_20261130 and replay_20261123).", "")
+    # (1) identity with the committed rows
+    out.w(f, "### (1) The replays reproduce the committed rows", "",
+          "| Seed | Run | replayed conditions | rows | rows identical in every committed column but wall_time_s | "
+          "differing cells | gt_seated recomputed exactly (as-run tolerances) | commit | dirty |",
+          "|---|---|---|---|---|---|---|---|---|")
+    allsame = allexact = allrows = 0
+    drift_rows = {sd: [] for sd in seeds}
+    for seed in seeds:
+        tot_rows = tot_same = tot_exact = 0
+        for (m, s), rr in reps[seed].items():
+            old = runs[(seed, m, s)]
+            assert rr.base_seed == seed
+            same = diff_cells = exact = 0
+            for r in rr.rows:
+                o = old.by[(r["condition"], r["controller"], r["trial_index"])]
+                d = sum(1 for k in o if k != "wall_time_s" and o[k] != r[k])
+                same += d == 0
+                diff_cells += d
+                if d:
+                    drift_rows[seed].append((m, s, r, o))
+                cond = rr.cond[r["condition"]]
+                exact += exact_seated(r, cond, rr.crit, rr.crit["depth_tolerance_mm"], rr.crit["max_tilt_deg"]) == \
+                    (r["gt_seated"] == "True")
+            n = len(rr.rows)
+            tot_rows += n
+            tot_same += same
+            tot_exact += exact
+            conds = sorted({r["condition"] for r in rr.rows})
+            out.w(f, f"| {seed} | {m} {s} | {', '.join(conds)} | {n} | {same} | {diff_cells} | {exact} | "
+                  f"{rr.commit[:7]} | {rr.dirty} |")
+        out.k(f"replay seed {seed}: {tot_same} of {tot_rows} rows identical to the committed benchmark in every "
+              f"column but wall_time_s; gt_seated recomputed exactly on {tot_exact} of {tot_rows} (TOLERANCE.md (1))")
+        allsame += tot_same
+        allexact += tot_exact
+        allrows += tot_rows
+    # The only tolerated differences: benchmark_v0.2d's disclosed limit (its PREREGISTRATION.md, "Known
+    # limits"): on the arm's generalization_combined the fixture dynamics depended on the previous trial in
+    # the same worker, so rows reproduce only to the last digits. v0.2e fixed it (seed 20261130 shows none).
+    outcome_cols = ("success", "failure_reason", "gt_seated", "declared_success", "protective_stop", "timeout")
+    for sd, lst in drift_rows.items():
+        for m, s, r, o in lst:
+            assert sd != "20261130" and (m, s, r["condition"]) == ("arm", "standard", "generalization_combined"), \
+                (sd, m, s, r["condition"], r["controller"], r["trial_index"])
+            assert all(o[k] == r[k] for k in outcome_cols)
+    assert allexact == allrows, "gt_seated not recomputed exactly"
+    for sd in seeds:
+        lst = drift_rows[sd]
+        if not lst:
+            continue
+        ctr = Counter(r["controller"] for _, _, r, _ in lst)
+        pose = max(abs(float(o[k]) - float(r[k])) for _, _, r, o in lst
+                   for k in ("final_depth_mm", "final_tilt_deg", "final_yaw_deg", "final_lateral_mm"))
+        cyc = sum(o["cycle_time_s"] != r["cycle_time_s"] for _, _, r, o in lst)
+        cmax = max(abs(float(o["cycle_time_s"]) - float(r["cycle_time_s"])) for _, _, r, o in lst)
+        out.w(f, f"Seed {sd}: the rows that are not identical are all arm standard generalization_combined, "
+              f"{', '.join(f'{L(c)} {n}' for c, n in sorted(ctr.items()))}. This is benchmark_v0.2d's disclosed "
+              "reproducibility limit (its PREREGISTRATION.md: on that condition the arm's fixture dynamics depend "
+              "on the previous trial in the same worker; fixed in v0.2e). Success, failure reason, gt_seated, "
+              f"declared success, stop and timeout are identical on every one. The final pose differs by at most "
+              f"{pose:.3g} (mm or deg), and the cycle time differs by at most {cmax * 1000:.0f} ms (rows: {cyc}).")
+        out.k(f"replay seed {sd}: non-identical rows only on arm standard generalization_combined "
+              f"({', '.join(f'{L(c)} {n}' for c, n in sorted(ctr.items()))}), outcome columns identical, pose drift "
+              f"<= {pose:.3g}, the v0.2d code's disclosed limit (TOLERANCE.md (1))")
+    out.w(f, "")
+    out.w(f, "", "On seed 20261130, `dirty` is True for the five runs that started after the analysis files "
+          "`experiments/v02f_evidence.py` and `tests/test_v02f_evidence.py` were edited during that replay "
+          "(git_dirty counts any tracked change outside results/). Neither file is imported by the runner or "
+          "the simulation; `git diff 2dc7009 -- . ':!results'` lists only those two files. The row identity "
+          "above is the direct check.", "")
+
+    # (2) the rule check
+    out.w(f, "### (2) How every other row is rescored, and a check of that rule", "",
+          "Rows in replayed conditions use the replayed values (`exact_seated`). All other rows use "
+          "`logged_seated`: seated as run means the per-axis lateral, settled and latched checks passed, "
+          "so only depth and angle decide; not seated as run with depth and angles passing means one of "
+          "those checks failed, so the row stays unseated. Rows the rule cannot decide must all be in "
+          "replayed conditions (asserted). Success = rescored seated and none of the logged outcome "
+          "blockers (stop, penetration, damage, workspace limit, timeout, declared failure).", "",
+          "| Seed | rule agrees with replay | cases settled only by the replay | undecided outside the replay |",
+          "|---|---|---|---|")
+    st = {}
+    drift_note = []
+    for seed in seeds:
+        seated_t, (agree, disagree, und_in, und_out) = _rescore_seed(runs, reps[seed], seed)
+        st[seed] = seated_t
+        ratio = _drift_margin(drift_rows[seed], runs[(seed, "arm", "standard")])
+        if ratio is not None:
+            drift_note.append((seed, ratio))
+        out.w(f, f"| {seed} | {agree} of {agree + disagree} | {und_in} | {und_out} |")
+        out.k(f"rescoring rule check, seed {seed}: logged-columns rule agrees with the replay on {agree} of "
+              f"{agree + disagree} (row, tolerance) cases; {und_in} settled only by the replay; {und_out} undecided "
+              "outside it (TOLERANCE.md (2))")
+        assert und_out == 0 and disagree == 0, f"rescoring incomplete on seed {seed}"
+    out.w(f, "")
+    for sd, (ratio, n) in drift_note:
+        out.w(f, f"Seed {sd}: {n} of the drifted rows are cases the old columns cannot decide, so their rescoring "
+              "uses replayed values from a trajectory that differs in the last digits. On every such (row, "
+              "tolerance) case, the replayed depth, angles, per-axis offsets and speed sit at least "
+              "(the per-axis drift is taken as the radius drift, which is all the old log shows) "
+              f"{ratio:.1f} times that row's own pose drift away from the threshold, so the rescored outcome "
+              "would be the same on the committed trajectory.", "")
+        out.k(f"rescoring on drifted rows, seed {sd}: {n} undecided rows; threshold margin >= {ratio:.1f} x the row's "
+              "pose drift (TOLERANCE.md (2))")
+        assert ratio > 1.0
+
+    # (3) full tables per seed
+    out.w(f, "### (3) Rescored seated counts, C's lead and bad units, every seed (POST HOC)", "",
+          "Good-part trials only: standard 2,000, heldout 500, latching good parts 600 per machine and seed. "
+          "Yaw and tilt share one tolerance. Lateral margin and settled speed as run. Rows marked `as run` are "
+          "the pre-registered scoring; the script checks them against the logged `success` and bad units. "
+          "C-only / X-only are discordant pairs on the same trials, exact McNemar p on that seed only.", "",
+          "| Seed | Machine | Suite | Depth tol (mm) | Yaw/tilt tol (deg) | Seated C / F / I / J | C-only / I-only (p) | "
+          "C-only / F-only (p) | Bad units C / F / I / J |", "|---|---|---|---|---|---|---|---|---|")
     summ = {}
-    for m in MACHINES:
-        for s in RESCORE_SUITES:
-            old = runs[(RESCORE_SEED, m, s)]
-            trials = sorted({(r["condition"], r["trial_index"]) for r in old.ctrl_rows[C] if old.good(r["condition"])})
-            for dt in DEPTH_TOLS:
-                for at in ANGLE_TOLS:
-                    succ, bu = {}, {}
-                    for c in RESCORE_CTRLS:
-                        sc = {}
-                        b = 0
-                        for cd, ti in trials:
-                            val, r = seated_t[(m, s, c, cd, ti, dt, at)]
-                            sc[(cd, ti)] = rescored_success(r, val)
-                            b += r["declared_success"] == "True" and not val
-                            if dt == 0.5 and at == 3.0:
-                                assert sc[(cd, ti)] == ok(r) and (r["declared_success"] == "True" and not val) == bad_unit(r)
-                        succ[c], bu[c] = sc, b
-                    pairs = []
-                    for x in (I, F):
-                        a = sum(succ[C][k] and not succ[x][k] for k in trials)
-                        bb = sum(succ[x][k] and not succ[C][k] for k in trials)
-                        pairs.append((a, bb))
-                    summ[(m, s, dt, at)] = (pairs, bu)
-                    tag = " (as run)" if (dt == 0.5 and at == 3.0) else ""
-                    out.w(f, f"| {m} | {s} | {dt}{tag} | {at}{tag} | "
-                          + " / ".join(str(sum(succ[c].values())) for c in RESCORE_CTRLS) + " | "
-                          + " | ".join(f"{a} / {bb} ({fp(mcnemar(a, bb))})" for a, bb in pairs) + " | "
-                          + " / ".join(str(bu[c]) for c in RESCORE_CTRLS) + " |")
-                    if s in ("standard", "heldout") or (s == "latching" and at in (3.0, 5.0)):
-                        out.k(f"POST HOC rescore, seed 20261130, {m} {s}, depth tol {dt} mm, yaw/tilt {at} deg: seated "
-                              f"C/F/I/J " + "/".join(str(sum(succ[c].values())) for c in RESCORE_CTRLS)
-                              + f"; C-only/I-only {pairs[0][0]}/{pairs[0][1]} (p {fp(mcnemar(*pairs[0]))}); "
-                              f"C-only/F-only {pairs[1][0]}/{pairs[1][1]}; bad units C/F/I/J "
-                              + "/".join(str(bu[c]) for c in RESCORE_CTRLS) + " (TOLERANCE.md (3))")
+    for seed in seeds:
+        for m in MACHINES:
+            for s in RESCORE_SUITES:
+                for dt in DEPTH_TOLS:
+                    for at in ANGLE_TOLS:
+                        succ, pairs, bu = _rescore_cell(runs, st[seed], seed, m, s, dt, at)
+                        summ[(seed, m, s, dt, at)] = (pairs, bu)
+                        tag = " (as run)" if (dt == 0.5 and at == 3.0) else ""
+                        out.w(f, f"| {seed} | {m} | {s} | {dt}{tag} | {at}{tag} | "
+                              + " / ".join(str(sum(succ[c].values())) for c in RESCORE_CTRLS) + " | "
+                              + " | ".join(f"{a} / {b_} ({fp(mcnemar(a, b_))})" for a, b_ in pairs) + " | "
+                              + " / ".join(str(bu[c]) for c in RESCORE_CTRLS) + " |")
+                        if dt == 0.5:
+                            out.k(f"POST HOC rescore, seed {seed}, {m} {s}, yaw/tilt {at} deg: seated C/F/I/J "
+                                  + "/".join(str(sum(succ[c].values())) for c in RESCORE_CTRLS)
+                                  + f"; C-only/I-only {pairs[0][0]}/{pairs[0][1]} (p {fp(mcnemar(*pairs[0]))}); "
+                                  f"C-only/F-only {pairs[1][0]}/{pairs[1][1]}; bad units C/F/I/J "
+                                  + "/".join(str(bu[c]) for c in RESCORE_CTRLS) + " (TOLERANCE.md (3))")
     out.w(f, "")
 
-    def lead(m, s, at, dt=0.5):
-        (a, b_), _ = summ[(m, s, dt, at)][0]
-        return f"{a}/{b_} (p {fp(mcnemar(a, b_))})"
+    # (4) the three-seed table
+    out.w(f, "### (4) Three seeds side by side (POST HOC, depth tolerance 0.5 mm)", "",
+          "Per seed: C-only / I-only (exact McNemar p on that seed), then bad units C / F / I / J. On housing-only "
+          "suites F equals I. The 1.0 mm depth rows are in (3).", "",
+          "| Machine | Suite | Yaw/tilt (deg) | " + " | ".join(f"{sd}: C-only / I-only (p) | {sd}: bad units C / F / I / J"
+                                                      for sd in seeds) + " |",
+          "|---|---|---|" + "---|---|" * len(seeds))
+    for m in MACHINES:
+        for s in RESCORE_SUITES:
+            for at in ANGLE_TOLS:
+                cells = []
+                for sd in seeds:
+                    pairs, bu = summ[(sd, m, s, 0.5, at)]
+                    a, b_ = pairs[0]
+                    cells += [f"{a} / {b_} ({fp(mcnemar(a, b_))})", " / ".join(str(bu[c]) for c in RESCORE_CTRLS)]
+                tag = " (as run)" if at == 3.0 else ""
+                out.w(f, f"| {m} | {s} | {at}{tag} | " + " | ".join(cells) + " |")
+    out.w(f, "")
 
-    def bus(m, s, at, dt=0.5):
-        bu = summ[(m, s, dt, at)][1]
-        return f"C {bu[C]}, I {bu[I]}, J {bu[J]}"
+    # (5) the one-seed conclusions, checked on every seed
+    def lead(sd, m, s, at, dt=0.5):
+        a, b_ = summ[(sd, m, s, dt, at)][0][0]
+        return a, b_, mcnemar(a, b_)
 
-    out.w(f, "### (4) In short (POST HOC)", "",
-          "On standard, C's lead over I (C-only / I-only) goes from "
-          + ", ".join(f"{lead('gantry', 'standard', at)} at {at} deg" for at in (3.0, 4.0, 5.0))
-          + " on the gantry, and from "
-          + ", ".join(f"{lead('arm', 'standard', at)} at {at} deg" for at in (3.0, 4.0, 5.0))
-          + " on the arm. Bad units at 3 / 4 / 5 deg: gantry "
-          + " / ".join(bus("gantry", "standard", at) for at in (3.0, 4.0, 5.0)) + "; arm "
-          + " / ".join(bus("arm", "standard", at) for at in (3.0, 4.0, 5.0))
-          + ". On heldout at 5 deg, C-only / I-only is " + lead("gantry", "heldout", 5.0) + " (gantry) and "
-          + lead("arm", "heldout", 5.0) + " (arm). At 2 deg the lead widens: " + lead("gantry", "standard", 2.0)
-          + " (gantry standard), with bad units " + bus("gantry", "standard", 2.0)
-          + ". A 1.0 mm depth tolerance changes almost nothing: compare the 0.5 and 1.0 mm rows. F equals I "
-          "on housing-only suites.", "")
+    out.w(f, "### (5) Which rescored findings hold on every seed (POST HOC)", "",
+          "| Finding | " + " | ".join(seeds) + " | All |", "|---|" + "---|" * len(seeds) + "---|")
+
+    def line(name, test, fmt):
+        vals = [(test(sd), fmt(sd)) for sd in seeds]
+        allv = all(v for v, _ in vals)
+        out.w(f, f"| {name} | " + " | ".join(t for _, t in vals) + f" | {'yes' if allv else 'no'} |")
+        out.k(f"POST HOC rescore, {name}: " + "; ".join(f"{sd} {t}" for sd, (_, t) in zip(seeds, vals))
+              + f" -> {'holds on all' if allv else 'not on all'} (TOLERANCE.md (5))")
+
+    def fl(sd, m, s, at):
+        a, b_, p = lead(sd, m, s, at)
+        return f"{a}/{b_}, p {fp(p)}"
+
+    for at in (3.5, 4.0, 5.0):
+        line(f"gantry standard: C ahead of I at {at} deg (C-only > I-only, p < 0.05)",
+             lambda sd, at=at: lead(sd, "gantry", "standard", at)[0] > lead(sd, "gantry", "standard", at)[1]
+             and lead(sd, "gantry", "standard", at)[2] < 0.05,
+             lambda sd, at=at: fl(sd, "gantry", "standard", at))
+    for at in (3.5, 4.0, 5.0):
+        line(f"arm standard: C's lead over I not significant at {at} deg (p >= 0.05)",
+             lambda sd, at=at: lead(sd, "arm", "standard", at)[2] >= 0.05,
+             lambda sd, at=at: fl(sd, "arm", "standard", at))
+    for m in MACHINES:
+        line(f"{m} standard: C passes 0 bad units at 2.5-5 deg",
+             lambda sd, m=m: all(summ[(sd, m, "standard", 0.5, at)][1][C] == 0 for at in ANGLE_TOLS if at >= 2.5),
+             lambda sd, m=m: "/".join(str(summ[(sd, m, "standard", 0.5, at)][1][C]) for at in ANGLE_TOLS))
+        line(f"{m} standard: I's bad units at 5 deg are under a fifth of those at 3 deg",
+             lambda sd, m=m: summ[(sd, m, "standard", 0.5, 5.0)][1][I] * 5 < summ[(sd, m, "standard", 0.5, 3.0)][1][I],
+             lambda sd, m=m: "/".join(str(summ[(sd, m, "standard", 0.5, at)][1][I]) for at in ANGLE_TOLS))
+        line(f"{m} heldout: I has more discordant wins than C at 5 deg",
+             lambda sd, m=m: lead(sd, m, "heldout", 5.0)[1] > lead(sd, m, "heldout", 5.0)[0],
+             lambda sd, m=m: fl(sd, m, "heldout", 5.0))
+        line(f"{m} standard: C's lead over I at 2 deg is larger than at 3 deg",
+             lambda sd, m=m: lead(sd, m, "standard", 2.0)[0] - lead(sd, m, "standard", 2.0)[1]
+             > lead(sd, m, "standard", 3.0)[0] - lead(sd, m, "standard", 3.0)[1],
+             lambda sd, m=m: fl(sd, m, "standard", 2.0))
+    maxd = max(abs(summ[(sd, m, s, 1.0, at)][1][c] - summ[(sd, m, s, 0.5, at)][1][c])
+               for sd in seeds for m in MACHINES for s in RESCORE_SUITES for at in ANGLE_TOLS for c in RESCORE_CTRLS)
+    out.w(f, "", f"Depth tolerance 1.0 mm against 0.5 mm: the largest change in any bad-unit count, over every seed, "
+          f"cell, angle and controller, is {maxd}.", "")
+    out.k(f"POST HOC rescore: 1.0 mm instead of 0.5 mm depth tolerance changes any bad-unit count by at most {maxd} "
+          "(TOLERANCE.md (5))")
 
 
 def part4(runs, out: Out) -> dict:

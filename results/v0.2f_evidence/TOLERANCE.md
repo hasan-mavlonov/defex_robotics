@@ -56,111 +56,338 @@ Why it does not match:
 
 A reading of the radius that passes every row in the sqrt 2 band when depth, tilt and yaw pass (an assumption, not the code's rule) leaves these mismatches on the housing-only suites (standard and heldout): seed 20261123: 4, seed 20261124: 2, seed 20261130: 0. Zero on one seed does not make the rule exact: it only says no row in that seed's data sat in the band and failed per axis. This is reported so the lead can decide whether a bounded rescoring is worth doing; it is not used.
 
-## Exact rescoring from the replay (seed 20261130)
+## Exact rescoring from replays (seeds 20261123, 20261124, 20261130)
 
-POST HOC throughout. Every number in this section is a rescoring under tolerances that were not pre-registered. None replaces a pre-registered result.
+POST HOC throughout. Every number in this section is a rescoring under tolerances that were not pre-registered. None replaces a pre-registered result. p-values are exact McNemar per seed, descriptive, never pooled across seeds (seeds 20261123 and 20261124 ran the v0.2d code 42df5c8, seed 20261130 the v0.2e code ddd0d34).
 
-`results/v0.2f_evidence/replay_20261130`: the conditions whose rows the old logs cannot rescore, replayed for C, F, I and J on code that adds only five logged columns (`final_x_mm`, `final_y_mm`, `final_tcp_speed_mm_s`, `final_latched`, `final_latch_intact`). The plan, written before the run, is `RUN_PLAN.md` in that folder.
+`results/v0.2f_evidence/replay_<seed>/`: the conditions whose rows the old logs cannot rescore, replayed for C, F, I and J on the benchmark's own code plus a logging-only commit that adds five columns (`final_x_mm`, `final_y_mm`, `final_tcp_speed_mm_s`, `final_latched`, `final_latch_intact`): 9197b9c on the v0.2e code for seed 20261130 (branch v0.2f/pack), its cherry-pick 22ef683 on 42df5c8 for the other two (branch v0.2f/replay-v02d). Each plan was written before its run (`RUN_PLAN.md` in replay_20261130 and replay_20261123).
 
-### (1) The replay reproduces the committed rows
+### (1) The replays reproduce the committed rows
 
-| Run | replayed conditions | rows | rows identical in every committed column but wall_time_s | differing cells | gt_seated recomputed exactly (as-run tolerances) | commit | dirty |
-|---|---|---|---|---|---|---|---|
-| gantry standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1200 | 0 | 1200 | 2dc7009 | False |
-| gantry heldout | heldout_mischar_1mm, heldout_mischar_2mm, heldout_worst_case | 1200 | 1200 | 0 | 1200 | 2dc7009 | True |
-| gantry latching | mf_noise_1mm | 800 | 800 | 0 | 800 | 2dc7009 | True |
-| arm standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1200 | 0 | 1200 | 2dc7009 | True |
-| arm heldout | heldout_mischar_1mm, heldout_mischar_2mm | 800 | 800 | 0 | 800 | 2dc7009 | True |
-| arm latching | mf_noise_1mm | 800 | 800 | 0 | 800 | 2dc7009 | True |
+| Seed | Run | replayed conditions | rows | rows identical in every committed column but wall_time_s | differing cells | gt_seated recomputed exactly (as-run tolerances) | commit | dirty |
+|---|---|---|---|---|---|---|---|---|
+| 20261123 | gantry standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1200 | 0 | 1200 | a57f4ad | False |
+| 20261123 | gantry heldout | heldout_mischar_1mm, heldout_mischar_2mm, heldout_worst_case | 1200 | 1200 | 0 | 1200 | a57f4ad | False |
+| 20261123 | gantry latching | mf_noise_1mm | 800 | 800 | 0 | 800 | a57f4ad | False |
+| 20261123 | arm standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1000 | 1802 | 1200 | a57f4ad | False |
+| 20261123 | arm heldout | heldout_mischar_1mm, heldout_mischar_2mm | 800 | 800 | 0 | 800 | a57f4ad | False |
+| 20261123 | arm latching | mf_noise_1mm, mf_nominal | 1600 | 1600 | 0 | 1600 | a57f4ad | False |
+| 20261124 | gantry standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1200 | 0 | 1200 | a57f4ad | False |
+| 20261124 | gantry heldout | heldout_mischar_1mm, heldout_mischar_2mm, heldout_worst_case | 1200 | 1200 | 0 | 1200 | a57f4ad | False |
+| 20261124 | gantry latching | mf_noise_1mm | 800 | 800 | 0 | 800 | a57f4ad | False |
+| 20261124 | arm standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1000 | 1806 | 1200 | a57f4ad | False |
+| 20261124 | arm heldout | heldout_mischar_1mm, heldout_mischar_2mm | 800 | 800 | 0 | 800 | a57f4ad | False |
+| 20261124 | arm latching | mf_noise_1mm | 800 | 800 | 0 | 800 | a57f4ad | False |
+| 20261130 | gantry standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1200 | 0 | 1200 | 2dc7009 | False |
+| 20261130 | gantry heldout | heldout_mischar_1mm, heldout_mischar_2mm, heldout_worst_case | 1200 | 1200 | 0 | 1200 | 2dc7009 | True |
+| 20261130 | gantry latching | mf_noise_1mm | 800 | 800 | 0 | 800 | 2dc7009 | True |
+| 20261130 | arm standard | generalization_combined, noise_1mm, noise_2mm | 1200 | 1200 | 0 | 1200 | 2dc7009 | True |
+| 20261130 | arm heldout | heldout_mischar_1mm, heldout_mischar_2mm | 800 | 800 | 0 | 800 | 2dc7009 | True |
+| 20261130 | arm latching | mf_noise_1mm | 800 | 800 | 0 | 800 | 2dc7009 | True |
+Seed 20261123: the rows that are not identical are all arm standard generalization_combined, I 100, J 100. This is benchmark_v0.2d's disclosed reproducibility limit (its PREREGISTRATION.md: on that condition the arm's fixture dynamics depend on the previous trial in the same worker; fixed in v0.2e). Success, failure reason, gt_seated, declared success, stop and timeout are identical on every one. The final pose differs by at most 0.0222 (mm or deg), and the cycle time differs by at most 8 ms (rows: 1).
+Seed 20261124: the rows that are not identical are all arm standard generalization_combined, I 100, J 100. This is benchmark_v0.2d's disclosed reproducibility limit (its PREREGISTRATION.md: on that condition the arm's fixture dynamics depend on the previous trial in the same worker; fixed in v0.2e). Success, failure reason, gt_seated, declared success, stop and timeout are identical on every one. The final pose differs by at most 0.00212 (mm or deg), and the cycle time differs by at most 6 ms (rows: 3).
 
-`dirty` is True for the five runs that started after the analysis files `experiments/v02f_evidence.py` and `tests/test_v02f_evidence.py` were edited during the replay (git_dirty counts any tracked change outside results/). Neither file is imported by the runner or the simulation; `git diff 2dc7009 -- . ':!results'` lists only those two files. The row identity above is the direct check.
+
+On seed 20261130, `dirty` is True for the five runs that started after the analysis files `experiments/v02f_evidence.py` and `tests/test_v02f_evidence.py` were edited during that replay (git_dirty counts any tracked change outside results/). Neither file is imported by the runner or the simulation; `git diff 2dc7009 -- . ':!results'` lists only those two files. The row identity above is the direct check.
 
 ### (2) How every other row is rescored, and a check of that rule
 
 Rows in replayed conditions use the replayed values (`exact_seated`). All other rows use `logged_seated`: seated as run means the per-axis lateral, settled and latched checks passed, so only depth and angle decide; not seated as run with depth and angles passing means one of those checks failed, so the row stays unseated. Rows the rule cannot decide must all be in replayed conditions (asserted). Success = rescored seated and none of the logged outcome blockers (stop, penetration, damage, workspace limit, timeout, declared failure).
 
-Check on the replayed conditions: where the logged-columns rule decides, it agrees with the replayed exact rule on 70689 of 70689 (row, tolerance) cases. It could not decide 1311 cases there, which the replay settles. Undecided cases outside the replayed conditions: 0.
+| Seed | rule agrees with replay | cases settled only by the replay | undecided outside the replay |
+|---|---|---|---|
+| 20261123 | 80135 of 80135 | 1465 | 0 |
+| 20261124 | 70671 of 70671 | 1329 | 0 |
+| 20261130 | 70689 of 70689 | 1311 | 0 |
 
-### (3) Rescored seated counts, C's lead and bad units (POST HOC)
+Seed 20261123: 6 of the drifted rows are cases the old columns cannot decide, so their rescoring uses replayed values from a trajectory that differs in the last digits. On every such (row, tolerance) case, the replayed depth, angles, per-axis offsets and speed sit at least (the per-axis drift is taken as the radius drift, which is all the old log shows) 18.6 times that row's own pose drift away from the threshold, so the rescored outcome would be the same on the committed trajectory.
 
-Good-part trials of seed 20261130 only: standard 2,000, heldout 500, latching good parts 600 per machine. Yaw and tilt share one tolerance. Lateral margin and settled speed as run. The row marked `as run` is the pre-registered scoring and must equal benchmark_v0.2e; it is checked against the logged `success`. C-only / X-only are discordant pairs on the same trials, exact McNemar p, descriptive only (post hoc, no correction).
+Seed 20261124: 3 of the drifted rows are cases the old columns cannot decide, so their rescoring uses replayed values from a trajectory that differs in the last digits. On every such (row, tolerance) case, the replayed depth, angles, per-axis offsets and speed sit at least (the per-axis drift is taken as the radius drift, which is all the old log shows) 182475.2 times that row's own pose drift away from the threshold, so the rescored outcome would be the same on the committed trajectory.
 
-| Machine | Suite | Depth tol (mm) | Yaw/tilt tol (deg) | Seated C / F / I / J | C-only / I-only (p) | C-only / F-only (p) | Bad units C / F / I / J |
-|---|---|---|---|---|---|---|---|
-| gantry | standard | 0.5 | 2.0 | 1978 / 1858 / 1858 / 1952 | 122 / 2 (<1e-6) | 122 / 2 (<1e-6) | 3 / 110 / 110 / 7 |
-| gantry | standard | 0.5 | 2.5 | 1981 / 1907 / 1907 / 1958 | 79 / 5 (<1e-6) | 79 / 5 (<1e-6) | 0 / 61 / 61 / 1 |
-| gantry | standard | 0.5 (as run) | 3.0 (as run) | 1981 / 1936 / 1936 / 1959 | 53 / 8 (<1e-6) | 53 / 8 (<1e-6) | 0 / 32 / 32 / 0 |
-| gantry | standard | 0.5 | 3.5 | 1981 / 1955 / 1955 / 1959 | 36 / 10 (0.00016) | 36 / 10 (0.00016) | 0 / 13 / 13 / 0 |
-| gantry | standard | 0.5 | 4.0 | 1981 / 1960 / 1960 / 1959 | 31 / 10 (0.0015) | 31 / 10 (0.0015) | 0 / 8 / 8 / 0 |
-| gantry | standard | 0.5 | 5.0 | 1981 / 1965 / 1965 / 1959 | 26 / 10 (0.011) | 26 / 10 (0.011) | 0 / 3 / 3 / 0 |
-| gantry | standard | 1.0 | 2.0 | 1978 / 1858 / 1858 / 1952 | 122 / 2 (<1e-6) | 122 / 2 (<1e-6) | 3 / 110 / 110 / 7 |
-| gantry | standard | 1.0 | 2.5 | 1981 / 1907 / 1907 / 1958 | 79 / 5 (<1e-6) | 79 / 5 (<1e-6) | 0 / 61 / 61 / 1 |
-| gantry | standard | 1.0 | 3.0 | 1981 / 1936 / 1936 / 1959 | 53 / 8 (<1e-6) | 53 / 8 (<1e-6) | 0 / 32 / 32 / 0 |
-| gantry | standard | 1.0 | 3.5 | 1981 / 1955 / 1955 / 1959 | 36 / 10 (0.00016) | 36 / 10 (0.00016) | 0 / 13 / 13 / 0 |
-| gantry | standard | 1.0 | 4.0 | 1981 / 1960 / 1960 / 1959 | 31 / 10 (0.0015) | 31 / 10 (0.0015) | 0 / 8 / 8 / 0 |
-| gantry | standard | 1.0 | 5.0 | 1981 / 1966 / 1966 / 1959 | 25 / 10 (0.017) | 25 / 10 (0.017) | 0 / 2 / 2 / 0 |
-| gantry | heldout | 0.5 | 2.0 | 407 / 365 / 365 / 439 | 88 / 46 (0.00036) | 88 / 46 (0.00036) | 0 / 91 / 91 / 6 |
-| gantry | heldout | 0.5 | 2.5 | 407 / 388 / 388 / 444 | 70 / 51 (0.1) | 70 / 51 (0.1) | 0 / 68 / 68 / 1 |
-| gantry | heldout | 0.5 (as run) | 3.0 (as run) | 407 / 419 / 419 / 444 | 48 / 60 (0.29) | 48 / 60 (0.29) | 0 / 37 / 37 / 1 |
-| gantry | heldout | 0.5 | 3.5 | 407 / 434 / 434 / 444 | 38 / 65 (0.01) | 38 / 65 (0.01) | 0 / 22 / 22 / 1 |
-| gantry | heldout | 0.5 | 4.0 | 407 / 445 / 445 / 445 | 30 / 68 (0.00016) | 30 / 68 (0.00016) | 0 / 11 / 11 / 0 |
-| gantry | heldout | 0.5 | 5.0 | 407 / 453 / 453 / 445 | 23 / 69 (1.7e-06) | 23 / 69 (1.7e-06) | 0 / 3 / 3 / 0 |
-| gantry | heldout | 1.0 | 2.0 | 407 / 365 / 365 / 439 | 88 / 46 (0.00036) | 88 / 46 (0.00036) | 0 / 91 / 91 / 6 |
-| gantry | heldout | 1.0 | 2.5 | 407 / 389 / 389 / 444 | 70 / 52 (0.12) | 70 / 52 (0.12) | 0 / 67 / 67 / 1 |
-| gantry | heldout | 1.0 | 3.0 | 407 / 420 / 420 / 444 | 48 / 61 (0.25) | 48 / 61 (0.25) | 0 / 36 / 36 / 1 |
-| gantry | heldout | 1.0 | 3.5 | 407 / 435 / 435 / 444 | 38 / 66 (0.0078) | 38 / 66 (0.0078) | 0 / 21 / 21 / 1 |
-| gantry | heldout | 1.0 | 4.0 | 407 / 446 / 446 / 445 | 30 / 69 (0.00011) | 30 / 69 (0.00011) | 0 / 10 / 10 / 0 |
-| gantry | heldout | 1.0 | 5.0 | 407 / 455 / 455 / 445 | 23 / 71 (<1e-6) | 23 / 71 (<1e-6) | 0 / 1 / 1 / 0 |
-| gantry | latching | 0.5 | 2.0 | 564 / 549 / 547 / 547 | 28 / 11 (0.0095) | 26 / 11 (0.02) | 21 / 44 / 45 / 45 |
-| gantry | latching | 0.5 | 2.5 | 577 / 584 / 583 / 583 | 11 / 17 (0.34) | 10 / 17 (0.25) | 8 / 9 / 9 / 9 |
-| gantry | latching | 0.5 (as run) | 3.0 (as run) | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
-| gantry | latching | 0.5 | 3.5 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
-| gantry | latching | 0.5 | 4.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
-| gantry | latching | 0.5 | 5.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
-| gantry | latching | 1.0 | 2.0 | 564 / 549 / 547 / 547 | 28 / 11 (0.0095) | 26 / 11 (0.02) | 21 / 44 / 45 / 45 |
-| gantry | latching | 1.0 | 2.5 | 577 / 584 / 583 / 583 | 11 / 17 (0.34) | 10 / 17 (0.25) | 8 / 9 / 9 / 9 |
-| gantry | latching | 1.0 | 3.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
-| gantry | latching | 1.0 | 3.5 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
-| gantry | latching | 1.0 | 4.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
-| gantry | latching | 1.0 | 5.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
-| arm | standard | 0.5 | 2.0 | 1961 / 1849 / 1849 / 1930 | 119 / 7 (<1e-6) | 119 / 7 (<1e-6) | 1 / 107 / 107 / 5 |
-| arm | standard | 0.5 | 2.5 | 1961 / 1900 / 1900 / 1934 | 72 / 11 (<1e-6) | 72 / 11 (<1e-6) | 1 / 56 / 56 / 1 |
-| arm | standard | 0.5 (as run) | 3.0 (as run) | 1962 / 1924 / 1924 / 1935 | 54 / 16 (5.9e-06) | 54 / 16 (5.9e-06) | 0 / 32 / 32 / 0 |
-| arm | standard | 0.5 | 3.5 | 1962 / 1944 / 1944 / 1935 | 35 / 17 (0.018) | 35 / 17 (0.018) | 0 / 12 / 12 / 0 |
-| arm | standard | 0.5 | 4.0 | 1962 / 1949 / 1949 / 1935 | 30 / 17 (0.079) | 30 / 17 (0.079) | 0 / 7 / 7 / 0 |
-| arm | standard | 0.5 | 5.0 | 1962 / 1953 / 1953 / 1935 | 27 / 18 (0.23) | 27 / 18 (0.23) | 0 / 3 / 3 / 0 |
-| arm | standard | 1.0 | 2.0 | 1961 / 1849 / 1849 / 1930 | 119 / 7 (<1e-6) | 119 / 7 (<1e-6) | 1 / 107 / 107 / 5 |
-| arm | standard | 1.0 | 2.5 | 1961 / 1900 / 1900 / 1934 | 72 / 11 (<1e-6) | 72 / 11 (<1e-6) | 1 / 56 / 56 / 1 |
-| arm | standard | 1.0 | 3.0 | 1962 / 1924 / 1924 / 1935 | 54 / 16 (5.9e-06) | 54 / 16 (5.9e-06) | 0 / 32 / 32 / 0 |
-| arm | standard | 1.0 | 3.5 | 1962 / 1944 / 1944 / 1935 | 35 / 17 (0.018) | 35 / 17 (0.018) | 0 / 12 / 12 / 0 |
-| arm | standard | 1.0 | 4.0 | 1962 / 1949 / 1949 / 1935 | 30 / 17 (0.079) | 30 / 17 (0.079) | 0 / 7 / 7 / 0 |
-| arm | standard | 1.0 | 5.0 | 1962 / 1954 / 1954 / 1935 | 26 / 18 (0.29) | 26 / 18 (0.29) | 0 / 2 / 2 / 0 |
-| arm | heldout | 0.5 | 2.0 | 384 / 342 / 342 / 376 | 92 / 50 (0.00053) | 92 / 50 (0.00053) | 0 / 84 / 84 / 3 |
-| arm | heldout | 0.5 | 2.5 | 384 / 364 / 364 / 379 | 74 / 54 (0.093) | 74 / 54 (0.093) | 0 / 62 / 62 / 0 |
-| arm | heldout | 0.5 (as run) | 3.0 (as run) | 384 / 392 / 392 / 379 | 52 / 60 (0.51) | 52 / 60 (0.51) | 0 / 34 / 34 / 0 |
-| arm | heldout | 0.5 | 3.5 | 384 / 406 / 406 / 379 | 41 / 63 (0.039) | 41 / 63 (0.039) | 0 / 20 / 20 / 0 |
-| arm | heldout | 0.5 | 4.0 | 384 / 413 / 413 / 379 | 35 / 64 (0.0046) | 35 / 64 (0.0046) | 0 / 13 / 13 / 0 |
-| arm | heldout | 0.5 | 5.0 | 384 / 419 / 419 / 379 | 33 / 68 (0.00064) | 33 / 68 (0.00064) | 0 / 7 / 7 / 0 |
-| arm | heldout | 1.0 | 2.0 | 384 / 342 / 342 / 376 | 92 / 50 (0.00053) | 92 / 50 (0.00053) | 0 / 84 / 84 / 3 |
-| arm | heldout | 1.0 | 2.5 | 384 / 364 / 364 / 379 | 74 / 54 (0.093) | 74 / 54 (0.093) | 0 / 62 / 62 / 0 |
-| arm | heldout | 1.0 | 3.0 | 384 / 392 / 392 / 379 | 52 / 60 (0.51) | 52 / 60 (0.51) | 0 / 34 / 34 / 0 |
-| arm | heldout | 1.0 | 3.5 | 384 / 406 / 406 / 379 | 41 / 63 (0.039) | 41 / 63 (0.039) | 0 / 20 / 20 / 0 |
-| arm | heldout | 1.0 | 4.0 | 384 / 413 / 413 / 379 | 35 / 64 (0.0046) | 35 / 64 (0.0046) | 0 / 13 / 13 / 0 |
-| arm | heldout | 1.0 | 5.0 | 384 / 421 / 421 / 379 | 32 / 69 (0.0003) | 32 / 69 (0.0003) | 0 / 5 / 5 / 0 |
-| arm | latching | 0.5 | 2.0 | 540 / 525 / 525 / 534 | 36 / 21 (0.063) | 36 / 21 (0.063) | 12 / 49 / 48 / 39 |
-| arm | latching | 0.5 | 2.5 | 552 / 561 / 562 / 568 | 23 / 33 (0.23) | 23 / 32 (0.28) | 0 / 13 / 11 / 5 |
-| arm | latching | 0.5 (as run) | 3.0 (as run) | 552 / 571 / 570 / 572 | 19 / 37 (0.022) | 18 / 37 (0.014) | 0 / 3 / 3 / 1 |
-| arm | latching | 0.5 | 3.5 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
-| arm | latching | 0.5 | 4.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
-| arm | latching | 0.5 | 5.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
-| arm | latching | 1.0 | 2.0 | 540 / 525 / 525 / 534 | 36 / 21 (0.063) | 36 / 21 (0.063) | 12 / 49 / 48 / 39 |
-| arm | latching | 1.0 | 2.5 | 552 / 561 / 562 / 568 | 23 / 33 (0.23) | 23 / 32 (0.28) | 0 / 13 / 11 / 5 |
-| arm | latching | 1.0 | 3.0 | 552 / 571 / 570 / 572 | 19 / 37 (0.022) | 18 / 37 (0.014) | 0 / 3 / 3 / 1 |
-| arm | latching | 1.0 | 3.5 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
-| arm | latching | 1.0 | 4.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
-| arm | latching | 1.0 | 5.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+### (3) Rescored seated counts, C's lead and bad units, every seed (POST HOC)
 
-### (4) In short (POST HOC)
+Good-part trials only: standard 2,000, heldout 500, latching good parts 600 per machine and seed. Yaw and tilt share one tolerance. Lateral margin and settled speed as run. Rows marked `as run` are the pre-registered scoring; the script checks them against the logged `success` and bad units. C-only / X-only are discordant pairs on the same trials, exact McNemar p on that seed only.
 
-On standard, C's lead over I (C-only / I-only) goes from 53/8 (p <1e-6) at 3.0 deg, 31/10 (p 0.0015) at 4.0 deg, 26/10 (p 0.011) at 5.0 deg on the gantry, and from 54/16 (p 5.9e-06) at 3.0 deg, 30/17 (p 0.079) at 4.0 deg, 27/18 (p 0.23) at 5.0 deg on the arm. Bad units at 3 / 4 / 5 deg: gantry C 0, I 32, J 0 / C 0, I 8, J 0 / C 0, I 3, J 0; arm C 0, I 32, J 0 / C 0, I 7, J 0 / C 0, I 3, J 0. On heldout at 5 deg, C-only / I-only is 23/69 (p 1.7e-06) (gantry) and 33/68 (p 0.00064) (arm). At 2 deg the lead widens: 122/2 (p <1e-6) (gantry standard), with bad units C 3, I 110, J 7. A 1.0 mm depth tolerance changes almost nothing: compare the 0.5 and 1.0 mm rows. F equals I on housing-only suites.
+| Seed | Machine | Suite | Depth tol (mm) | Yaw/tilt tol (deg) | Seated C / F / I / J | C-only / I-only (p) | C-only / F-only (p) | Bad units C / F / I / J |
+|---|---|---|---|---|---|---|---|---|
+| 20261123 | gantry | standard | 0.5 | 2.0 | 1983 / 1870 / 1870 / 1952 | 113 / 0 (<1e-6) | 113 / 0 (<1e-6) | 1 / 104 / 104 / 10 |
+| 20261123 | gantry | standard | 0.5 | 2.5 | 1984 / 1906 / 1906 / 1959 | 79 / 1 (<1e-6) | 79 / 1 (<1e-6) | 0 / 68 / 68 / 3 |
+| 20261123 | gantry | standard | 0.5 (as run) | 3.0 (as run) | 1984 / 1926 / 1926 / 1961 | 60 / 2 (<1e-6) | 60 / 2 (<1e-6) | 0 / 48 / 48 / 1 |
+| 20261123 | gantry | standard | 0.5 | 3.5 | 1984 / 1949 / 1949 / 1961 | 39 / 4 (<1e-6) | 39 / 4 (<1e-6) | 0 / 25 / 25 / 1 |
+| 20261123 | gantry | standard | 0.5 | 4.0 | 1984 / 1961 / 1961 / 1961 | 28 / 5 (6.6e-05) | 28 / 5 (6.6e-05) | 0 / 13 / 13 / 1 |
+| 20261123 | gantry | standard | 0.5 | 5.0 | 1984 / 1972 / 1972 / 1961 | 18 / 6 (0.023) | 18 / 6 (0.023) | 0 / 2 / 2 / 1 |
+| 20261123 | gantry | standard | 1.0 | 2.0 | 1983 / 1870 / 1870 / 1952 | 113 / 0 (<1e-6) | 113 / 0 (<1e-6) | 1 / 104 / 104 / 10 |
+| 20261123 | gantry | standard | 1.0 | 2.5 | 1984 / 1906 / 1906 / 1959 | 79 / 1 (<1e-6) | 79 / 1 (<1e-6) | 0 / 68 / 68 / 3 |
+| 20261123 | gantry | standard | 1.0 | 3.0 | 1984 / 1926 / 1926 / 1961 | 60 / 2 (<1e-6) | 60 / 2 (<1e-6) | 0 / 48 / 48 / 1 |
+| 20261123 | gantry | standard | 1.0 | 3.5 | 1984 / 1949 / 1949 / 1961 | 39 / 4 (<1e-6) | 39 / 4 (<1e-6) | 0 / 25 / 25 / 1 |
+| 20261123 | gantry | standard | 1.0 | 4.0 | 1984 / 1961 / 1961 / 1961 | 28 / 5 (6.6e-05) | 28 / 5 (6.6e-05) | 0 / 13 / 13 / 1 |
+| 20261123 | gantry | standard | 1.0 | 5.0 | 1984 / 1973 / 1973 / 1961 | 17 / 6 (0.035) | 17 / 6 (0.035) | 0 / 1 / 1 / 1 |
+| 20261123 | gantry | heldout | 0.5 | 2.0 | 436 / 358 / 358 / 439 | 112 / 34 (<1e-6) | 112 / 34 (<1e-6) | 2 / 98 / 98 / 10 |
+| 20261123 | gantry | heldout | 0.5 | 2.5 | 438 / 388 / 388 / 445 | 87 / 37 (8.3e-06) | 87 / 37 (8.3e-06) | 0 / 68 / 68 / 4 |
+| 20261123 | gantry | heldout | 0.5 (as run) | 3.0 (as run) | 438 / 417 / 417 / 447 | 60 / 39 (0.044) | 60 / 39 (0.044) | 0 / 39 / 39 / 2 |
+| 20261123 | gantry | heldout | 0.5 | 3.5 | 438 / 432 / 432 / 447 | 48 / 42 (0.6) | 48 / 42 (0.6) | 0 / 24 / 24 / 2 |
+| 20261123 | gantry | heldout | 0.5 | 4.0 | 438 / 439 / 439 / 447 | 41 / 42 (1) | 41 / 42 (1) | 0 / 17 / 17 / 2 |
+| 20261123 | gantry | heldout | 0.5 | 5.0 | 438 / 450 / 450 / 447 | 32 / 44 (0.21) | 32 / 44 (0.21) | 0 / 6 / 6 / 2 |
+| 20261123 | gantry | heldout | 1.0 | 2.0 | 436 / 358 / 358 / 439 | 112 / 34 (<1e-6) | 112 / 34 (<1e-6) | 2 / 98 / 98 / 10 |
+| 20261123 | gantry | heldout | 1.0 | 2.5 | 438 / 389 / 389 / 445 | 87 / 38 (1.4e-05) | 87 / 38 (1.4e-05) | 0 / 67 / 67 / 4 |
+| 20261123 | gantry | heldout | 1.0 | 3.0 | 438 / 419 / 419 / 447 | 59 / 40 (0.07) | 59 / 40 (0.07) | 0 / 37 / 37 / 2 |
+| 20261123 | gantry | heldout | 1.0 | 3.5 | 438 / 434 / 434 / 447 | 47 / 43 (0.75) | 47 / 43 (0.75) | 0 / 22 / 22 / 2 |
+| 20261123 | gantry | heldout | 1.0 | 4.0 | 438 / 441 / 441 / 447 | 40 / 43 (0.83) | 40 / 43 (0.83) | 0 / 15 / 15 / 2 |
+| 20261123 | gantry | heldout | 1.0 | 5.0 | 438 / 455 / 455 / 447 | 29 / 46 (0.064) | 29 / 46 (0.064) | 0 / 1 / 1 / 2 |
+| 20261123 | gantry | latching | 0.5 | 2.0 | 569 / 570 / 567 / 567 | 18 / 16 (0.86) | 15 / 16 (1) | 10 / 21 / 21 / 21 |
+| 20261123 | gantry | latching | 0.5 | 2.5 | 579 / 587 / 584 / 584 | 10 / 15 (0.42) | 7 / 15 (0.13) | 0 / 4 / 4 / 4 |
+| 20261123 | gantry | latching | 0.5 (as run) | 3.0 (as run) | 579 / 591 / 588 / 588 | 7 / 16 (0.093) | 4 / 16 (0.012) | 0 / 0 / 0 / 0 |
+| 20261123 | gantry | latching | 0.5 | 3.5 | 579 / 591 / 588 / 588 | 7 / 16 (0.093) | 4 / 16 (0.012) | 0 / 0 / 0 / 0 |
+| 20261123 | gantry | latching | 0.5 | 4.0 | 579 / 591 / 588 / 588 | 7 / 16 (0.093) | 4 / 16 (0.012) | 0 / 0 / 0 / 0 |
+| 20261123 | gantry | latching | 0.5 | 5.0 | 579 / 591 / 588 / 588 | 7 / 16 (0.093) | 4 / 16 (0.012) | 0 / 0 / 0 / 0 |
+| 20261123 | gantry | latching | 1.0 | 2.0 | 569 / 570 / 567 / 567 | 18 / 16 (0.86) | 15 / 16 (1) | 10 / 21 / 21 / 21 |
+| 20261123 | gantry | latching | 1.0 | 2.5 | 579 / 587 / 584 / 584 | 10 / 15 (0.42) | 7 / 15 (0.13) | 0 / 4 / 4 / 4 |
+| 20261123 | gantry | latching | 1.0 | 3.0 | 579 / 591 / 588 / 588 | 7 / 16 (0.093) | 4 / 16 (0.012) | 0 / 0 / 0 / 0 |
+| 20261123 | gantry | latching | 1.0 | 3.5 | 579 / 591 / 588 / 588 | 7 / 16 (0.093) | 4 / 16 (0.012) | 0 / 0 / 0 / 0 |
+| 20261123 | gantry | latching | 1.0 | 4.0 | 579 / 591 / 588 / 588 | 7 / 16 (0.093) | 4 / 16 (0.012) | 0 / 0 / 0 / 0 |
+| 20261123 | gantry | latching | 1.0 | 5.0 | 579 / 591 / 588 / 588 | 7 / 16 (0.093) | 4 / 16 (0.012) | 0 / 0 / 0 / 0 |
+| 20261123 | arm | standard | 0.5 | 2.0 | 1955 / 1856 / 1856 / 1931 | 114 / 15 (<1e-6) | 114 / 15 (<1e-6) | 1 / 109 / 109 / 8 |
+| 20261123 | arm | standard | 0.5 | 2.5 | 1956 / 1895 / 1895 / 1939 | 77 / 16 (<1e-6) | 77 / 16 (<1e-6) | 0 / 70 / 70 / 0 |
+| 20261123 | arm | standard | 0.5 (as run) | 3.0 (as run) | 1956 / 1922 / 1922 / 1939 | 51 / 17 (4.5e-05) | 51 / 17 (4.5e-05) | 0 / 43 / 43 / 0 |
+| 20261123 | arm | standard | 0.5 | 3.5 | 1956 / 1939 / 1939 / 1939 | 35 / 18 (0.027) | 35 / 18 (0.027) | 0 / 26 / 26 / 0 |
+| 20261123 | arm | standard | 0.5 | 4.0 | 1956 / 1950 / 1950 / 1939 | 27 / 21 (0.47) | 27 / 21 (0.47) | 0 / 15 / 15 / 0 |
+| 20261123 | arm | standard | 0.5 | 5.0 | 1956 / 1961 / 1961 / 1939 | 22 / 27 (0.57) | 22 / 27 (0.57) | 0 / 4 / 4 / 0 |
+| 20261123 | arm | standard | 1.0 | 2.0 | 1955 / 1856 / 1856 / 1931 | 114 / 15 (<1e-6) | 114 / 15 (<1e-6) | 1 / 109 / 109 / 8 |
+| 20261123 | arm | standard | 1.0 | 2.5 | 1956 / 1895 / 1895 / 1939 | 77 / 16 (<1e-6) | 77 / 16 (<1e-6) | 0 / 70 / 70 / 0 |
+| 20261123 | arm | standard | 1.0 | 3.0 | 1956 / 1922 / 1922 / 1939 | 51 / 17 (4.5e-05) | 51 / 17 (4.5e-05) | 0 / 43 / 43 / 0 |
+| 20261123 | arm | standard | 1.0 | 3.5 | 1956 / 1939 / 1939 / 1939 | 35 / 18 (0.027) | 35 / 18 (0.027) | 0 / 26 / 26 / 0 |
+| 20261123 | arm | standard | 1.0 | 4.0 | 1956 / 1950 / 1950 / 1939 | 27 / 21 (0.47) | 27 / 21 (0.47) | 0 / 15 / 15 / 0 |
+| 20261123 | arm | standard | 1.0 | 5.0 | 1956 / 1961 / 1961 / 1939 | 22 / 27 (0.57) | 22 / 27 (0.57) | 0 / 4 / 4 / 0 |
+| 20261123 | arm | heldout | 0.5 | 2.0 | 395 / 335 / 335 / 383 | 100 / 40 (<1e-6) | 100 / 40 (<1e-6) | 0 / 93 / 93 / 6 |
+| 20261123 | arm | heldout | 0.5 | 2.5 | 395 / 364 / 364 / 389 | 73 / 42 (0.0049) | 73 / 42 (0.0049) | 0 / 64 / 64 / 0 |
+| 20261123 | arm | heldout | 0.5 (as run) | 3.0 (as run) | 395 / 397 / 397 / 389 | 50 / 52 (0.92) | 50 / 52 (0.92) | 0 / 31 / 31 / 0 |
+| 20261123 | arm | heldout | 0.5 | 3.5 | 395 / 413 / 413 / 389 | 37 / 55 (0.076) | 37 / 55 (0.076) | 0 / 15 / 15 / 0 |
+| 20261123 | arm | heldout | 0.5 | 4.0 | 395 / 419 / 419 / 389 | 34 / 58 (0.016) | 34 / 58 (0.016) | 0 / 9 / 9 / 0 |
+| 20261123 | arm | heldout | 0.5 | 5.0 | 395 / 426 / 426 / 389 | 30 / 61 (0.0015) | 30 / 61 (0.0015) | 0 / 2 / 2 / 0 |
+| 20261123 | arm | heldout | 1.0 | 2.0 | 395 / 335 / 335 / 383 | 100 / 40 (<1e-6) | 100 / 40 (<1e-6) | 0 / 93 / 93 / 6 |
+| 20261123 | arm | heldout | 1.0 | 2.5 | 395 / 364 / 364 / 389 | 73 / 42 (0.0049) | 73 / 42 (0.0049) | 0 / 64 / 64 / 0 |
+| 20261123 | arm | heldout | 1.0 | 3.0 | 395 / 397 / 397 / 389 | 50 / 52 (0.92) | 50 / 52 (0.92) | 0 / 31 / 31 / 0 |
+| 20261123 | arm | heldout | 1.0 | 3.5 | 395 / 413 / 413 / 389 | 37 / 55 (0.076) | 37 / 55 (0.076) | 0 / 15 / 15 / 0 |
+| 20261123 | arm | heldout | 1.0 | 4.0 | 395 / 419 / 419 / 389 | 34 / 58 (0.016) | 34 / 58 (0.016) | 0 / 9 / 9 / 0 |
+| 20261123 | arm | heldout | 1.0 | 5.0 | 395 / 427 / 427 / 389 | 30 / 62 (0.0011) | 30 / 62 (0.0011) | 0 / 1 / 1 / 0 |
+| 20261123 | arm | latching | 0.5 | 2.0 | 553 / 542 / 540 / 548 | 31 / 18 (0.085) | 30 / 19 (0.15) | 13 / 20 / 20 / 12 |
+| 20261123 | arm | latching | 0.5 | 2.5 | 565 / 558 / 556 / 558 | 25 / 16 (0.21) | 25 / 18 (0.36) | 1 / 4 / 4 / 2 |
+| 20261123 | arm | latching | 0.5 (as run) | 3.0 (as run) | 566 / 562 / 560 / 560 | 23 / 17 (0.43) | 23 / 19 (0.64) | 0 / 0 / 0 / 0 |
+| 20261123 | arm | latching | 0.5 | 3.5 | 566 / 562 / 560 / 560 | 23 / 17 (0.43) | 23 / 19 (0.64) | 0 / 0 / 0 / 0 |
+| 20261123 | arm | latching | 0.5 | 4.0 | 566 / 562 / 560 / 560 | 23 / 17 (0.43) | 23 / 19 (0.64) | 0 / 0 / 0 / 0 |
+| 20261123 | arm | latching | 0.5 | 5.0 | 566 / 562 / 560 / 560 | 23 / 17 (0.43) | 23 / 19 (0.64) | 0 / 0 / 0 / 0 |
+| 20261123 | arm | latching | 1.0 | 2.0 | 553 / 542 / 540 / 548 | 31 / 18 (0.085) | 30 / 19 (0.15) | 13 / 20 / 20 / 12 |
+| 20261123 | arm | latching | 1.0 | 2.5 | 565 / 558 / 556 / 558 | 25 / 16 (0.21) | 25 / 18 (0.36) | 1 / 4 / 4 / 2 |
+| 20261123 | arm | latching | 1.0 | 3.0 | 566 / 562 / 560 / 560 | 23 / 17 (0.43) | 23 / 19 (0.64) | 0 / 0 / 0 / 0 |
+| 20261123 | arm | latching | 1.0 | 3.5 | 566 / 562 / 560 / 560 | 23 / 17 (0.43) | 23 / 19 (0.64) | 0 / 0 / 0 / 0 |
+| 20261123 | arm | latching | 1.0 | 4.0 | 566 / 562 / 560 / 560 | 23 / 17 (0.43) | 23 / 19 (0.64) | 0 / 0 / 0 / 0 |
+| 20261123 | arm | latching | 1.0 | 5.0 | 566 / 562 / 560 / 560 | 23 / 17 (0.43) | 23 / 19 (0.64) | 0 / 0 / 0 / 0 |
+| 20261124 | gantry | standard | 0.5 | 2.0 | 1988 / 1875 / 1875 / 1954 | 114 / 1 (<1e-6) | 114 / 1 (<1e-6) | 0 / 93 / 93 / 6 |
+| 20261124 | gantry | standard | 0.5 | 2.5 | 1988 / 1906 / 1906 / 1958 | 84 / 2 (<1e-6) | 84 / 2 (<1e-6) | 0 / 62 / 62 / 2 |
+| 20261124 | gantry | standard | 0.5 (as run) | 3.0 (as run) | 1988 / 1929 / 1929 / 1959 | 62 / 3 (<1e-6) | 62 / 3 (<1e-6) | 0 / 39 / 39 / 1 |
+| 20261124 | gantry | standard | 0.5 | 3.5 | 1988 / 1949 / 1949 / 1959 | 42 / 3 (<1e-6) | 42 / 3 (<1e-6) | 0 / 19 / 19 / 1 |
+| 20261124 | gantry | standard | 0.5 | 4.0 | 1988 / 1959 / 1959 / 1959 | 32 / 3 (<1e-6) | 32 / 3 (<1e-6) | 0 / 9 / 9 / 1 |
+| 20261124 | gantry | standard | 0.5 | 5.0 | 1988 / 1966 / 1966 / 1959 | 26 / 4 (5.9e-05) | 26 / 4 (5.9e-05) | 0 / 2 / 2 / 1 |
+| 20261124 | gantry | standard | 1.0 | 2.0 | 1988 / 1875 / 1875 / 1954 | 114 / 1 (<1e-6) | 114 / 1 (<1e-6) | 0 / 93 / 93 / 6 |
+| 20261124 | gantry | standard | 1.0 | 2.5 | 1988 / 1906 / 1906 / 1958 | 84 / 2 (<1e-6) | 84 / 2 (<1e-6) | 0 / 62 / 62 / 2 |
+| 20261124 | gantry | standard | 1.0 | 3.0 | 1988 / 1929 / 1929 / 1959 | 62 / 3 (<1e-6) | 62 / 3 (<1e-6) | 0 / 39 / 39 / 1 |
+| 20261124 | gantry | standard | 1.0 | 3.5 | 1988 / 1949 / 1949 / 1959 | 42 / 3 (<1e-6) | 42 / 3 (<1e-6) | 0 / 19 / 19 / 1 |
+| 20261124 | gantry | standard | 1.0 | 4.0 | 1988 / 1959 / 1959 / 1959 | 32 / 3 (<1e-6) | 32 / 3 (<1e-6) | 0 / 9 / 9 / 1 |
+| 20261124 | gantry | standard | 1.0 | 5.0 | 1988 / 1966 / 1966 / 1959 | 26 / 4 (5.9e-05) | 26 / 4 (5.9e-05) | 0 / 2 / 2 / 1 |
+| 20261124 | gantry | heldout | 0.5 | 2.0 | 434 / 384 / 384 / 447 | 88 / 38 (9.8e-06) | 88 / 38 (9.8e-06) | 2 / 78 / 78 / 6 |
+| 20261124 | gantry | heldout | 0.5 | 2.5 | 435 / 410 / 410 / 452 | 65 / 40 (0.019) | 65 / 40 (0.019) | 1 / 52 / 52 / 1 |
+| 20261124 | gantry | heldout | 0.5 (as run) | 3.0 (as run) | 436 / 431 / 431 / 452 | 46 / 41 (0.67) | 46 / 41 (0.67) | 0 / 31 / 31 / 1 |
+| 20261124 | gantry | heldout | 0.5 | 3.5 | 436 / 446 / 446 / 452 | 32 / 42 (0.3) | 32 / 42 (0.3) | 0 / 16 / 16 / 1 |
+| 20261124 | gantry | heldout | 0.5 | 4.0 | 436 / 451 / 451 / 452 | 28 / 43 (0.096) | 28 / 43 (0.096) | 0 / 11 / 11 / 1 |
+| 20261124 | gantry | heldout | 0.5 | 5.0 | 436 / 459 / 459 / 452 | 21 / 44 (0.0059) | 21 / 44 (0.0059) | 0 / 3 / 3 / 1 |
+| 20261124 | gantry | heldout | 1.0 | 2.0 | 434 / 385 / 385 / 447 | 88 / 39 (1.6e-05) | 88 / 39 (1.6e-05) | 2 / 77 / 77 / 6 |
+| 20261124 | gantry | heldout | 1.0 | 2.5 | 435 / 411 / 411 / 452 | 65 / 41 (0.025) | 65 / 41 (0.025) | 1 / 51 / 51 / 1 |
+| 20261124 | gantry | heldout | 1.0 | 3.0 | 436 / 432 / 432 / 452 | 46 / 42 (0.75) | 46 / 42 (0.75) | 0 / 30 / 30 / 1 |
+| 20261124 | gantry | heldout | 1.0 | 3.5 | 436 / 447 / 447 / 452 | 32 / 43 (0.25) | 32 / 43 (0.25) | 0 / 15 / 15 / 1 |
+| 20261124 | gantry | heldout | 1.0 | 4.0 | 436 / 452 / 452 / 452 | 28 / 44 (0.076) | 28 / 44 (0.076) | 0 / 10 / 10 / 1 |
+| 20261124 | gantry | heldout | 1.0 | 5.0 | 436 / 462 / 462 / 452 | 21 / 47 (0.0022) | 21 / 47 (0.0022) | 0 / 0 / 0 / 1 |
+| 20261124 | gantry | latching | 0.5 | 2.0 | 565 / 560 / 556 / 556 | 25 / 16 (0.21) | 22 / 17 (0.52) | 14 / 34 / 36 / 36 |
+| 20261124 | gantry | latching | 0.5 | 2.5 | 577 / 585 / 582 / 582 | 13 / 18 (0.47) | 11 / 19 (0.2) | 2 / 9 / 10 / 10 |
+| 20261124 | gantry | latching | 0.5 (as run) | 3.0 (as run) | 579 / 594 / 592 / 592 | 5 / 18 (0.011) | 4 / 19 (0.0026) | 0 / 0 / 0 / 0 |
+| 20261124 | gantry | latching | 0.5 | 3.5 | 579 / 594 / 592 / 592 | 5 / 18 (0.011) | 4 / 19 (0.0026) | 0 / 0 / 0 / 0 |
+| 20261124 | gantry | latching | 0.5 | 4.0 | 579 / 594 / 592 / 592 | 5 / 18 (0.011) | 4 / 19 (0.0026) | 0 / 0 / 0 / 0 |
+| 20261124 | gantry | latching | 0.5 | 5.0 | 579 / 594 / 592 / 592 | 5 / 18 (0.011) | 4 / 19 (0.0026) | 0 / 0 / 0 / 0 |
+| 20261124 | gantry | latching | 1.0 | 2.0 | 565 / 560 / 556 / 556 | 25 / 16 (0.21) | 22 / 17 (0.52) | 14 / 34 / 36 / 36 |
+| 20261124 | gantry | latching | 1.0 | 2.5 | 577 / 585 / 582 / 582 | 13 / 18 (0.47) | 11 / 19 (0.2) | 2 / 9 / 10 / 10 |
+| 20261124 | gantry | latching | 1.0 | 3.0 | 579 / 594 / 592 / 592 | 5 / 18 (0.011) | 4 / 19 (0.0026) | 0 / 0 / 0 / 0 |
+| 20261124 | gantry | latching | 1.0 | 3.5 | 579 / 594 / 592 / 592 | 5 / 18 (0.011) | 4 / 19 (0.0026) | 0 / 0 / 0 / 0 |
+| 20261124 | gantry | latching | 1.0 | 4.0 | 579 / 594 / 592 / 592 | 5 / 18 (0.011) | 4 / 19 (0.0026) | 0 / 0 / 0 / 0 |
+| 20261124 | gantry | latching | 1.0 | 5.0 | 579 / 594 / 592 / 592 | 5 / 18 (0.011) | 4 / 19 (0.0026) | 0 / 0 / 0 / 0 |
+| 20261124 | arm | standard | 0.5 | 2.0 | 1963 / 1861 / 1861 / 1925 | 111 / 9 (<1e-6) | 111 / 9 (<1e-6) | 0 / 101 / 101 / 10 |
+| 20261124 | arm | standard | 0.5 | 2.5 | 1963 / 1898 / 1898 / 1935 | 75 / 10 (<1e-6) | 75 / 10 (<1e-6) | 0 / 64 / 64 / 0 |
+| 20261124 | arm | standard | 0.5 (as run) | 3.0 (as run) | 1963 / 1923 / 1923 / 1935 | 51 / 11 (<1e-6) | 51 / 11 (<1e-6) | 0 / 39 / 39 / 0 |
+| 20261124 | arm | standard | 0.5 | 3.5 | 1963 / 1945 / 1945 / 1935 | 30 / 12 (0.0079) | 30 / 12 (0.0079) | 0 / 17 / 17 / 0 |
+| 20261124 | arm | standard | 0.5 | 4.0 | 1963 / 1952 / 1952 / 1935 | 24 / 13 (0.099) | 24 / 13 (0.099) | 0 / 10 / 10 / 0 |
+| 20261124 | arm | standard | 0.5 | 5.0 | 1963 / 1958 / 1958 / 1935 | 20 / 15 (0.5) | 20 / 15 (0.5) | 0 / 4 / 4 / 0 |
+| 20261124 | arm | standard | 1.0 | 2.0 | 1963 / 1861 / 1861 / 1925 | 111 / 9 (<1e-6) | 111 / 9 (<1e-6) | 0 / 101 / 101 / 10 |
+| 20261124 | arm | standard | 1.0 | 2.5 | 1963 / 1898 / 1898 / 1935 | 75 / 10 (<1e-6) | 75 / 10 (<1e-6) | 0 / 64 / 64 / 0 |
+| 20261124 | arm | standard | 1.0 | 3.0 | 1963 / 1923 / 1923 / 1935 | 51 / 11 (<1e-6) | 51 / 11 (<1e-6) | 0 / 39 / 39 / 0 |
+| 20261124 | arm | standard | 1.0 | 3.5 | 1963 / 1945 / 1945 / 1935 | 30 / 12 (0.0079) | 30 / 12 (0.0079) | 0 / 17 / 17 / 0 |
+| 20261124 | arm | standard | 1.0 | 4.0 | 1963 / 1952 / 1952 / 1935 | 24 / 13 (0.099) | 24 / 13 (0.099) | 0 / 10 / 10 / 0 |
+| 20261124 | arm | standard | 1.0 | 5.0 | 1963 / 1958 / 1958 / 1935 | 20 / 15 (0.5) | 20 / 15 (0.5) | 0 / 4 / 4 / 0 |
+| 20261124 | arm | heldout | 0.5 | 2.0 | 395 / 360 / 360 / 395 | 87 / 52 (0.0038) | 87 / 52 (0.0038) | 0 / 78 / 78 / 5 |
+| 20261124 | arm | heldout | 0.5 | 2.5 | 395 / 386 / 386 / 400 | 65 / 56 (0.47) | 65 / 56 (0.47) | 0 / 52 / 52 / 0 |
+| 20261124 | arm | heldout | 0.5 (as run) | 3.0 (as run) | 395 / 410 / 410 / 400 | 43 / 58 (0.16) | 43 / 58 (0.16) | 0 / 28 / 28 / 0 |
+| 20261124 | arm | heldout | 0.5 | 3.5 | 395 / 423 / 423 / 400 | 32 / 60 (0.0046) | 32 / 60 (0.0046) | 0 / 15 / 15 / 0 |
+| 20261124 | arm | heldout | 0.5 | 4.0 | 395 / 430 / 430 / 400 | 27 / 62 (0.00027) | 27 / 62 (0.00027) | 0 / 8 / 8 / 0 |
+| 20261124 | arm | heldout | 0.5 | 5.0 | 395 / 434 / 434 / 400 | 24 / 63 (3.5e-05) | 24 / 63 (3.5e-05) | 0 / 4 / 4 / 0 |
+| 20261124 | arm | heldout | 1.0 | 2.0 | 395 / 360 / 360 / 395 | 87 / 52 (0.0038) | 87 / 52 (0.0038) | 0 / 78 / 78 / 5 |
+| 20261124 | arm | heldout | 1.0 | 2.5 | 395 / 386 / 386 / 400 | 65 / 56 (0.47) | 65 / 56 (0.47) | 0 / 52 / 52 / 0 |
+| 20261124 | arm | heldout | 1.0 | 3.0 | 395 / 410 / 410 / 400 | 43 / 58 (0.16) | 43 / 58 (0.16) | 0 / 28 / 28 / 0 |
+| 20261124 | arm | heldout | 1.0 | 3.5 | 395 / 423 / 423 / 400 | 32 / 60 (0.0046) | 32 / 60 (0.0046) | 0 / 15 / 15 / 0 |
+| 20261124 | arm | heldout | 1.0 | 4.0 | 395 / 430 / 430 / 400 | 27 / 62 (0.00027) | 27 / 62 (0.00027) | 0 / 8 / 8 / 0 |
+| 20261124 | arm | heldout | 1.0 | 5.0 | 395 / 435 / 435 / 400 | 24 / 64 (2.4e-05) | 24 / 64 (2.4e-05) | 0 / 3 / 3 / 0 |
+| 20261124 | arm | latching | 0.5 | 2.0 | 552 / 529 / 529 / 539 | 40 / 17 (0.0032) | 40 / 17 (0.0032) | 10 / 35 / 34 / 24 |
+| 20261124 | arm | latching | 0.5 | 2.5 | 561 / 554 / 553 / 560 | 28 / 20 (0.31) | 28 / 21 (0.39) | 1 / 10 / 10 / 3 |
+| 20261124 | arm | latching | 0.5 (as run) | 3.0 (as run) | 562 / 563 / 562 / 563 | 20 / 20 (1) | 20 / 21 (1) | 0 / 1 / 1 / 0 |
+| 20261124 | arm | latching | 0.5 | 3.5 | 562 / 564 / 563 / 563 | 19 / 20 (1) | 19 / 21 (0.87) | 0 / 0 / 0 / 0 |
+| 20261124 | arm | latching | 0.5 | 4.0 | 562 / 564 / 563 / 563 | 19 / 20 (1) | 19 / 21 (0.87) | 0 / 0 / 0 / 0 |
+| 20261124 | arm | latching | 0.5 | 5.0 | 562 / 564 / 563 / 563 | 19 / 20 (1) | 19 / 21 (0.87) | 0 / 0 / 0 / 0 |
+| 20261124 | arm | latching | 1.0 | 2.0 | 552 / 529 / 529 / 539 | 40 / 17 (0.0032) | 40 / 17 (0.0032) | 10 / 35 / 34 / 24 |
+| 20261124 | arm | latching | 1.0 | 2.5 | 561 / 554 / 553 / 560 | 28 / 20 (0.31) | 28 / 21 (0.39) | 1 / 10 / 10 / 3 |
+| 20261124 | arm | latching | 1.0 | 3.0 | 562 / 563 / 562 / 563 | 20 / 20 (1) | 20 / 21 (1) | 0 / 1 / 1 / 0 |
+| 20261124 | arm | latching | 1.0 | 3.5 | 562 / 564 / 563 / 563 | 19 / 20 (1) | 19 / 21 (0.87) | 0 / 0 / 0 / 0 |
+| 20261124 | arm | latching | 1.0 | 4.0 | 562 / 564 / 563 / 563 | 19 / 20 (1) | 19 / 21 (0.87) | 0 / 0 / 0 / 0 |
+| 20261124 | arm | latching | 1.0 | 5.0 | 562 / 564 / 563 / 563 | 19 / 20 (1) | 19 / 21 (0.87) | 0 / 0 / 0 / 0 |
+| 20261130 | gantry | standard | 0.5 | 2.0 | 1978 / 1858 / 1858 / 1952 | 122 / 2 (<1e-6) | 122 / 2 (<1e-6) | 3 / 110 / 110 / 7 |
+| 20261130 | gantry | standard | 0.5 | 2.5 | 1981 / 1907 / 1907 / 1958 | 79 / 5 (<1e-6) | 79 / 5 (<1e-6) | 0 / 61 / 61 / 1 |
+| 20261130 | gantry | standard | 0.5 (as run) | 3.0 (as run) | 1981 / 1936 / 1936 / 1959 | 53 / 8 (<1e-6) | 53 / 8 (<1e-6) | 0 / 32 / 32 / 0 |
+| 20261130 | gantry | standard | 0.5 | 3.5 | 1981 / 1955 / 1955 / 1959 | 36 / 10 (0.00016) | 36 / 10 (0.00016) | 0 / 13 / 13 / 0 |
+| 20261130 | gantry | standard | 0.5 | 4.0 | 1981 / 1960 / 1960 / 1959 | 31 / 10 (0.0015) | 31 / 10 (0.0015) | 0 / 8 / 8 / 0 |
+| 20261130 | gantry | standard | 0.5 | 5.0 | 1981 / 1965 / 1965 / 1959 | 26 / 10 (0.011) | 26 / 10 (0.011) | 0 / 3 / 3 / 0 |
+| 20261130 | gantry | standard | 1.0 | 2.0 | 1978 / 1858 / 1858 / 1952 | 122 / 2 (<1e-6) | 122 / 2 (<1e-6) | 3 / 110 / 110 / 7 |
+| 20261130 | gantry | standard | 1.0 | 2.5 | 1981 / 1907 / 1907 / 1958 | 79 / 5 (<1e-6) | 79 / 5 (<1e-6) | 0 / 61 / 61 / 1 |
+| 20261130 | gantry | standard | 1.0 | 3.0 | 1981 / 1936 / 1936 / 1959 | 53 / 8 (<1e-6) | 53 / 8 (<1e-6) | 0 / 32 / 32 / 0 |
+| 20261130 | gantry | standard | 1.0 | 3.5 | 1981 / 1955 / 1955 / 1959 | 36 / 10 (0.00016) | 36 / 10 (0.00016) | 0 / 13 / 13 / 0 |
+| 20261130 | gantry | standard | 1.0 | 4.0 | 1981 / 1960 / 1960 / 1959 | 31 / 10 (0.0015) | 31 / 10 (0.0015) | 0 / 8 / 8 / 0 |
+| 20261130 | gantry | standard | 1.0 | 5.0 | 1981 / 1966 / 1966 / 1959 | 25 / 10 (0.017) | 25 / 10 (0.017) | 0 / 2 / 2 / 0 |
+| 20261130 | gantry | heldout | 0.5 | 2.0 | 407 / 365 / 365 / 439 | 88 / 46 (0.00036) | 88 / 46 (0.00036) | 0 / 91 / 91 / 6 |
+| 20261130 | gantry | heldout | 0.5 | 2.5 | 407 / 388 / 388 / 444 | 70 / 51 (0.1) | 70 / 51 (0.1) | 0 / 68 / 68 / 1 |
+| 20261130 | gantry | heldout | 0.5 (as run) | 3.0 (as run) | 407 / 419 / 419 / 444 | 48 / 60 (0.29) | 48 / 60 (0.29) | 0 / 37 / 37 / 1 |
+| 20261130 | gantry | heldout | 0.5 | 3.5 | 407 / 434 / 434 / 444 | 38 / 65 (0.01) | 38 / 65 (0.01) | 0 / 22 / 22 / 1 |
+| 20261130 | gantry | heldout | 0.5 | 4.0 | 407 / 445 / 445 / 445 | 30 / 68 (0.00016) | 30 / 68 (0.00016) | 0 / 11 / 11 / 0 |
+| 20261130 | gantry | heldout | 0.5 | 5.0 | 407 / 453 / 453 / 445 | 23 / 69 (1.7e-06) | 23 / 69 (1.7e-06) | 0 / 3 / 3 / 0 |
+| 20261130 | gantry | heldout | 1.0 | 2.0 | 407 / 365 / 365 / 439 | 88 / 46 (0.00036) | 88 / 46 (0.00036) | 0 / 91 / 91 / 6 |
+| 20261130 | gantry | heldout | 1.0 | 2.5 | 407 / 389 / 389 / 444 | 70 / 52 (0.12) | 70 / 52 (0.12) | 0 / 67 / 67 / 1 |
+| 20261130 | gantry | heldout | 1.0 | 3.0 | 407 / 420 / 420 / 444 | 48 / 61 (0.25) | 48 / 61 (0.25) | 0 / 36 / 36 / 1 |
+| 20261130 | gantry | heldout | 1.0 | 3.5 | 407 / 435 / 435 / 444 | 38 / 66 (0.0078) | 38 / 66 (0.0078) | 0 / 21 / 21 / 1 |
+| 20261130 | gantry | heldout | 1.0 | 4.0 | 407 / 446 / 446 / 445 | 30 / 69 (0.00011) | 30 / 69 (0.00011) | 0 / 10 / 10 / 0 |
+| 20261130 | gantry | heldout | 1.0 | 5.0 | 407 / 455 / 455 / 445 | 23 / 71 (<1e-6) | 23 / 71 (<1e-6) | 0 / 1 / 1 / 0 |
+| 20261130 | gantry | latching | 0.5 | 2.0 | 564 / 549 / 547 / 547 | 28 / 11 (0.0095) | 26 / 11 (0.02) | 21 / 44 / 45 / 45 |
+| 20261130 | gantry | latching | 0.5 | 2.5 | 577 / 584 / 583 / 583 | 11 / 17 (0.34) | 10 / 17 (0.25) | 8 / 9 / 9 / 9 |
+| 20261130 | gantry | latching | 0.5 (as run) | 3.0 (as run) | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| 20261130 | gantry | latching | 0.5 | 3.5 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| 20261130 | gantry | latching | 0.5 | 4.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| 20261130 | gantry | latching | 0.5 | 5.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| 20261130 | gantry | latching | 1.0 | 2.0 | 564 / 549 / 547 / 547 | 28 / 11 (0.0095) | 26 / 11 (0.02) | 21 / 44 / 45 / 45 |
+| 20261130 | gantry | latching | 1.0 | 2.5 | 577 / 584 / 583 / 583 | 11 / 17 (0.34) | 10 / 17 (0.25) | 8 / 9 / 9 / 9 |
+| 20261130 | gantry | latching | 1.0 | 3.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| 20261130 | gantry | latching | 1.0 | 3.5 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| 20261130 | gantry | latching | 1.0 | 4.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| 20261130 | gantry | latching | 1.0 | 5.0 | 585 / 593 / 592 / 592 | 7 / 14 (0.19) | 6 / 14 (0.12) | 0 / 0 / 0 / 0 |
+| 20261130 | arm | standard | 0.5 | 2.0 | 1961 / 1849 / 1849 / 1930 | 119 / 7 (<1e-6) | 119 / 7 (<1e-6) | 1 / 107 / 107 / 5 |
+| 20261130 | arm | standard | 0.5 | 2.5 | 1961 / 1900 / 1900 / 1934 | 72 / 11 (<1e-6) | 72 / 11 (<1e-6) | 1 / 56 / 56 / 1 |
+| 20261130 | arm | standard | 0.5 (as run) | 3.0 (as run) | 1962 / 1924 / 1924 / 1935 | 54 / 16 (5.9e-06) | 54 / 16 (5.9e-06) | 0 / 32 / 32 / 0 |
+| 20261130 | arm | standard | 0.5 | 3.5 | 1962 / 1944 / 1944 / 1935 | 35 / 17 (0.018) | 35 / 17 (0.018) | 0 / 12 / 12 / 0 |
+| 20261130 | arm | standard | 0.5 | 4.0 | 1962 / 1949 / 1949 / 1935 | 30 / 17 (0.079) | 30 / 17 (0.079) | 0 / 7 / 7 / 0 |
+| 20261130 | arm | standard | 0.5 | 5.0 | 1962 / 1953 / 1953 / 1935 | 27 / 18 (0.23) | 27 / 18 (0.23) | 0 / 3 / 3 / 0 |
+| 20261130 | arm | standard | 1.0 | 2.0 | 1961 / 1849 / 1849 / 1930 | 119 / 7 (<1e-6) | 119 / 7 (<1e-6) | 1 / 107 / 107 / 5 |
+| 20261130 | arm | standard | 1.0 | 2.5 | 1961 / 1900 / 1900 / 1934 | 72 / 11 (<1e-6) | 72 / 11 (<1e-6) | 1 / 56 / 56 / 1 |
+| 20261130 | arm | standard | 1.0 | 3.0 | 1962 / 1924 / 1924 / 1935 | 54 / 16 (5.9e-06) | 54 / 16 (5.9e-06) | 0 / 32 / 32 / 0 |
+| 20261130 | arm | standard | 1.0 | 3.5 | 1962 / 1944 / 1944 / 1935 | 35 / 17 (0.018) | 35 / 17 (0.018) | 0 / 12 / 12 / 0 |
+| 20261130 | arm | standard | 1.0 | 4.0 | 1962 / 1949 / 1949 / 1935 | 30 / 17 (0.079) | 30 / 17 (0.079) | 0 / 7 / 7 / 0 |
+| 20261130 | arm | standard | 1.0 | 5.0 | 1962 / 1954 / 1954 / 1935 | 26 / 18 (0.29) | 26 / 18 (0.29) | 0 / 2 / 2 / 0 |
+| 20261130 | arm | heldout | 0.5 | 2.0 | 384 / 342 / 342 / 376 | 92 / 50 (0.00053) | 92 / 50 (0.00053) | 0 / 84 / 84 / 3 |
+| 20261130 | arm | heldout | 0.5 | 2.5 | 384 / 364 / 364 / 379 | 74 / 54 (0.093) | 74 / 54 (0.093) | 0 / 62 / 62 / 0 |
+| 20261130 | arm | heldout | 0.5 (as run) | 3.0 (as run) | 384 / 392 / 392 / 379 | 52 / 60 (0.51) | 52 / 60 (0.51) | 0 / 34 / 34 / 0 |
+| 20261130 | arm | heldout | 0.5 | 3.5 | 384 / 406 / 406 / 379 | 41 / 63 (0.039) | 41 / 63 (0.039) | 0 / 20 / 20 / 0 |
+| 20261130 | arm | heldout | 0.5 | 4.0 | 384 / 413 / 413 / 379 | 35 / 64 (0.0046) | 35 / 64 (0.0046) | 0 / 13 / 13 / 0 |
+| 20261130 | arm | heldout | 0.5 | 5.0 | 384 / 419 / 419 / 379 | 33 / 68 (0.00064) | 33 / 68 (0.00064) | 0 / 7 / 7 / 0 |
+| 20261130 | arm | heldout | 1.0 | 2.0 | 384 / 342 / 342 / 376 | 92 / 50 (0.00053) | 92 / 50 (0.00053) | 0 / 84 / 84 / 3 |
+| 20261130 | arm | heldout | 1.0 | 2.5 | 384 / 364 / 364 / 379 | 74 / 54 (0.093) | 74 / 54 (0.093) | 0 / 62 / 62 / 0 |
+| 20261130 | arm | heldout | 1.0 | 3.0 | 384 / 392 / 392 / 379 | 52 / 60 (0.51) | 52 / 60 (0.51) | 0 / 34 / 34 / 0 |
+| 20261130 | arm | heldout | 1.0 | 3.5 | 384 / 406 / 406 / 379 | 41 / 63 (0.039) | 41 / 63 (0.039) | 0 / 20 / 20 / 0 |
+| 20261130 | arm | heldout | 1.0 | 4.0 | 384 / 413 / 413 / 379 | 35 / 64 (0.0046) | 35 / 64 (0.0046) | 0 / 13 / 13 / 0 |
+| 20261130 | arm | heldout | 1.0 | 5.0 | 384 / 421 / 421 / 379 | 32 / 69 (0.0003) | 32 / 69 (0.0003) | 0 / 5 / 5 / 0 |
+| 20261130 | arm | latching | 0.5 | 2.0 | 540 / 525 / 525 / 534 | 36 / 21 (0.063) | 36 / 21 (0.063) | 12 / 49 / 48 / 39 |
+| 20261130 | arm | latching | 0.5 | 2.5 | 552 / 561 / 562 / 568 | 23 / 33 (0.23) | 23 / 32 (0.28) | 0 / 13 / 11 / 5 |
+| 20261130 | arm | latching | 0.5 (as run) | 3.0 (as run) | 552 / 571 / 570 / 572 | 19 / 37 (0.022) | 18 / 37 (0.014) | 0 / 3 / 3 / 1 |
+| 20261130 | arm | latching | 0.5 | 3.5 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| 20261130 | arm | latching | 0.5 | 4.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| 20261130 | arm | latching | 0.5 | 5.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| 20261130 | arm | latching | 1.0 | 2.0 | 540 / 525 / 525 / 534 | 36 / 21 (0.063) | 36 / 21 (0.063) | 12 / 49 / 48 / 39 |
+| 20261130 | arm | latching | 1.0 | 2.5 | 552 / 561 / 562 / 568 | 23 / 33 (0.23) | 23 / 32 (0.28) | 0 / 13 / 11 / 5 |
+| 20261130 | arm | latching | 1.0 | 3.0 | 552 / 571 / 570 / 572 | 19 / 37 (0.022) | 18 / 37 (0.014) | 0 / 3 / 3 / 1 |
+| 20261130 | arm | latching | 1.0 | 3.5 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| 20261130 | arm | latching | 1.0 | 4.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+| 20261130 | arm | latching | 1.0 | 5.0 | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
+
+### (4) Three seeds side by side (POST HOC, depth tolerance 0.5 mm)
+
+Per seed: C-only / I-only (exact McNemar p on that seed), then bad units C / F / I / J. On housing-only suites F equals I. The 1.0 mm depth rows are in (3).
+
+| Machine | Suite | Yaw/tilt (deg) | 20261123: C-only / I-only (p) | 20261123: bad units C / F / I / J | 20261124: C-only / I-only (p) | 20261124: bad units C / F / I / J | 20261130: C-only / I-only (p) | 20261130: bad units C / F / I / J |
+|---|---|---|---|---|---|---|---|---|
+| gantry | standard | 2.0 | 113 / 0 (<1e-6) | 1 / 104 / 104 / 10 | 114 / 1 (<1e-6) | 0 / 93 / 93 / 6 | 122 / 2 (<1e-6) | 3 / 110 / 110 / 7 |
+| gantry | standard | 2.5 | 79 / 1 (<1e-6) | 0 / 68 / 68 / 3 | 84 / 2 (<1e-6) | 0 / 62 / 62 / 2 | 79 / 5 (<1e-6) | 0 / 61 / 61 / 1 |
+| gantry | standard | 3.0 (as run) | 60 / 2 (<1e-6) | 0 / 48 / 48 / 1 | 62 / 3 (<1e-6) | 0 / 39 / 39 / 1 | 53 / 8 (<1e-6) | 0 / 32 / 32 / 0 |
+| gantry | standard | 3.5 | 39 / 4 (<1e-6) | 0 / 25 / 25 / 1 | 42 / 3 (<1e-6) | 0 / 19 / 19 / 1 | 36 / 10 (0.00016) | 0 / 13 / 13 / 0 |
+| gantry | standard | 4.0 | 28 / 5 (6.6e-05) | 0 / 13 / 13 / 1 | 32 / 3 (<1e-6) | 0 / 9 / 9 / 1 | 31 / 10 (0.0015) | 0 / 8 / 8 / 0 |
+| gantry | standard | 5.0 | 18 / 6 (0.023) | 0 / 2 / 2 / 1 | 26 / 4 (5.9e-05) | 0 / 2 / 2 / 1 | 26 / 10 (0.011) | 0 / 3 / 3 / 0 |
+| gantry | heldout | 2.0 | 112 / 34 (<1e-6) | 2 / 98 / 98 / 10 | 88 / 38 (9.8e-06) | 2 / 78 / 78 / 6 | 88 / 46 (0.00036) | 0 / 91 / 91 / 6 |
+| gantry | heldout | 2.5 | 87 / 37 (8.3e-06) | 0 / 68 / 68 / 4 | 65 / 40 (0.019) | 1 / 52 / 52 / 1 | 70 / 51 (0.1) | 0 / 68 / 68 / 1 |
+| gantry | heldout | 3.0 (as run) | 60 / 39 (0.044) | 0 / 39 / 39 / 2 | 46 / 41 (0.67) | 0 / 31 / 31 / 1 | 48 / 60 (0.29) | 0 / 37 / 37 / 1 |
+| gantry | heldout | 3.5 | 48 / 42 (0.6) | 0 / 24 / 24 / 2 | 32 / 42 (0.3) | 0 / 16 / 16 / 1 | 38 / 65 (0.01) | 0 / 22 / 22 / 1 |
+| gantry | heldout | 4.0 | 41 / 42 (1) | 0 / 17 / 17 / 2 | 28 / 43 (0.096) | 0 / 11 / 11 / 1 | 30 / 68 (0.00016) | 0 / 11 / 11 / 0 |
+| gantry | heldout | 5.0 | 32 / 44 (0.21) | 0 / 6 / 6 / 2 | 21 / 44 (0.0059) | 0 / 3 / 3 / 1 | 23 / 69 (1.7e-06) | 0 / 3 / 3 / 0 |
+| gantry | latching | 2.0 | 18 / 16 (0.86) | 10 / 21 / 21 / 21 | 25 / 16 (0.21) | 14 / 34 / 36 / 36 | 28 / 11 (0.0095) | 21 / 44 / 45 / 45 |
+| gantry | latching | 2.5 | 10 / 15 (0.42) | 0 / 4 / 4 / 4 | 13 / 18 (0.47) | 2 / 9 / 10 / 10 | 11 / 17 (0.34) | 8 / 9 / 9 / 9 |
+| gantry | latching | 3.0 (as run) | 7 / 16 (0.093) | 0 / 0 / 0 / 0 | 5 / 18 (0.011) | 0 / 0 / 0 / 0 | 7 / 14 (0.19) | 0 / 0 / 0 / 0 |
+| gantry | latching | 3.5 | 7 / 16 (0.093) | 0 / 0 / 0 / 0 | 5 / 18 (0.011) | 0 / 0 / 0 / 0 | 7 / 14 (0.19) | 0 / 0 / 0 / 0 |
+| gantry | latching | 4.0 | 7 / 16 (0.093) | 0 / 0 / 0 / 0 | 5 / 18 (0.011) | 0 / 0 / 0 / 0 | 7 / 14 (0.19) | 0 / 0 / 0 / 0 |
+| gantry | latching | 5.0 | 7 / 16 (0.093) | 0 / 0 / 0 / 0 | 5 / 18 (0.011) | 0 / 0 / 0 / 0 | 7 / 14 (0.19) | 0 / 0 / 0 / 0 |
+| arm | standard | 2.0 | 114 / 15 (<1e-6) | 1 / 109 / 109 / 8 | 111 / 9 (<1e-6) | 0 / 101 / 101 / 10 | 119 / 7 (<1e-6) | 1 / 107 / 107 / 5 |
+| arm | standard | 2.5 | 77 / 16 (<1e-6) | 0 / 70 / 70 / 0 | 75 / 10 (<1e-6) | 0 / 64 / 64 / 0 | 72 / 11 (<1e-6) | 1 / 56 / 56 / 1 |
+| arm | standard | 3.0 (as run) | 51 / 17 (4.5e-05) | 0 / 43 / 43 / 0 | 51 / 11 (<1e-6) | 0 / 39 / 39 / 0 | 54 / 16 (5.9e-06) | 0 / 32 / 32 / 0 |
+| arm | standard | 3.5 | 35 / 18 (0.027) | 0 / 26 / 26 / 0 | 30 / 12 (0.0079) | 0 / 17 / 17 / 0 | 35 / 17 (0.018) | 0 / 12 / 12 / 0 |
+| arm | standard | 4.0 | 27 / 21 (0.47) | 0 / 15 / 15 / 0 | 24 / 13 (0.099) | 0 / 10 / 10 / 0 | 30 / 17 (0.079) | 0 / 7 / 7 / 0 |
+| arm | standard | 5.0 | 22 / 27 (0.57) | 0 / 4 / 4 / 0 | 20 / 15 (0.5) | 0 / 4 / 4 / 0 | 27 / 18 (0.23) | 0 / 3 / 3 / 0 |
+| arm | heldout | 2.0 | 100 / 40 (<1e-6) | 0 / 93 / 93 / 6 | 87 / 52 (0.0038) | 0 / 78 / 78 / 5 | 92 / 50 (0.00053) | 0 / 84 / 84 / 3 |
+| arm | heldout | 2.5 | 73 / 42 (0.0049) | 0 / 64 / 64 / 0 | 65 / 56 (0.47) | 0 / 52 / 52 / 0 | 74 / 54 (0.093) | 0 / 62 / 62 / 0 |
+| arm | heldout | 3.0 (as run) | 50 / 52 (0.92) | 0 / 31 / 31 / 0 | 43 / 58 (0.16) | 0 / 28 / 28 / 0 | 52 / 60 (0.51) | 0 / 34 / 34 / 0 |
+| arm | heldout | 3.5 | 37 / 55 (0.076) | 0 / 15 / 15 / 0 | 32 / 60 (0.0046) | 0 / 15 / 15 / 0 | 41 / 63 (0.039) | 0 / 20 / 20 / 0 |
+| arm | heldout | 4.0 | 34 / 58 (0.016) | 0 / 9 / 9 / 0 | 27 / 62 (0.00027) | 0 / 8 / 8 / 0 | 35 / 64 (0.0046) | 0 / 13 / 13 / 0 |
+| arm | heldout | 5.0 | 30 / 61 (0.0015) | 0 / 2 / 2 / 0 | 24 / 63 (3.5e-05) | 0 / 4 / 4 / 0 | 33 / 68 (0.00064) | 0 / 7 / 7 / 0 |
+| arm | latching | 2.0 | 31 / 18 (0.085) | 13 / 20 / 20 / 12 | 40 / 17 (0.0032) | 10 / 35 / 34 / 24 | 36 / 21 (0.063) | 12 / 49 / 48 / 39 |
+| arm | latching | 2.5 | 25 / 16 (0.21) | 1 / 4 / 4 / 2 | 28 / 20 (0.31) | 1 / 10 / 10 / 3 | 23 / 33 (0.23) | 0 / 13 / 11 / 5 |
+| arm | latching | 3.0 (as run) | 23 / 17 (0.43) | 0 / 0 / 0 / 0 | 20 / 20 (1) | 0 / 1 / 1 / 0 | 19 / 37 (0.022) | 0 / 3 / 3 / 1 |
+| arm | latching | 3.5 | 23 / 17 (0.43) | 0 / 0 / 0 / 0 | 19 / 20 (1) | 0 / 0 / 0 / 0 | 17 / 38 (0.0065) | 0 / 0 / 0 / 0 |
+| arm | latching | 4.0 | 23 / 17 (0.43) | 0 / 0 / 0 / 0 | 19 / 20 (1) | 0 / 0 / 0 / 0 | 17 / 38 (0.0065) | 0 / 0 / 0 / 0 |
+| arm | latching | 5.0 | 23 / 17 (0.43) | 0 / 0 / 0 / 0 | 19 / 20 (1) | 0 / 0 / 0 / 0 | 17 / 38 (0.0065) | 0 / 0 / 0 / 0 |
+
+### (5) Which rescored findings hold on every seed (POST HOC)
+
+| Finding | 20261123 | 20261124 | 20261130 | All |
+|---|---|---|---|---|
+| gantry standard: C ahead of I at 3.5 deg (C-only > I-only, p < 0.05) | 39/4, p <1e-6 | 42/3, p <1e-6 | 36/10, p 0.00016 | yes |
+| gantry standard: C ahead of I at 4.0 deg (C-only > I-only, p < 0.05) | 28/5, p 6.6e-05 | 32/3, p <1e-6 | 31/10, p 0.0015 | yes |
+| gantry standard: C ahead of I at 5.0 deg (C-only > I-only, p < 0.05) | 18/6, p 0.023 | 26/4, p 5.9e-05 | 26/10, p 0.011 | yes |
+| arm standard: C's lead over I not significant at 3.5 deg (p >= 0.05) | 35/18, p 0.027 | 30/12, p 0.0079 | 35/17, p 0.018 | no |
+| arm standard: C's lead over I not significant at 4.0 deg (p >= 0.05) | 27/21, p 0.47 | 24/13, p 0.099 | 30/17, p 0.079 | yes |
+| arm standard: C's lead over I not significant at 5.0 deg (p >= 0.05) | 22/27, p 0.57 | 20/15, p 0.5 | 27/18, p 0.23 | yes |
+| gantry standard: C passes 0 bad units at 2.5-5 deg | 1/0/0/0/0/0 | 0/0/0/0/0/0 | 3/0/0/0/0/0 | yes |
+| gantry standard: I's bad units at 5 deg are under a fifth of those at 3 deg | 104/68/48/25/13/2 | 93/62/39/19/9/2 | 110/61/32/13/8/3 | yes |
+| gantry heldout: I has more discordant wins than C at 5 deg | 32/44, p 0.21 | 21/44, p 0.0059 | 23/69, p 1.7e-06 | yes |
+| gantry standard: C's lead over I at 2 deg is larger than at 3 deg | 113/0, p <1e-6 | 114/1, p <1e-6 | 122/2, p <1e-6 | yes |
+| arm standard: C passes 0 bad units at 2.5-5 deg | 1/0/0/0/0/0 | 0/0/0/0/0/0 | 1/1/0/0/0/0 | no |
+| arm standard: I's bad units at 5 deg are under a fifth of those at 3 deg | 109/70/43/26/15/4 | 101/64/39/17/10/4 | 107/56/32/12/7/3 | yes |
+| arm heldout: I has more discordant wins than C at 5 deg | 30/61, p 0.0015 | 24/63, p 3.5e-05 | 33/68, p 0.00064 | yes |
+| arm standard: C's lead over I at 2 deg is larger than at 3 deg | 114/15, p <1e-6 | 111/9, p <1e-6 | 119/7, p <1e-6 | yes |
+
+Depth tolerance 1.0 mm against 0.5 mm: the largest change in any bad-unit count, over every seed, cell, angle and controller, is 5.
 

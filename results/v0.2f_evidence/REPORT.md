@@ -44,14 +44,18 @@ multiple comparisons. Bad unit = `declared_success` True and `gt_seated` False.
    7 above 4 deg (`BAD_UNITS.md` (b), (c)). The 3 deg yaw and tilt limits are an assumed
    seating specification (README, "Success tolerances"), applied to a housing-only part.
 6. **A looser seating spec shrinks C's standard lead; a tighter one widens it (POST HOC
-   rescoring, seed 20261130 only).** The four logged pose columns cannot rescore
-   `gt_seated` (10,507 of 288,000 rows disagree). So the conditions where that matters
-   were replayed with the missing values logged. The 6,000 replayed rows match
-   benchmark_v0.2e exactly. Rescored on gantry standard, C-only / I-only is 53/8 at
-   3 deg, 31/10 at 4 deg and 26/10 at 5 deg; on arm standard it is 54/16, 30/17
-   (p = 0.079) and 27/18 (p = 0.23). I's bad units fall from 32 to 8 to 3 on each machine
-   (arm 7 at 4 deg); C stays at 0. These rescored numbers do not replace the
-   pre-registered ones (part 3, `TOLERANCE.md`).
+   rescoring, all three seeds).** The four logged pose columns cannot rescore
+   `gt_seated` (10,507 of 288,000 rows disagree). So, on each seed, the conditions where
+   that matters were replayed with the missing values logged; the replayed rows match the
+   benchmarks (part 3). At a 4 deg yaw/tilt spec:
+   - Gantry standard: C's lead over I holds on every seed. C-only / I-only is 28/5,
+     32/3 and 31/10 (p = 6.6e-5, < 1e-6, 0.0015). It still holds at 5 deg (18/6, 26/4,
+     26/10).
+   - Arm standard: the lead is not significant on any seed: 27/21, 24/13 and 30/17
+     (p = 0.47, 0.099, 0.079). At 3.5 deg it is still significant on all three.
+   - I's standard bad units fall from 48 / 39 / 32 to 13 / 9 / 8 (gantry) and from
+     43 / 39 / 32 to 15 / 10 / 7 (arm). C's stay at 0.
+   These rescored numbers do not replace the pre-registered ones (`TOLERANCE.md`).
 7. **C's tail is its retries.** On seed 20261130, C's p95 / median runs from 1.63 (gantry
    standard) to 2.67 (gantry heldout). It is at or under 1.5 only on gantry latch_spread
    (1.47, 1.47, 1.48 on the three seeds) (`PHASES.md` (c)). On gantry standard, 133 of the
@@ -173,7 +177,7 @@ Recomputed from `final_depth_mm`, `final_lateral_mm`, `final_tilt_deg` and
 
 So nothing was rescored from the old columns.
 
-**Exact rescoring from a replay (POST HOC, seed 20261130 only).**
+**Exact rescoring from a replay (POST HOC; seed 20261130 first, the other two seeds after the table).**
 
 Logging. Commit 9197b9c adds five columns to trials.csv: `final_x_mm`, `final_y_mm`
 (socket frame), `final_tcp_speed_mm_s`, `final_latched` and `final_latch_intact`. It
@@ -256,7 +260,69 @@ differ by 0-2 trials, are in `TOLERANCE.md` (3). "as run" is the pre-registered 
 | arm latching | 3.0 as run | 552 / 571 / 570 / 572 | 19 / 37 (0.022) | 18 / 37 (0.014) | 0 / 3 / 3 / 1 |
 | arm latching | 3.5 (same at 4-5) | 552 / 574 / 573 / 573 | 17 / 38 (0.0065) | 16 / 38 (0.0038) | 0 / 0 / 0 / 0 |
 
-Only seed 20261130 was replayed. The two earlier seeds are not rescored.
+**The same rescoring on all three seeds (POST HOC; `TOLERANCE.md` (1)-(5)).** Seeds
+20261123 and 20261124 ran the v0.2d code. They were replayed from 42df5c8 plus the
+logging-only commit, cherry-picked as 22ef683 (branch v0.2f/replay-v02d, `--workers 6`,
+31.5 minutes). The conditions follow the same rule; arm latching mf_nominal is added on
+seed 20261123. Checks:
+- 12,400 of 12,800 replayed rows (6,800 and 6,000) are identical in every committed column but
+  `wall_time_s`.
+- The other 400 are I and J on arm standard generalization_combined. That is the v0.2d
+  code's disclosed limit: the arm's fixture dynamics depend on the previous trial in the
+  same worker. On those rows the outcome columns are identical and the pose differs by at
+  most 0.022. On every case where the old columns cannot decide those rows, the replayed
+  values sit at least 18 times that drift from the threshold.
+- gt_seated is recomputed exactly on every replayed row, and no row is left undecided.
+
+Per seed, C-only / I-only (exact McNemar p on that seed, never pooled) and bad units
+C / F / I / J, depth tolerance 0.5 mm:
+
+| Machine, suite | Yaw/tilt (deg) | 20261123 | bad units | 20261124 | bad units | 20261130 | bad units |
+|---|---|---|---|---|---|---|---|
+| gantry standard | 2.0 | 113 / 0 (<1e-6) | 1 / 104 / 104 / 10 | 114 / 1 (<1e-6) | 0 / 93 / 93 / 6 | 122 / 2 (<1e-6) | 3 / 110 / 110 / 7 |
+| gantry standard | 2.5 | 79 / 1 (<1e-6) | 0 / 68 / 68 / 3 | 84 / 2 (<1e-6) | 0 / 62 / 62 / 2 | 79 / 5 (<1e-6) | 0 / 61 / 61 / 1 |
+| gantry standard | 3.0 as run | 60 / 2 (<1e-6) | 0 / 48 / 48 / 1 | 62 / 3 (<1e-6) | 0 / 39 / 39 / 1 | 53 / 8 (<1e-6) | 0 / 32 / 32 / 0 |
+| gantry standard | 3.5 | 39 / 4 (<1e-6) | 0 / 25 / 25 / 1 | 42 / 3 (<1e-6) | 0 / 19 / 19 / 1 | 36 / 10 (0.00016) | 0 / 13 / 13 / 0 |
+| gantry standard | 4.0 | 28 / 5 (6.6e-05) | 0 / 13 / 13 / 1 | 32 / 3 (<1e-6) | 0 / 9 / 9 / 1 | 31 / 10 (0.0015) | 0 / 8 / 8 / 0 |
+| gantry standard | 5.0 | 18 / 6 (0.023) | 0 / 2 / 2 / 1 | 26 / 4 (5.9e-05) | 0 / 2 / 2 / 1 | 26 / 10 (0.011) | 0 / 3 / 3 / 0 |
+| gantry heldout | 2.0 | 112 / 34 (<1e-6) | 2 / 98 / 98 / 10 | 88 / 38 (9.8e-06) | 2 / 78 / 78 / 6 | 88 / 46 (0.00036) | 0 / 91 / 91 / 6 |
+| gantry heldout | 2.5 | 87 / 37 (8.3e-06) | 0 / 68 / 68 / 4 | 65 / 40 (0.019) | 1 / 52 / 52 / 1 | 70 / 51 (0.1) | 0 / 68 / 68 / 1 |
+| gantry heldout | 3.0 as run | 60 / 39 (0.044) | 0 / 39 / 39 / 2 | 46 / 41 (0.67) | 0 / 31 / 31 / 1 | 48 / 60 (0.29) | 0 / 37 / 37 / 1 |
+| gantry heldout | 3.5 | 48 / 42 (0.6) | 0 / 24 / 24 / 2 | 32 / 42 (0.3) | 0 / 16 / 16 / 1 | 38 / 65 (0.01) | 0 / 22 / 22 / 1 |
+| gantry heldout | 4.0 | 41 / 42 (1) | 0 / 17 / 17 / 2 | 28 / 43 (0.096) | 0 / 11 / 11 / 1 | 30 / 68 (0.00016) | 0 / 11 / 11 / 0 |
+| gantry heldout | 5.0 | 32 / 44 (0.21) | 0 / 6 / 6 / 2 | 21 / 44 (0.0059) | 0 / 3 / 3 / 1 | 23 / 69 (1.7e-06) | 0 / 3 / 3 / 0 |
+| gantry latching | 2.0 | 18 / 16 (0.86) | 10 / 21 / 21 / 21 | 25 / 16 (0.21) | 14 / 34 / 36 / 36 | 28 / 11 (0.0095) | 21 / 44 / 45 / 45 |
+| gantry latching | 2.5 | 10 / 15 (0.42) | 0 / 4 / 4 / 4 | 13 / 18 (0.47) | 2 / 9 / 10 / 10 | 11 / 17 (0.34) | 8 / 9 / 9 / 9 |
+| gantry latching | 3.0-5.0 (as run at 3) | 7 / 16 (0.093) | 0 / 0 / 0 / 0 | 5 / 18 (0.011) | 0 / 0 / 0 / 0 | 7 / 14 (0.19) | 0 / 0 / 0 / 0 |
+| arm standard | 2.0 | 114 / 15 (<1e-6) | 1 / 109 / 109 / 8 | 111 / 9 (<1e-6) | 0 / 101 / 101 / 10 | 119 / 7 (<1e-6) | 1 / 107 / 107 / 5 |
+| arm standard | 2.5 | 77 / 16 (<1e-6) | 0 / 70 / 70 / 0 | 75 / 10 (<1e-6) | 0 / 64 / 64 / 0 | 72 / 11 (<1e-6) | 1 / 56 / 56 / 1 |
+| arm standard | 3.0 as run | 51 / 17 (4.5e-05) | 0 / 43 / 43 / 0 | 51 / 11 (<1e-6) | 0 / 39 / 39 / 0 | 54 / 16 (5.9e-06) | 0 / 32 / 32 / 0 |
+| arm standard | 3.5 | 35 / 18 (0.027) | 0 / 26 / 26 / 0 | 30 / 12 (0.0079) | 0 / 17 / 17 / 0 | 35 / 17 (0.018) | 0 / 12 / 12 / 0 |
+| arm standard | 4.0 | 27 / 21 (0.47) | 0 / 15 / 15 / 0 | 24 / 13 (0.099) | 0 / 10 / 10 / 0 | 30 / 17 (0.079) | 0 / 7 / 7 / 0 |
+| arm standard | 5.0 | 22 / 27 (0.57) | 0 / 4 / 4 / 0 | 20 / 15 (0.5) | 0 / 4 / 4 / 0 | 27 / 18 (0.23) | 0 / 3 / 3 / 0 |
+| arm heldout | 2.0 | 100 / 40 (<1e-6) | 0 / 93 / 93 / 6 | 87 / 52 (0.0038) | 0 / 78 / 78 / 5 | 92 / 50 (0.00053) | 0 / 84 / 84 / 3 |
+| arm heldout | 2.5 | 73 / 42 (0.0049) | 0 / 64 / 64 / 0 | 65 / 56 (0.47) | 0 / 52 / 52 / 0 | 74 / 54 (0.093) | 0 / 62 / 62 / 0 |
+| arm heldout | 3.0 as run | 50 / 52 (0.92) | 0 / 31 / 31 / 0 | 43 / 58 (0.16) | 0 / 28 / 28 / 0 | 52 / 60 (0.51) | 0 / 34 / 34 / 0 |
+| arm heldout | 3.5 | 37 / 55 (0.076) | 0 / 15 / 15 / 0 | 32 / 60 (0.0046) | 0 / 15 / 15 / 0 | 41 / 63 (0.039) | 0 / 20 / 20 / 0 |
+| arm heldout | 4.0 | 34 / 58 (0.016) | 0 / 9 / 9 / 0 | 27 / 62 (0.00027) | 0 / 8 / 8 / 0 | 35 / 64 (0.0046) | 0 / 13 / 13 / 0 |
+| arm heldout | 5.0 | 30 / 61 (0.0015) | 0 / 2 / 2 / 0 | 24 / 63 (3.5e-05) | 0 / 4 / 4 / 0 | 33 / 68 (0.00064) | 0 / 7 / 7 / 0 |
+| arm latching | 2.0 | 31 / 18 (0.085) | 13 / 20 / 20 / 12 | 40 / 17 (0.0032) | 10 / 35 / 34 / 24 | 36 / 21 (0.063) | 12 / 49 / 48 / 39 |
+| arm latching | 2.5 | 25 / 16 (0.21) | 1 / 4 / 4 / 2 | 28 / 20 (0.31) | 1 / 10 / 10 / 3 | 23 / 33 (0.23) | 0 / 13 / 11 / 5 |
+| arm latching | 3.0 as run | 23 / 17 (0.43) | 0 / 0 / 0 / 0 | 20 / 20 (1) | 0 / 1 / 1 / 0 | 19 / 37 (0.022) | 0 / 3 / 3 / 1 |
+| arm latching | 3.5-5.0 | 23 / 17 (0.43) | 0 / 0 / 0 / 0 | 19 / 20 (1) | 0 / 0 / 0 / 0 | 17 / 38 (0.0065) | 0 / 0 / 0 / 0 |
+
+What holds on all three seeds (`TOLERANCE.md` (5)):
+- **Gantry standard.** C stays significantly ahead of I at 3.5, 4 and 5 deg.
+- **Arm standard.** C's lead is significant at 3.5 deg but not at 4 or 5 deg.
+- **I's bad units.** At 5 deg I's standard bad units are under a fifth of those at 3 deg,
+  on both machines.
+- **Heldout at 5 deg.** I has more discordant wins than C on both machines; gantry seed
+  20261123 is not significant (p = 0.21).
+- **Tighter spec.** At 2 deg, C's standard lead is larger than at 3 deg, and C passes
+  1-3 bad units on 4 of the 6 seed-machine pairs.
+- **C's bad units.** C passes none at 2.5-5 deg on every seed and machine except one: arm
+  seed 20261130, 1 at 2.5 deg.
+- **Depth tolerance.** 1.0 mm instead of 0.5 mm changes any bad-unit count by at most 5.
 
 ## 4. Cycle time by phase (`PHASES.md`)
 
@@ -352,7 +418,7 @@ C's p95 / median is above 1.5 on every run except gantry latch_spread.
 - For some bad units in the committed runs, the failed check is partly unknown (per-axis
   lateral, settled, latched), as `BAD_UNITS.md` marks. The replay settles this for seed
   20261130 in the replayed conditions only.
-- The tolerance rescoring covers one seed, and it is post hoc.
+- The tolerance rescoring covers all three seeds, and it is post hoc.
 - Equal effort: F, H and I have no post-seat pose correction. J shows what F gains from
   C's VERIFY. No fair baseline with a conventional seat-and-align step was built. That is
   an open fairness item.

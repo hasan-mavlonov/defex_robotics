@@ -29,28 +29,32 @@ hand-eye bias, arm friction 1.0, and gantry latching with 1 mm camera noise. In 
 C runs out of retries or time, or (on the arm) hits a protective stop.
 
 Does the bad-unit edge survive a looser seating spec? This is a POST HOC rescoring of
-seed 20261130 only, from an exact replay with the per-axis offset, TCP speed and latch
-flags logged. All 6,000 replayed rows match the benchmark. It is not a replacement for any
-pre-registered result. With yaw and tilt allowed to 4 or 5 deg:
-- I's bad units on standard fall from 32 to 8 and 3 (gantry), and from 32 to 7 and 3
-  (arm). C stays at 0.
-- C's standard lead over I shrinks to 31/10 and 26/10 on the gantry (p = 0.0015, 0.011).
-  On the arm it shrinks to 30/17 and 27/18 (p = 0.079, 0.23), no longer significant.
-- On heldout, I seats more than C as the spec loosens (gantry 23/69 at 5 deg).
-- At 2 deg the lead widens: gantry 122/2, arm 119/7.
-- A depth tolerance of 1.0 mm instead of 0.5 mm changes at most two trials per cell.
+all three seeds. It uses exact replays with the per-axis offset, TCP speed and latch
+flags logged. The replayed rows match the benchmarks (the v0.2d code's disclosed
+last-digit drift on arm generalization_combined aside). No number here replaces a
+pre-registered result. p-values are per seed and are not pooled.
+- **Gantry standard.** C's lead over I holds at 4 deg on every seed: 28/5, 32/3, 31/10
+  (p = 6.6e-5, < 1e-6, 0.0015). It still holds at 5 deg: 18/6, 26/4, 26/10.
+- **Arm standard.** The lead loses significance at 4 deg on every seed: 27/21, 24/13,
+  30/17 (p = 0.47, 0.099, 0.079). It is still significant at 3.5 deg.
+- **I's bad units** on standard at 3 / 4 / 5 deg: gantry 48/13/2, 39/9/2, 32/8/3; arm
+  43/15/4, 39/10/4, 32/7/3. C stays at 0.
+- **Heldout.** I has more discordant wins than C at 5 deg on both machines and every
+  seed (gantry seed 20261123 not significant).
+- **Tighter spec.** At 2 deg the lead widens on every seed (gantry 113/0, 114/1, 122/2).
+- **Depth tolerance.** 1.0 mm instead of 0.5 mm changes any bad-unit count by at most 5.
 
-Full table: `TOLERANCE.md` (3) and `REPORT.md` part 3. C's slow tail is its retries,
-and the retries sit in the same high-camera-error trials (`PHASES.md` (d), (d2)).
+Full table: `TOLERANCE.md` (3), (4) and `REPORT.md` part 3. C's slow tail is its
+retries, and the retries sit in the same high-camera-error trials (`PHASES.md` (d),
+(d2)).
 
-| Seed 20261130, POST HOC rescore | Yaw/tilt 2 deg | 3 deg (as run) | 4 deg | 5 deg |
+| POST HOC rescore, standard, C-only / I-only (seeds 20261123 / 20261124 / 20261130) | 2 deg | 3 deg (as run) | 4 deg | 5 deg |
 |---|---|---|---|---|
-| gantry standard, C-only / I-only | 122 / 2 | 53 / 8 | 31 / 10 | 26 / 10 |
-| gantry standard, bad units C / I / J | 3 / 110 / 7 | 0 / 32 / 0 | 0 / 8 / 0 | 0 / 3 / 0 |
-| arm standard, C-only / I-only | 119 / 7 | 54 / 16 | 30 / 17 | 27 / 18 |
-| arm standard, bad units C / I / J | 1 / 107 / 5 | 0 / 32 / 0 | 0 / 7 / 0 | 0 / 3 / 0 |
-| gantry heldout, C-only / I-only | 88 / 46 | 48 / 60 | 30 / 68 | 23 / 69 |
-| arm heldout, C-only / I-only | 92 / 50 | 52 / 60 | 35 / 64 | 33 / 68 |
+| gantry | 113/0, 114/1, 122/2 | 60/2, 62/3, 53/8 | 28/5, 32/3, 31/10 | 18/6, 26/4, 26/10 |
+| gantry, I's bad units | 104, 93, 110 | 48, 39, 32 | 13, 9, 8 | 2, 2, 3 |
+| arm | 114/15, 111/9, 119/7 | 51/17, 51/11, 54/16 | 27/21, 24/13, 30/17 | 22/27, 20/15, 27/18 |
+| arm, I's bad units | 109, 101, 107 | 43, 39, 32 | 15, 10, 7 | 4, 4, 3 |
+| C's bad units, gantry / arm | 1/1, 0/0, 3/1 | 0 everywhere | 0 everywhere | 0 everywhere |
 
 On housing-only suites F equals I. Depth tolerance 0.5 mm (as run).
 

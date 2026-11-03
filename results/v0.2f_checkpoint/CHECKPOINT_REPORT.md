@@ -22,9 +22,13 @@ and found where C fails.
 2. **C's zero bad units come from its VERIFY step and an assumed 3 deg spec.**
    - J, which is F's insertion plus C's VERIFY, passes 2-3 bad units per 7,400 good-part
      trials, against F's 176-197.
-   - Rescored exactly (POST HOC, seed 20261130), I's standard bad units fall from 32 to 8
-     (gantry) and from 32 to 7 (arm) at a 4 deg spec. C's lead over I on the arm then loses significance (30/17,
-     p = 0.079). On the gantry it holds (31/10, p = 0.0015).
+   - Rescored exactly (POST HOC, all three seeds, p per seed), at a 4 deg spec:
+     - I's standard bad units fall to 13, 9, 8 (gantry; 48, 39, 32 at 3 deg) and to
+       15, 10, 7 (arm; 43, 39, 32). C's stay at 0.
+     - On the arm, C's lead over I loses significance on every seed: 27/21, 24/13,
+       30/17 (p = 0.47, 0.099, 0.079).
+     - On the gantry it holds on every seed: 28/5, 32/3, 31/10 (p <= 0.0015). It also
+       holds at 5 deg (18/6, 26/4, 26/10).
    (`results/v0.2f_evidence/TOLERANCE.md`)
 3. **A clean held-out test (heldout2, pre-registered, seed 20261207) is mixed.**
    - C is ahead in 5 of 10 cells: unseen socket tilt and yaw, and the arm tight-tolerance

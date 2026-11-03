@@ -184,7 +184,7 @@ comparisons; the arm holds 24 of 29
   There, on friction_1, C seats 1 of 90 against 89-90 of 90 for F, H and I. With the
   elliptic cone it seats 81 of 90. On the gantry, with the same contact draws, C seats
   90 of 90 under the pyramidal cone (counted from `arm/trials.csv` and
-  `gantry/trials.csv`). <!-- PENDING: friction diagnosis -->
+  `gantry/trials.csv`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.txt`): C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
 * The v0.2a statement "C leads in all 13 simulators" is not repeated in that form.
 
 **Rig plan.** Nothing has been bought. [`hardware/TEST_PROTOCOL.md`](hardware/TEST_PROTOCOL.md)
@@ -276,7 +276,7 @@ the results were seen.
   friction cone C seats 1 of 90 friction_1 parts against 89-90 of 90 for F, H and I
   (the split by cone is POST HOC). The arm's "C below F" on latching is not confirmed
   per simulator either (9 of 12; pooled still C below F, p = 0.038)
-  (`results/sim_randomization_v0.2f`). <!-- PENDING: friction diagnosis -->
+  (`results/sim_randomization_v0.2f`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.txt`): a VERIFY false reject; floor friction stops C's wall probe before the wall, and recovery repeats it.
 * **Anything on hardware.** The latch snap force and the latch spread are assumed.
   There is one latching connector and one simulated arm, and no rig yet.
 
@@ -1352,7 +1352,7 @@ Open after v0.2f, none of it implemented:
   one.
 - On the arm under MuJoCo's pyramidal friction cone, C fails friction_1 (1 of 90
   seated), while F, H and I do not (`results/sim_randomization_v0.2f`, POST HOC
-  split). <!-- PENDING: friction diagnosis -->
+  split). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.txt`): a VERIFY false reject; floor friction stops C's wall probe before the wall, and recovery repeats it. Fix options (C design changes, text only) are in that report.
 - Any fix to C needs a new pre-registration and a fresh seed.
 
 ## Porting to another simulator

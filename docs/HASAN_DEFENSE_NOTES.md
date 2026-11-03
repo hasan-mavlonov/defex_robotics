@@ -80,7 +80,7 @@ You should not trust absolute numbers.
     pooled still C below F, p = 0.038). C against I there is not resolved (low power).
   - C's zero bad units does not hold on every simulator: 1 per machine, both in
     variant 10. C still passes fewer than F, H and I in all 12 variants.
-  - <!-- PENDING: friction diagnosis -->
+  - Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.txt`): C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
 - The earlier run (`results/sim_randomization_v0.2/REPORT.md`) used the v0.2a code
   (fe48eca), gantry only. Do not cite its "C led in all 13" for the current code.
 - One known way the simulator flatters C: its F/T bias is constant and tared out. Under

@@ -227,7 +227,7 @@ variants keeping benchmark_v0.2e's verdict, of 12; 10 are needed
   - Neutral success, C against F, H and I, does not hold (6 of 12; pooled C worse,
     0 / 15, p = 6.1e-05). POST HOC split: the 6 failing variants are the 6 with the
     pyramidal friction cone. On friction_1 there C seats 1 of 90 against 89-90 of 90.
-    <!-- PENDING: friction diagnosis -->
+    Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.txt`): C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
   - Latching good parts, C below F, does not hold per simulator (9 of 12). Pooled, C is
     still below F (p = 0.038). C against I is not resolved (low power).
 - **Bad units:** C passed 1 per machine, both in variant 10 (gantry: a seated plug

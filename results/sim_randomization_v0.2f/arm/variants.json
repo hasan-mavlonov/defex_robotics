@@ -1,0 +1,375 @@
+{
+  "seed": 20261205,
+  "backend": "arm",
+  "cells": [
+    [
+      "standard",
+      "noise_1mm",
+      15
+    ],
+    [
+      "standard",
+      "noise_2mm",
+      15
+    ],
+    [
+      "standard",
+      "generalization_combined",
+      15
+    ],
+    [
+      "standard",
+      "nominal",
+      15
+    ],
+    [
+      "standard",
+      "lateral_3mm",
+      15
+    ],
+    [
+      "standard",
+      "friction_1",
+      15
+    ],
+    [
+      "heldout",
+      "heldout_worst_case",
+      15
+    ],
+    [
+      "heldout",
+      "heldout_handeye_bias_1.5mm",
+      15
+    ],
+    [
+      "latching",
+      "mf_noise_1mm",
+      50
+    ],
+    [
+      "latching",
+      "mf_half_latched",
+      4
+    ],
+    [
+      "latching",
+      "mf_broken_latch",
+      4
+    ],
+    [
+      "latching",
+      "mf_stubbed_terminal",
+      4
+    ]
+  ],
+  "controllers": [
+    "adaptive",
+    "spiral_rcc",
+    "spiral_pull",
+    "spiral_rcc_pull",
+    "spiral_rcc_verify",
+    "adaptive_learned"
+  ],
+  "variants": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "bands": {
+    "contact_timeconst_s": [
+      0.0015,
+      0.004
+    ],
+    "contact_dampratio": [
+      0.7,
+      1.3
+    ],
+    "contact_friction_timeconst_s": [
+      0.01,
+      0.04
+    ],
+    "solimp_dmin": [
+      0.9,
+      0.97
+    ],
+    "solimp_dmax": [
+      0.98,
+      0.995
+    ],
+    "solimp_width_m": [
+      0.0001,
+      0.0005
+    ],
+    "impratio": [
+      3.0,
+      20.0
+    ],
+    "linear_kp_n_per_m": [
+      5000.0,
+      20000.0
+    ],
+    "angular_kp_nm_per_rad": [
+      10.0,
+      25.0
+    ]
+  },
+  "cones": [
+    "elliptic",
+    "pyramidal"
+  ],
+  "arm_bands": {
+    "arm_shoulder_elbow_kp_scale": [
+      0.5,
+      2.0
+    ],
+    "arm_wrist_kp_scale": [
+      0.5,
+      2.0
+    ],
+    "arm_latency_s": [
+      0.004,
+      0.008
+    ]
+  },
+  "draws": [
+    {
+      "variant": 0,
+      "contact_timeconst_s": 0.002,
+      "contact_dampratio": 1.0,
+      "contact_friction_timeconst_s": 0.02,
+      "solimp_dmin": 0.95,
+      "solimp_dmax": 0.99,
+      "solimp_width_m": 0.0002,
+      "impratio": 10.0,
+      "cone": "elliptic",
+      "arm_shoulder_elbow_kp_scale": 1.0,
+      "arm_wrist_kp_scale": 1.0,
+      "arm_latency_s": 0.006
+    },
+    {
+      "variant": 1,
+      "contact_timeconst_s": 0.0038604966674897073,
+      "contact_dampratio": 0.9985648585962874,
+      "contact_friction_timeconst_s": 0.016431178314401326,
+      "solimp_dmin": 0.9541556824905291,
+      "solimp_dmax": 0.9876493525967697,
+      "solimp_width_m": 0.0003924452080779829,
+      "impratio": 9.756046530485328,
+      "cone": "elliptic",
+      "arm_shoulder_elbow_kp_scale": 0.8453897934334015,
+      "arm_wrist_kp_scale": 0.5442798133244088,
+      "arm_latency_s": 0.004445793564806473
+    },
+    {
+      "variant": 2,
+      "contact_timeconst_s": 0.0028780077819166978,
+      "contact_dampratio": 0.8395464354431997,
+      "contact_friction_timeconst_s": 0.018024114731115842,
+      "solimp_dmin": 0.9052218494797949,
+      "solimp_dmax": 0.9921573026012523,
+      "solimp_width_m": 0.0002972710424716372,
+      "impratio": 19.684994415995735,
+      "cone": "elliptic",
+      "arm_shoulder_elbow_kp_scale": 1.275913794468168,
+      "arm_wrist_kp_scale": 0.6550481315899035,
+      "arm_latency_s": 0.005807033819082693
+    },
+    {
+      "variant": 3,
+      "contact_timeconst_s": 0.0015233316491193947,
+      "contact_dampratio": 0.8450299546728337,
+      "contact_friction_timeconst_s": 0.012448466746529,
+      "solimp_dmin": 0.9549693103660123,
+      "solimp_dmax": 0.9830191248334371,
+      "solimp_width_m": 0.00027272209779649116,
+      "impratio": 11.102960163766431,
+      "cone": "elliptic",
+      "arm_shoulder_elbow_kp_scale": 1.0099582562544507,
+      "arm_wrist_kp_scale": 1.1428508931714787,
+      "arm_latency_s": 0.006816128047632356
+    },
+    {
+      "variant": 4,
+      "contact_timeconst_s": 0.0028829211266871296,
+      "contact_dampratio": 1.1990256537607566,
+      "contact_friction_timeconst_s": 0.023114365037276343,
+      "solimp_dmin": 0.9120799808755412,
+      "solimp_dmax": 0.981238200118823,
+      "solimp_width_m": 0.00036104370314743716,
+      "impratio": 13.667815143260226,
+      "cone": "pyramidal",
+      "arm_shoulder_elbow_kp_scale": 1.0038003701018867,
+      "arm_wrist_kp_scale": 1.5957002853682993,
+      "arm_latency_s": 0.007105718026841968
+    },
+    {
+      "variant": 5,
+      "contact_timeconst_s": 0.0017262965379524183,
+      "contact_dampratio": 0.8480728824854052,
+      "contact_friction_timeconst_s": 0.03365014389212744,
+      "solimp_dmin": 0.9141438226904267,
+      "solimp_dmax": 0.9823941434262772,
+      "solimp_width_m": 0.00018930424204572152,
+      "impratio": 13.356509052407691,
+      "cone": "elliptic",
+      "arm_shoulder_elbow_kp_scale": 1.0238331200772064,
+      "arm_wrist_kp_scale": 1.1271711619998694,
+      "arm_latency_s": 0.0063942245490652035
+    },
+    {
+      "variant": 6,
+      "contact_timeconst_s": 0.0027778305560229857,
+      "contact_dampratio": 0.7975063598222735,
+      "contact_friction_timeconst_s": 0.011225331607156306,
+      "solimp_dmin": 0.964896929730364,
+      "solimp_dmax": 0.9932746797528674,
+      "solimp_width_m": 0.0004225554401420124,
+      "impratio": 3.383791893369283,
+      "cone": "pyramidal",
+      "arm_shoulder_elbow_kp_scale": 1.2777357821616622,
+      "arm_wrist_kp_scale": 0.7140896817464544,
+      "arm_latency_s": 0.006802899880551778
+    },
+    {
+      "variant": 7,
+      "contact_timeconst_s": 0.0023681966884436948,
+      "contact_dampratio": 0.9893912522176495,
+      "contact_friction_timeconst_s": 0.03999024554660583,
+      "solimp_dmin": 0.9624728982006898,
+      "solimp_dmax": 0.9872351261984312,
+      "solimp_width_m": 0.000451851136030208,
+      "impratio": 4.772578776727813,
+      "cone": "pyramidal",
+      "arm_shoulder_elbow_kp_scale": 1.2908154071224436,
+      "arm_wrist_kp_scale": 1.3689472868726795,
+      "arm_latency_s": 0.005486436567566964
+    },
+    {
+      "variant": 8,
+      "contact_timeconst_s": 0.0019577799123559007,
+      "contact_dampratio": 1.1958472394368773,
+      "contact_friction_timeconst_s": 0.028068763234662394,
+      "solimp_dmin": 0.9365704906568993,
+      "solimp_dmax": 0.9905369337123383,
+      "solimp_width_m": 0.00045937767418707955,
+      "impratio": 16.96035849500397,
+      "cone": "pyramidal",
+      "arm_shoulder_elbow_kp_scale": 1.4937085158093324,
+      "arm_wrist_kp_scale": 1.3180259564137495,
+      "arm_latency_s": 0.004151183613317257
+    },
+    {
+      "variant": 9,
+      "contact_timeconst_s": 0.0023315856296034216,
+      "contact_dampratio": 1.217147798929794,
+      "contact_friction_timeconst_s": 0.022397002806832392,
+      "solimp_dmin": 0.9319246112092634,
+      "solimp_dmax": 0.9879174024041821,
+      "solimp_width_m": 0.000411038378603858,
+      "impratio": 13.207078318167781,
+      "cone": "elliptic",
+      "arm_shoulder_elbow_kp_scale": 1.3357486895770434,
+      "arm_wrist_kp_scale": 1.2210828915712517,
+      "arm_latency_s": 0.004113109879608513
+    },
+    {
+      "variant": 10,
+      "contact_timeconst_s": 0.0038010381027050576,
+      "contact_dampratio": 1.2509049850228653,
+      "contact_friction_timeconst_s": 0.020633691284010425,
+      "solimp_dmin": 0.959564139444286,
+      "solimp_dmax": 0.9820522064593401,
+      "solimp_width_m": 0.0002794985757352542,
+      "impratio": 16.96725769591264,
+      "cone": "elliptic",
+      "arm_shoulder_elbow_kp_scale": 1.2056137383226364,
+      "arm_wrist_kp_scale": 0.5922168876153621,
+      "arm_latency_s": 0.004769573317284351
+    },
+    {
+      "variant": 11,
+      "contact_timeconst_s": 0.0035509630477878005,
+      "contact_dampratio": 1.183892669428602,
+      "contact_friction_timeconst_s": 0.012378411863960787,
+      "solimp_dmin": 0.9563788395165858,
+      "solimp_dmax": 0.9908306445004927,
+      "solimp_width_m": 0.0003440312815946082,
+      "impratio": 18.890583206818143,
+      "cone": "pyramidal",
+      "arm_shoulder_elbow_kp_scale": 0.6518083505505169,
+      "arm_wrist_kp_scale": 1.2019261591982884,
+      "arm_latency_s": 0.007253498153792909
+    },
+    {
+      "variant": 12,
+      "contact_timeconst_s": 0.002973565957067721,
+      "contact_dampratio": 0.9207460952782278,
+      "contact_friction_timeconst_s": 0.02838099229301803,
+      "solimp_dmin": 0.9673038783038215,
+      "solimp_dmax": 0.9903185500738555,
+      "solimp_width_m": 0.00024025777015245132,
+      "impratio": 17.78226771428987,
+      "cone": "pyramidal",
+      "arm_shoulder_elbow_kp_scale": 1.5633528312335467,
+      "arm_wrist_kp_scale": 0.5038744989924232,
+      "arm_latency_s": 0.006308772117031764
+    }
+  ],
+  "nominal_sim": {
+    "timestep_s": 0.0005,
+    "control_period_s": 0.002,
+    "contact_timeconst_s": 0.002,
+    "contact_dampratio": 1.0,
+    "contact_friction_timeconst_s": 0.02,
+    "contact_solimp": [
+      0.95,
+      0.99,
+      0.0002,
+      0.5,
+      2.0
+    ],
+    "integrator": "implicitfast",
+    "cone": "elliptic",
+    "impratio": 10.0,
+    "max_trial_time_s": 30.0,
+    "settle_time_s": 0.25
+  },
+  "nominal_fixture": {
+    "linear_kp_n_per_m": 10000.0,
+    "linear_dampratio": 1.0,
+    "linear_force_limit_n": 60.0,
+    "angular_kp_nm_per_rad": 15.0,
+    "angular_dampratio": 1.0,
+    "angular_torque_limit_nm": 2.0,
+    "carriage_x_mass_kg": 1.5,
+    "carriage_y_mass_kg": 1.0,
+    "ram_z_mass_kg": 0.5,
+    "wrist_link_mass_kg": 0.05,
+    "tool_mass_kg": 0.03,
+    "linear_armature_kg": 0.2,
+    "angular_armature_kgm2": 0.002,
+    "linear_viscous_n_s_per_m": 2.0,
+    "angular_viscous_nm_s_per_rad": 0.002,
+    "max_linear_speed_mm_s": 50.0,
+    "max_angular_speed_deg_s": 45.0,
+    "max_linear_accel_mm_s2": 500.0,
+    "max_angular_accel_deg_s2": 600.0,
+    "home_height_mm": 60.0,
+    "travel_xy_mm": 80.0,
+    "travel_z_down_mm": 90.0,
+    "travel_z_up_mm": 60.0,
+    "yaw_range_deg": 35.0,
+    "tilt_range_deg": 25.0
+  }
+}

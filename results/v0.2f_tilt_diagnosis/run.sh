@@ -19,13 +19,47 @@ if [ "$STEP" = all ] || [ "$STEP" = trace ]; then
 fi
 
 if [ "$STEP" = all ] || [ "$STEP" = dev ]; then
-  # Frozen code (flags off). C and G: latching + latch_spread 50 trials, standard 50 trials; J latching 20.
+  # Frozen code (flags off). C and G: latching + latch_spread 50 trials; J latching + latch_spread 20;
+  # C and G standard 25 (cut from 50 while running: the machine was shared, load average over 50).
   for B in arm gantry; do
     PYTHONPATH=. $PY $D run --backend $B --suite latching,latch_spread --trials 50 --workers 2 \
         --controllers adaptive,adaptive_learned --out $R/runs/${B}_latch_cg.jsonl.gz
     PYTHONPATH=. $PY $D run --backend $B --suite latching,latch_spread --trials 20 --workers 2 \
         --controllers spiral_rcc_verify --out $R/runs/${B}_latch_j.jsonl.gz
-    PYTHONPATH=. $PY $D run --backend $B --suite standard --trials 50 --workers 2 \
+    PYTHONPATH=. $PY $D run --backend $B --suite standard --trials 25 --workers 2 \
         --controllers adaptive,adaptive_learned --out $R/runs/${B}_standard_cg.jsonl.gz
+  done
+fi
+
+if [ "$STEP" = all ] || [ "$STEP" = candidates ]; then
+  # RULE.md (2f95377): P by the re-run shortcut (acting trials + 40 controls per machine), JW and JP on every J trial.
+  for B in arm gantry; do
+    PYTHONPATH=. $PY experiments/v02f_tilt_select.py $R/runs/${B}_latch_cg.jsonl.gz > $R/runs/P_${B}_trials.json
+    PYTHONPATH=. $PY $D run --backend $B --only $R/runs/P_${B}_trials.json --workers 2 \
+        --cfg tilt_check_push_below_floor=true --out $R/runs/fix_P_$B.jsonl.gz
+    PYTHONPATH=. $PY $D run --backend $B --suite latching,latch_spread --trials 20 --workers 2 \
+        --controllers spiral_rcc_verify --j handover_window=true --out $R/runs/fix_JW_$B.jsonl.gz
+    PYTHONPATH=. $PY $D run --backend $B --suite latching,latch_spread --trials 20 --workers 2 \
+        --controllers spiral_rcc_verify --cfg tilt_check_push_below_floor=true --out $R/runs/fix_JP_$B.jsonl.gz
+  done
+  X="$PY experiments/v02f_tilt_compare.py"
+  $X --base $R/runs/arm_latch_cg.jsonl.gz,$R/runs/gantry_latch_cg.jsonl.gz \
+     --cand $R/runs/fix_P_arm.jsonl.gz,$R/runs/fix_P_gantry.jsonl.gz --bound 3 --name P > $R/CAND_P.md
+  for C in JW JP; do
+    $X --base $R/runs/arm_latch_j.jsonl.gz,$R/runs/gantry_latch_j.jsonl.gz \
+       --cand $R/runs/fix_${C}_arm.jsonl.gz,$R/runs/fix_${C}_gantry.jsonl.gz --bound 1 --name $C > $R/CAND_$C.md
+  done
+fi
+
+if [ "$STEP" = all ] || [ "$STEP" = validation ]; then
+  # Seed 4007, once: P (C, G) and JW (J; the tie-break pick over JP). 20 trials per condition.
+  V="--seeds 4007 --validation --suite latching,latch_spread --trials 20 --workers 2"
+  for B in arm gantry; do
+    PYTHONPATH=. $PY $D run --backend $B $V --controllers adaptive,adaptive_learned --out $R/runs/val_base_cg_$B.jsonl.gz
+    PYTHONPATH=. $PY experiments/v02f_tilt_select.py $R/runs/val_base_cg_$B.jsonl.gz --controls 20 > $R/runs/val_P_${B}_trials.json
+    PYTHONPATH=. $PY $D run --backend $B --seeds 4007 --validation --only $R/runs/val_P_${B}_trials.json --workers 2 \
+        --cfg tilt_check_push_below_floor=true --out $R/runs/val_P_$B.jsonl.gz
+    PYTHONPATH=. $PY $D run --backend $B $V --controllers spiral_rcc_verify --out $R/runs/val_base_j_$B.jsonl.gz
+    PYTHONPATH=. $PY $D run --backend $B $V --controllers spiral_rcc_verify --j handover_window=true --out $R/runs/val_JW_$B.jsonl.gz
   done
 fi

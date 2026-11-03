@@ -215,6 +215,14 @@ def cmd_run(args) -> None:
     idx = list(range(args.trials))
     jobs = [(su, c, ctrl, s, tuple(idx[k:k + args.chunk]), overrides, j_overrides) for s in seeds for su, c in conds
             for ctrl in args.controllers.split(",") for k in range(0, len(idx), args.chunk)]
+    if args.only:
+        # Re-run only the listed trials: a JSON list of [suite, condition, controller, seed, trial_index].
+        want: dict = {}
+        for su, c, ctrl, s, i in json.loads(Path(args.only).read_text()):
+            if s not in allowed:
+                raise SystemExit(f"seed {s} not allowed")
+            want.setdefault((su, c, ctrl, s), []).append(i)
+        jobs = [(su, c, ctrl, s, tuple(sorted(ix)), overrides, j_overrides) for (su, c, ctrl, s), ix in want.items()]
     total = sum(len(j[4]) for j in jobs)
     import defex
 
@@ -304,6 +312,7 @@ def main() -> None:
     r.add_argument("--cfg", default="", help="AdaptiveConfig overrides on C's code, k=v,...")
     r.add_argument("--j", default="", help="attribute overrides on J's controller, k=v,...")
     r.add_argument("--validation", action="store_true", help="allow the fresh validation seed 4007")
+    r.add_argument("--only", default="", help="JSON list of [suite, condition, controller, seed, index] to re-run")
     r.add_argument("--out", required=True)
     t = sub.add_parser("trace")
     t.add_argument("--backend", default="arm")

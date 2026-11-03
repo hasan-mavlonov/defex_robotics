@@ -69,11 +69,20 @@ against 387 (`results/benchmark_v0.2e/HEADLINE_TABLES.md` (c)).
 You should not trust absolute numbers.
 - The contact model is pinned by tests against stated physics
   (`tests/test_mating_physics.py`).
-- <!-- PENDING: sim_randomization_v0.2f -->
-- The only randomized-simulator run so far (`results/sim_randomization_v0.2/REPORT.md`)
-  used the v0.2a code (frozen at fe48eca). That was before the baselines were re-tuned,
-  before the latching parts and the arm, and before H, I and J. Do not cite it for the
-  current code.
+- 12 randomized simulators plus the nominal one per machine, on the current
+  controllers (`results/sim_randomization_v0.2f/REPORT.txt`, seed 20261205; G pinned
+  to its nominal model, a configuration of this run):
+  - Gantry: 29 of 29 primary comparisons hold.
+  - Arm: 24 of 29. C's high-camera-error lead holds narrowly (10 of 12 against F and
+    I, pooled not significant). Neutral success does not hold: C loses friction_1 in
+    the 6 pyramidal-cone variants, seating 1 of 90 against 89-90 of 90 (the split by
+    cone is POST HOC). Arm latching C below F does not hold per simulator (9 of 12;
+    pooled still C below F, p = 0.038). C against I there is not resolved (low power).
+  - C's zero bad units does not hold on every simulator: 1 per machine, both in
+    variant 10. C still passes fewer than F, H and I in all 12 variants.
+  - <!-- PENDING: friction diagnosis -->
+- The earlier run (`results/sim_randomization_v0.2/REPORT.md`) used the v0.2a code
+  (fe48eca), gantry only. Do not cite its "C led in all 13" for the current code.
 - One known way the simulator flatters C: its F/T bias is constant and tared out. Under
   drift, C's VERIFY can lift a seated plug (question 9).
 - The real answer is a rig. Measured success will be compared with frozen predictions
@@ -177,6 +186,9 @@ force and a movement limit of 0.6 x the 1.75 mm terminal wipe.
     hit its time limit.
   - **Checkpoint 2 (v0.2b):** C passed 6 in 6,200. Five came from a bug in the arm's
     yaw check at 0.2 mm clearance, since fixed (`results/v0.2c_verify_fixes/REPORT.md`).
+  - **sim_randomization_v0.2f:** C passed 1 on each machine, both in variant 10:
+    a seated gantry plug that over-penetrated, and an arm latched plug at 3.11 deg
+    tilt (`results/sim_randomization_v0.2f/TABLES.md`).
   - **heldout2:** C passed 8 of 400 on the arm, all at 0.3 N/s F/T drift. They are
     short plugs at 13.05-14.40 mm, against the 14.5 mm limit. H passed 0 and I 1 in
     that cell (p = 0.0078 and 0.016).

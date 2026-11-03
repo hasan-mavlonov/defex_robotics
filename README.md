@@ -152,6 +152,41 @@ pre-registered
 * G gave no measurable gain in any cell. One seed and 40 trials per condition: a
   "matches" verdict here is weak evidence of equality.
 
+**Across simulators.** [`results/sim_randomization_v0.2f`](results/sim_randomization_v0.2f/REPORT.txt)
+is pre-registered. It ran seed 20261205 on code c87f942 (controllers unchanged since
+ddd0d34): 12
+randomized MuJoCo simulators plus the nominal one per machine, controllers C, F, H, I,
+J and G, 26,052 paired trials, 15-50 per condition per variant. G is pinned to its
+nominal learned model (a configuration of this run). A comparison "holds" if at least
+10 of the 12 randomized variants keep benchmark_v0.2e's verdict and the pooled
+scenario sign test does not contradict it. The gantry holds 29 of 29 primary
+comparisons; the arm holds 24 of 29
+([`TABLES.md`](results/sim_randomization_v0.2f/TABLES.md), "Verdicts"):
+
+| Machine, group, metric | Reference (v0.2e) | Variants holding, C vs F / H / I | Verdict |
+|---|---|---|---|
+| gantry, high camera error, success | C better | 12 / 12 / 12 | holds |
+| gantry, all good parts, bad units | C better | 12 / 12 / 12 | holds |
+| arm, high camera error, success | C better | 10 / 12 / 10 (pooled vs F and I: 8 / 7, p = 1) | holds, narrowly |
+| arm, neutral (nominal, lateral_3mm, friction_1), success | no difference | 6 / 6 / 6 (pooled 0 / 15, p = 6.1e-05, C worse) | **does not hold** |
+| arm, latching good parts, success | C below F and I; C above H | 9 / 12 / 9 (pooled vs F 13 / 27, p = 0.038) | **does not hold** (F), holds (H), not resolved, low power (I) |
+| arm, all good parts, bad units | C better | 12 / 12 / 12 | holds |
+
+* **C's zero bad units does not hold on every simulator.** C passed 1 bad unit on each
+  machine, both in variant 10. On the gantry it is a seated plug that over-penetrated
+  (noise_2mm trial 6, `penetration_violation`). On the arm it is a latched plug at
+  3.11 deg tilt (mf_noise_1mm trial 15). Over all variants: gantry C 1, H 73, I 75,
+  F 75 of 1,820 good-part trials; arm C 1, H 30, I 56, F 59 of 2,210. C passes fewer
+  than F, H and I in all 12 variants on both machines. C, G, H, I and J passed 0 of 156
+  bad parts each per machine.
+* **The arm neutral loss is one condition under one contact model (POST HOC split).**
+  The 6 failing variants are exactly the 6 with MuJoCo's pyramidal friction cone.
+  There, on friction_1, C seats 1 of 90 against 89-90 of 90 for F, H and I. With the
+  elliptic cone it seats 81 of 90. On the gantry, with the same contact draws, C seats
+  90 of 90 under the pyramidal cone (counted from `arm/trials.csv` and
+  `gantry/trials.csv`). <!-- PENDING: friction diagnosis -->
+* The v0.2a statement "C leads in all 13 simulators" is not repeated in that form.
+
 **Rig plan.** Nothing has been bought. [`hardware/TEST_PROTOCOL.md`](hardware/TEST_PROTOCOL.md)
 fixes the rig test: C, I, J and F (plus A, optionally H) on a housing-only part and a
 Micro-Fit 3.0, a jig that sets each trial's socket pose, and a measured final plug
@@ -187,6 +222,10 @@ the results were seen.
   - More than half of the lead is trials where I passed an out-of-tolerance plug.
   - Under a looser seating spec the lead shrinks: on the arm it is not significant at
     4 deg (POST HOC rescoring, seed 20261130 only).
+  - Across 12 randomized simulators, C's lead in the high-camera-error conditions holds
+    on the gantry (12 of 12 against F, H and I). On the arm it holds narrowly against F
+    and I (10 of 12, the minimum; pooled not significant, 8 / 7)
+    (`results/sim_randomization_v0.2f`).
 * **C passed no unseated good part as good in 7,400 good-part trials on each of the
   three seeds** (Wilson 95% upper bound 0.05% per seed). H passed 101-118 and I
   138-161. Scope:
@@ -199,6 +238,9 @@ the results were seen.
   - It rests partly on the simulator's constant, tared-out F/T bias. Under F/T drift
     on the arm (heldout2), C passed 8 of the 40 trials at 0.3 N/s, because VERIFY's
     force-target preload lifted seated plugs (POST HOC trace).
+  - Across 12 randomized simulators it is not exactly zero: C passed 1 bad unit per
+    machine, both in variant 10. C still passed fewer than F, H and I in all 12
+    variants on both machines (`results/sim_randomization_v0.2f`).
   - <!-- PENDING: tilt diagnosis -->
 * **On heldout2, a clean held-out test, C seats more than every fair baseline on unseen
   receptacle tilt and yaw** on both machines, and on the tighter Micro-Fit on the arm.
@@ -229,10 +271,12 @@ the results were seen.
   than F and I on every cell, and the cost of a passed bad unit is not priced.
 * **That C or J is the better product.** J seats more than C on some cells and fewer
   on others. These runs do not decide it.
-* **Robustness across simulators for the current code.**
-  <!-- PENDING: sim_randomization_v0.2f -->
-  The only randomized-simulator run (`results/sim_randomization_v0.2`) used the v0.2a
-  code.
+* **That C's results hold on every contact model on the arm.** Across 12 randomized
+  simulators, the arm's neutral-condition result does not hold: under the pyramidal
+  friction cone C seats 1 of 90 friction_1 parts against 89-90 of 90 for F, H and I
+  (the split by cone is POST HOC). The arm's "C below F" on latching is not confirmed
+  per simulator either (9 of 12; pooled still C below F, p = 0.038)
+  (`results/sim_randomization_v0.2f`). <!-- PENDING: friction diagnosis -->
 * **Anything on hardware.** The latch snap force and the latch spread are assumed.
   There is one latching connector and one simulated arm, and no rig yet.
 
@@ -574,8 +618,10 @@ worst case, and C passed 29 bad units (details below).
   C led the best of D, E, F in all 13, by 8.3 to 12.5 points
   ([`results/sim_randomization_v0.2`](results/sim_randomization_v0.2/REPORT.md)).
   That run used the v0.2a code (frozen at fe48eca), before the baseline re-tuning,
-  the latching parts, the arm and H, I and J. It has not been repeated on later
-  code. <!-- PENDING: sim_randomization_v0.2f -->
+  the latching parts, the arm and H, I and J. The rerun on the v0.2e controllers,
+  [`results/sim_randomization_v0.2f`](results/sim_randomization_v0.2f/REPORT.txt), does
+  not repeat it in that form; see
+  [Current results](#current-results-benchmark_v02e-on-three-seeds-and-heldout2).
 * **No cliffs in C's own constants.** Every one of 113 configured constants,
   scaled by +/-20% one at a time, cost at most 10 points; the worst +/-50% change
   cost 8.3 (two hard-coded thresholds were not in the sweep; see the report)
@@ -1304,8 +1350,9 @@ Open after v0.2f, none of it implemented:
 - No controller re-zeroes the F/T sensor just before contact.
 - The seating spec is assumed at 3 deg. A rig or pilot customer has to give the real
   one.
-- Robustness across simulators has not been measured on current code.
-  <!-- PENDING: sim_randomization_v0.2f -->
+- On the arm under MuJoCo's pyramidal friction cone, C fails friction_1 (1 of 90
+  seated), while F, H and I do not (`results/sim_randomization_v0.2f`, POST HOC
+  split). <!-- PENDING: friction diagnosis -->
 - Any fix to C needs a new pre-registration and a fresh seed.
 
 ## Porting to another simulator

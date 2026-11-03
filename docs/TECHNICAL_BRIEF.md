@@ -188,10 +188,13 @@ Nothing has been bought and no vendor contacted.
   machines and all three seeds. Scope: the lead sits in the conditions with camera sigma
   1-2 mm or the combined condition. In nominal, noise_0mm and noise_0.5mm (sigma 0.3, 0
   and 0.5 mm), C and I seat exactly the same trials. It shrinks under a looser seating
-  spec (POST HOC, one seed).
+  spec (POST HOC, one seed). Across 12 randomized simulators it holds on the gantry,
+  and narrowly on the arm (10 of 12 against F and I).
 - C passed no bad unit in 7,400 good-part trials on each of three seeds. Scope: this
   rests on C's VERIFY (J has the same edge), on the assumed 3 deg spec, and on a
   constant, tared-out F/T bias. Under F/T drift on the arm (heldout2), C passed 8.
+  Across 12 randomized simulators it passed 1 per machine, still fewer than F, H and I
+  in every variant.
 - On heldout2, C seats more than every fair baseline on unseen receptacle tilt and yaw,
   on both machines. Scope: one seed. J matches C there, so VERIFY likely carries it.
 
@@ -202,14 +205,37 @@ Nothing has been bought and no vendor contacted.
 - That C seats more latching parts or handles part-to-part variation better.
 - That C copes better with a camera worse than told, an unseen grasp offset or F/T
   drift. A fair baseline matches or beats it there.
+- That C's results hold on every contact model on the arm: under the pyramidal
+  friction cone C fails friction_1 (above).
 - That C is cheaper per good unit. It is slower, and a passed bad unit is not priced.
 - That C or J is the better product. These runs do not decide it.
 - Any hardware number.
 
 ## Robustness across simulators
 
-<!-- PENDING: sim_randomization_v0.2f -->
-The only randomized-simulator run so far
+[`sim_randomization_v0.2f`](../results/sim_randomization_v0.2f/REPORT.txt) is
+pre-registered. Seed 20261205, controllers unchanged since ddd0d34, 12 randomized
+MuJoCo simulators plus the nominal one per machine, C, F, H, I, J and G (G pinned to
+its nominal model, a configuration of this run), 26,052 trials. Counts are randomized
+variants keeping benchmark_v0.2e's verdict, of 12; 10 are needed
+([`TABLES.md`](../results/sim_randomization_v0.2f/TABLES.md)).
+- **Gantry:** 29 of 29 primary comparisons hold, including C's success lead in the
+  high-camera-error conditions and its bad-unit lead (12 of 12 against F, H and I).
+- **Arm:** 24 of 29 hold.
+  - The high-camera-error lead holds narrowly: 10 of 12 against F and I, pooled 8 / 7,
+    not significant.
+  - Neutral success, C against F, H and I, does not hold (6 of 12; pooled C worse,
+    0 / 15, p = 6.1e-05). POST HOC split: the 6 failing variants are the 6 with the
+    pyramidal friction cone. On friction_1 there C seats 1 of 90 against 89-90 of 90.
+    <!-- PENDING: friction diagnosis -->
+  - Latching good parts, C below F, does not hold per simulator (9 of 12). Pooled, C is
+    still below F (p = 0.038). C against I is not resolved (low power).
+- **Bad units:** C passed 1 per machine, both in variant 10 (gantry: a seated plug
+  over-penetrated; arm: a latched plug at 3.11 deg). Gantry C 1, H 73, I 75, F 75 of
+  1,820; arm C 1, H 30, I 56, F 59 of 2,210. C passes fewer than F, H and I in all 12
+  variants on both machines.
+
+The earlier randomization
 ([`sim_randomization_v0.2`](../results/sim_randomization_v0.2/REPORT.md)) used the
-v0.2a code (frozen at fe48eca), before the baselines were re-tuned and before the
-latching parts, the arm, H, I and J. It says nothing about the current code.
+v0.2a code (fe48eca) on the gantry only. Its "C leads in all 13" is not repeated in
+that form.

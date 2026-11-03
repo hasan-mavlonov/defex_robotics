@@ -1,6 +1,5 @@
 # v0.2f baseline retract cap: report
 
-(Written as REPORT.txt because writing REPORT.md was blocked.)
 
 ## Result
 

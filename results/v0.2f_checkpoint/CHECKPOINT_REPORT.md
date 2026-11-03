@@ -197,7 +197,10 @@ conventional cell.
      C's tilt, yaw and bad-unit edge.
    - **Against the baselines:** C caps its retract pull on a latching part at 36 N, and
      D, F, H and I do not. H's retry retract tore 2 good latches on the development
-     seeds (POST HOC observation).
+     seeds (POST HOC observation). A port of C's cap to D, F, H and I was tried under a
+     committed rule and dropped by it: at the baselines' 40 mm/s retract it moved a tear
+     rather than preventing one (`results/v0.2f_baseline_retract_cap`). The item stays
+     open; a slower baseline retract would need your approval.
 
 ## What the docs said before, and what changed
 
@@ -223,8 +226,8 @@ conventional cell.
    - jam-branch progress after repeated same-probe attempts;
    - a socket-axis reference for the tilt check.
    Each needs its own pre-registration and fresh seed. None is implemented.
-4. Whether to build a fair seat-and-align baseline, and give D, F, H and I C's retract
-   cap.
+4. Whether to build a fair seat-and-align baseline, and give D, F, H and I a gentle
+   retract (the direct port of C's cap failed its rule; see item 8).
 5. Whether to switch on either default-off tilt option. Each passed a no-harm rule on
    validation seed 4007, gives rows identical to v0.2e with the flag off, and changed no
    outcome.
@@ -243,7 +246,7 @@ All are in the bundle `defex_robotics_v0.2_branches_2026-11-02.bundle`.
   - `v0.2f/pack`, `v0.2f/hw`, `v0.2f/latchfit`, `v0.2f/simrand`;
   - `v0.2f/heldout2`, `v0.2f/h2-diagnosis`, `v0.2f/friction-diagnosis`;
   - `v0.2f/tilt` (default-off options), `v0.2f/docs`, `v0.2f/realtime`,
-    `v0.2f/tolerance-3seeds`.
+    `v0.2f/tolerance-3seeds`, `v0.2f/baseline-retract-cap` (inert, default off).
 - `v0.2f/replay-v02d` is in the bundle as the record of how the v0.2d-code replays
   were made. Do not merge it: it is built on the v0.2d code.
 - The earlier chain (`v0.2/*` through `v0.2e/*`) is unchanged, and

@@ -121,3 +121,52 @@ def test_variant_reaches_j_insertion(tmp_path, monkeypatch):
     for name in BASELINES:
         c = make_controller(f"{name}@cap")
         assert c.cfg.retract_pull_cap and c.stiff_fixture_cfg.retract_pull_cap
+
+
+def _write_run(folder, rows, events):
+    import csv
+    import gzip
+
+    folder.mkdir(parents=True)
+    (folder / "config.json").write_text(json.dumps({"backend": folder.name.split("_")[0], "base_seed": 2026}))
+    with (folder / "trials.csv").open("w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    with gzip.open(folder / "events.json.gz", "wt") as fh:
+        json.dump(events, fh)
+
+
+def _row(ctrl, i, success="True", intact="True", depth="8.0"):
+    return {"controller": ctrl, "condition": "mf_noise_1mm", "group": "latching", "trial_index": str(i),
+            "success": success, "protective_stop": "False", "declared_success": "True" if success == "True" else "False",
+            "final_latch_intact": intact, "final_depth_mm": depth, "failure_reason": "none", "wall_time_s": str(i + 0.5)}
+
+
+def test_compare_counts_trips_tears_and_identity(tmp_path):
+    from experiments.v02f_retract_cap_compare import compare
+
+    trip = [[1.0, "gentle_retract", "pull 37.0 N above 36.0 N: stop pulling, plug held at 7.80 mm"]]
+    rows = [_row("spiral", 0), _row("spiral@cap", 0),
+            _row("spiral", 1, success="False", intact="False"), _row("spiral@cap", 1, depth="7.8")]
+    ev = {"mf_noise_1mm|spiral|0": [], "mf_noise_1mm|spiral@cap|0": [],
+          "mf_noise_1mm|spiral|1": [], "mf_noise_1mm|spiral@cap|1": trip}
+    _write_run(tmp_path / "a" / "gantry_latch_spread_s2026", rows, ev)
+    out, passed = compare(tmp_path / "a", "@cap")
+    assert passed
+    line = next(x for x in out if x.startswith("| gantry | latch_spread | D |"))
+    assert "| 2 | 1 | 1 -> 2 of 2 (+1/-0) | 1 -> 0 (0) |" in line
+    rows[1] = _row("spiral@cap", 0, depth="7.9")  # differs without a trip
+    _write_run(tmp_path / "b" / "gantry_latching_s2026", rows, ev)
+    out, passed = compare(tmp_path / "b", "@cap")
+    assert not passed and any("differs without a trip" in x for x in out)
+
+
+def test_compare_with_a_twin_folder(tmp_path):
+    from experiments.v02f_retract_cap_compare import compare
+
+    _write_run(tmp_path / "bench" / "arm_latching_s2026", [_row("spiral_pull", 0)], {"mf_noise_1mm|spiral_pull|0": []})
+    _write_run(tmp_path / "unc" / "arm_latching_s2026", [_row("spiral_pull@nocap", 0)],
+               {"mf_noise_1mm|spiral_pull@nocap|0": []})
+    out, passed = compare(tmp_path / "bench", "", "@nocap", tmp_path / "unc")
+    assert passed and any(x.startswith("| arm | latching | H | 1 | 0 |") for x in out)

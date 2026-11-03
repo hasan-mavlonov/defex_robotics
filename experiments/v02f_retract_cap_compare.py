@@ -1,6 +1,12 @@
 """v0.2f: baselines with and without C's gentle-retract cap, paired (results/v0.2f_baseline_retract_cap/RULE.md).
 
     python -m experiments.v02f_retract_cap_compare results/v0.2f_baseline_retract_cap/dev [--suffix @cap]
+    python -m experiments.v02f_retract_cap_compare results/<benchmark> --twin results/<uncapped run> \
+        --uncapped-suffix @nocap --suffix ""
+
+With --twin, rows and events of the same-named subfolder under the twin root are added (the uncapped
+controllers of a benchmark run kept under another results name). --uncapped-suffix names the uncapped side
+(default: the bare controller); --suffix the capped side.
 
 Reads every <run>/*/trials.csv and events.json.gz under the folder. Each folder holds a controller X and its
 capped twin X<suffix> on the same trials. Per pair: success on good parts, latches torn (final_latch_intact
@@ -35,7 +41,7 @@ def _run_meta(folder: Path) -> tuple[str, str, str]:
     return cfg["backend"], suite, str(cfg["base_seed"])
 
 
-def compare(root: Path, suffix: str) -> tuple[list[str], bool]:
+def compare(root: Path, suffix: str, u_suffix: str = "", twin: Path | None = None) -> tuple[list[str], bool]:
     cells: dict[tuple, dict] = defaultdict(lambda: defaultdict(int))
     trips, failures = [], []
     for folder in sorted(p.parent for p in root.glob("*/trials.csv")):
@@ -43,13 +49,19 @@ def compare(root: Path, suffix: str) -> tuple[list[str], bool]:
         rows = load(folder)
         with gzip.open(folder / "events.json.gz", "rt") as fh:
             events = json.load(fh)
-        idx = {(r["controller"], r["condition"], r["trial_index"]): r for r in rows}
-        for (ctrl, cond, i), u in idx.items():
-            if ctrl not in BASE or (ctrl + suffix, cond, i) not in idx:
+        if twin is not None:
+            if not (twin / folder.name / "trials.csv").exists():
                 continue
-            k = idx[(ctrl + suffix, cond, i)]
+            rows += load(twin / folder.name)
+            with gzip.open(twin / folder.name / "events.json.gz", "rt") as fh:
+                events.update(json.load(fh))
+        idx = {(r["controller"], r["condition"], r["trial_index"]): r for r in rows}
+        for ctrl, cond, i in list(idx):
+            if ctrl not in BASE or (ctrl + suffix, cond, i) not in idx or (ctrl + u_suffix, cond, i) not in idx:
+                continue
+            u, k = idx[(ctrl + u_suffix, cond, i)], idx[(ctrl + suffix, cond, i)]
             gk = [e for e in events[f"{cond}|{ctrl + suffix}|{i}"] if e[1] == "gentle_retract"]
-            gu = [e for e in events[f"{cond}|{ctrl}|{i}"] if e[1] == "gentle_retract"]
+            gu = [e for e in events[f"{cond}|{ctrl + u_suffix}|{i}"] if e[1] == "gentle_retract"]
             # J's VERIFY is C's code and logs C's own gentle retract in both: a trip is an event only k has.
             gentle = gk[len(gu):] if gk[:len(gu)] == gu else gk
             good = u["group"] != "bad_part"
@@ -85,8 +97,9 @@ def compare(root: Path, suffix: str) -> tuple[list[str], bool]:
                               "capped": f"{k['success']}/{k['failure_reason']}/torn={torn(k)}/stop={k['protective_stop']}",
                               "rows_differ": bool(differs), "first_trip": gentle[0][2], "trips": len(gentle)})
     out = [f"# Retract cap, paired: {root}", "",
-           f"Made by `python -m experiments.v02f_retract_cap_compare {root}`. u = v0.2e baseline (flag off), "
-           f"k = the same controller with `retract_pull_cap` on (`{suffix}`), same trials. Good = good-part trials "
+           f"Made by `python -m experiments.v02f_retract_cap_compare {root}`"
+           + (f" with twin `{twin}`" if twin else "") + f". u = the baseline with `retract_pull_cap` off "
+           f"(`{u_suffix or 'bare name'}`), k = the same controller with it on (`{suffix or 'bare name'}`), same trials. Good = good-part trials "
            "(success; bad units = escapes on good parts); bad = deliberately bad parts passed. Torn = "
            "`final_latch_intact` False, any trial. Tripped = trials with a `gentle_retract` event in k that u does "
            "not have (J's VERIFY logs C's own).", "",
@@ -138,8 +151,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("root", type=Path)
     ap.add_argument("--suffix", default="@cap")
+    ap.add_argument("--uncapped-suffix", default="")
+    ap.add_argument("--twin", type=Path, default=None)
     args = ap.parse_args()
-    out, _ = compare(args.root, args.suffix)
+    out, _ = compare(args.root, args.suffix, args.uncapped_suffix, args.twin)
     print("\n".join(out[:60]))
 
 

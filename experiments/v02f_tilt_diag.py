@@ -186,7 +186,8 @@ def run_job(job: tuple) -> list[dict]:
         row = res.to_row()
         row.update(base_seed=seed, suite=suite, backend=os.environ.get("DEFEX_BACKEND", "gantry"), checks=checks,
                    seats=seats, ev=[[t, k, d] for t, k, d in res.events
-                                    if k in ("tilt", "wall_yaw", "yaw", "verify", "latch", "verify_handover")])
+                                    if k in ("tilt", "wall_yaw", "yaw", "yaw_centering", "verify", "latch", "verify_handover", "tilt_push",
+                                             "seat_conform")])
         out.append(row)
     return out
 

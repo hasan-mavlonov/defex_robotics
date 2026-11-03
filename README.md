@@ -1124,8 +1124,8 @@ The project targets the existing `.venv` on the Mac mini (Python 3.12, MuJoCo
 source .venv/bin/activate
 pip install -e ".[dev,video]"     # mujoco, numpy, matplotlib; pytest; imageio + ffmpeg for MP4
 
-pytest -q                         # 299 tests (physics, geometry, sensing, controllers, reports)
-pytest -q -m "not slow"           # 257 tests: skips the closed-loop controller tests
+pytest -q                         # 300 tests (physics, geometry, sensing, controllers, reports)
+pytest -q -m "not slow"           # 258 tests: skips the closed-loop controller tests
 python -m experiments.baseline    # one-minute check: all controllers at 100% on easy conditions
 ```
 
@@ -1221,7 +1221,7 @@ experiments/              baseline check, robustness benchmark, evaluation + plo
 demos/                    live viewer, video recorder, replay, investor video
   media/                  rendered investor video and its README still
 simulations/              generated workcell MJCF, original prototype, viewer script
-tests/                    299 tests: geometry, physics, sensing, controllers, metrics
+tests/                    300 tests: geometry, physics, sensing, controllers, metrics
 results/benchmark_v0.1/   the reported benchmark: trials.csv, summary.json/.csv, report.md,
                           plots/, events.json.gz, trajectories/ (replayable),
                           earlier_runs/ (superseded reports)

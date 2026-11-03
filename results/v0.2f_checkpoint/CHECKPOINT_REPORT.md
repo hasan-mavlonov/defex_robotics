@@ -1,7 +1,8 @@
 # v0.2f checkpoint report for Hasan
 
-Simulation only. No controller behaviour changed in v0.2f: every reported run used the
-frozen v0.2e controllers (ddd0d34). The brief's stop condition still holds, so the pitch
+Simulation only. No controller behaviour changed in v0.2f. Every v0.2f run used the frozen
+v0.2e controllers (ddd0d34), except the exact replays of seeds 20261123 and 20261124 in
+item 2, which used those benchmarks' own v0.2d code (42df5c8) plus logging only. The brief's stop condition still holds, so the pitch
 is your decision. This report does not pick it.
 
 ## Words used here
@@ -9,11 +10,11 @@ is your decision. This report does not pick it.
 - **C**: the adaptive controller (the product). **G**: C plus a learned contact prior.
 - **Fair baselines**: D (force-controlled spiral search), E (vision correction on a
   passive RCC compliance stage), F (spiral on the RCC), and H and I (D and F plus C's
-  retention pull test). I is the strongest.
+  retention pull test). F and I seat about equally; I also rejects bad parts.
 - **J**: F's insertion followed by C's VERIFY (C's post-seat checks). Not a fair
   baseline. It shows what C's VERIFY alone buys.
-- **Bad unit**: a good part that ends out of tolerance (short, offset, or more than
-  3 deg off in tilt or yaw) but is declared seated. **Bad part**: a deliberately
+- **Bad unit**: a good part that is declared seated but is not: short, offset, more
+  than 3 deg off in tilt or yaw, not settled, or (latching parts) not latched. **Bad part**: a deliberately
   defective part (half latched, broken latch, stubbed pin, wrong polarity).
 - **Cell**: one machine (gantry or UR5e arm) and one suite. **C-only / I-only**: paired
   trials that only C seats, and only I seats.
@@ -52,7 +53,7 @@ The other numbers that decide the pitch:
 |---|---|---|---|---|
 | Bad parts passed, of 2,200 (v0.2e) | 0 | 0 | 1,510 | 0 |
 | Bad units, of 7,400 good-part trials (three seeds) | 0 / 0 / 0 | 161 / 138 / 138 | 197 / 176 / 178 | 3 / 2 / 2 |
-| Bad units, heldout2 (gantry / arm, of 400 each) | 0 / 8 | 57 / 63 | | 0 / 5 |
+| Bad units, heldout2 (gantry / arm, of 400 each) | 0 / 8 | 57 / 63 | 57 / 63 | 0 / 5 |
 | Good units per hour, standard (gantry / arm, v0.2e) | 601 / 387 | 1,100 / 593 | 1,100 / 593 | 643 / 381 |
 | Good units per hour, latching (gantry / arm, v0.2e) | 449 / 280 | 498 / 320 | 861 / 495 | 498 / 322 |
 
@@ -61,21 +62,36 @@ Sources:
 - `results/heldout2_v0.2f/HELDOUT2_TABLES.md` (b) and (c);
 - `results/benchmark_v0.2e/HEADLINE_TABLES.md` (c), at 0 s per protective stop.
 
-I's and H's bad units, in the benchmarks and in heldout2's tilt and yaw families, are
-mostly plugs at about full depth, just past the assumed 3 deg limit (item 2 below).
+Good units per hour count good-part trials only. On the same latching suites F also
+passes 518 of 800 (gantry) and 468 of 800 (arm) deliberately bad parts as good.
+
+I's and H's bad units in the benchmarks are mostly plugs at about full depth, just past
+the assumed 3 deg limit (item 2 below). In heldout2's 4 deg unseen-yaw condition they sit
+further out (median about 3.9-4.0 deg, up to 4.87 deg; POST HOC, from trials.csv).
 
 **C or J?** J is a conventional spiral + RCC insertion with C's VERIFY bolted on.
-- It matches C's protection against bad units almost exactly (2-3 against 0 per 7,400),
-  at about C's cycle time.
+- On the benchmarks it nearly matches C's protection against bad units (2-3 against 0
+  per 7,400), at about C's cycle time. Not everywhere:
+  - across simulators on the arm J passed 31 of 2,210 against C's 1, 30 of them under the
+    pyramidal cone (`results/sim_randomization_v0.2f`);
+  - on heldout2 arm it passed 5 against C's 8.
 - Its success against C is mixed:
   - J is below C on standard on both machines (gantry 98.0% against 99.1%, arm 96.8%
     against 98.1%).
-  - J is ahead of C on arm latching (95.3% against 92.0%) and on gantry `heldout`.
+  - J is ahead of C on gantry `heldout` on all three seeds, and on arm latching on seed
+    20261130 only (95.3% against 92.0%; level on the earlier two seeds).
   - On heldout2, J is ahead on the gantry whole suite (97.2% against 94.0%, p = 0.019),
-    mostly in the plug-offset family (98.8% against 75.0%). On the arm it matches C.
+    mostly in the plug-offset family (98.8% against 75.0%). On the arm whole suite it
+    matches C, but it is ahead on plug offset (96.2% against 76.2%) and below on the
+    tight-tolerance Micro-Fit (80.0% against 93.8%).
 
-Read POST HOC, most of C's edge over the fair baselines is its VERIFY step, not its
-search. These runs do not decide whether the product is C, or a check sold on top of a
+Read POST HOC (`results/v0.2f_evidence/CONCENTRATION.md` (d)):
+- most of C's bad-unit edge, and its heldout2 tilt and yaw edge, is its VERIFY step;
+- on standard success, VERIFY accounts for about half of C's gantry lead over F (23 of
+  45, 35 of 58 and 30 of 59 net trials on the three seeds) and less than half of its arm
+  lead (11 of 38, 17 of 34, 12 of 40). The rest is C's own insertion.
+
+These runs do not decide whether the product is C, or a check sold on top of a
 conventional cell.
 
 ## What lies under the scorecard
@@ -103,8 +119,9 @@ conventional cell.
    - Old `heldout` at 5 deg: I has more discordant wins than C on both machines and all
      seeds.
    - The v0.2d-code replays reproduce 12,400 of 12,800 rows exactly; the other 400 (I and
-     J, arm generalization_combined) differ only in final-digit drift that the v0.2d
-     pre-registration disclosed, with identical outcomes.
+     J, arm generalization_combined) differ by up to 0.022 mm or deg in final pose and up
+     to 8 ms in cycle time. That drift is the v0.2d code's disclosed limit, and the
+     outcomes are identical.
 3. **C's zero bad units rests partly on the simulator.**
    - Under F/T drift (heldout2, arm), VERIFY's 1 N force-target preload lifts a seated
      plug, and nothing re-checks depth (`results/v0.2f_h2_diagnosis`).
@@ -113,20 +130,27 @@ conventional cell.
      - G passed the same 8, and J passed 5.
    - Everywhere else the simulated sensor bias is constant and tared out. A real sensor
      drifts.
-4. **Where C fails, and why** (POST HOC traces; each reproduces on the development seeds).
+4. **Where C fails, and why** (POST HOC traces; each mechanism reproduces on the
+   development seeds).
    - **Plug offset in the fingers.** An edge contact is relabelled as a jam, and C retries
      from the same probe. F's spiral passes over the offset
      (`results/v0.2f_h2_diagnosis`).
-   - **Arm friction 1.0.** VERIFY's wall probe stops on floor friction before it reaches
-     the wall, so C rejects a seated plug (`results/v0.2f_friction_diagnosis`).
-     - Under MuJoCo's pyramidal friction cone this decides the arm friction_1 result:
-       C seats 1 of 90, against 89-90 for F, H and I.
+   - **Arm friction 1.0** (`results/v0.2f_friction_diagnosis`).
+     - On the nominal (elliptic-cone) benchmarks, C's 18 friction_1 losses over three
+       seeds are 11 torque protective stops just over the 0.6 N m limit, 6 wall-probe
+       stalls and 1 mouth stall.
+     - In a wall-probe stall, the probe stops on floor friction before it reaches the
+       wall, so C rejects a seated plug.
+     - Under MuJoCo's pyramidal cone the stall decides the result: C seats 1 of 90,
+       against 89-90 for F, H and I (cone split POST HOC).
      - MuJoCo's documentation calls the elliptic cone, the nominal setting, the closer
        model.
    - **The tilt check.** It compares the plug with the axis C aimed it along, so it
      cannot see an error in C's socket-axis estimate (`results/v0.2f_tilt_diagnosis`).
      - G's 3.01 deg bad unit is this case.
-     - The Micro-Fit cavity keeps such plugs near 3 deg.
+     - The Micro-Fit cavity keeps such plugs near 3 deg. On the development seeds the
+       under-read shows (234 of 8,320 verdicts read more than 1 deg low), but no bad unit
+       does.
      - The gantry housing-only VERIFY has no yaw check.
 5. **Across simulators** (pre-registered, seed 20261205, 12 randomized contact and servo
    models plus the nominal one per machine, `results/sim_randomization_v0.2f`).
@@ -135,14 +159,17 @@ conventional cell.
    - Arm: 24 of 29.
      - C's high-camera-error lead keeps its direction in exactly 10 of 12, the minimum.
        Pooled, it is not significant.
-     - The friction_1 loss above appears.
+     - The friction_1 loss above appears (cone split POST HOC).
      - "C below F" on arm latching keeps its direction in 9 of 12 (pooled still C
        below F, p = 0.038).
-   - C's bad units are not exactly zero across simulators (1 per machine), but they are
-     fewer than F's, H's and I's in every model.
-6. **Throughput.** C makes fewer good units per hour than F and I everywhere.
+   - C's bad units are not exactly zero across simulators: 1 on the arm (a latched plug at
+     3.11 deg). On the gantry C declared 1 seated plug good that had over-penetrated: a
+     failed trial, but not a bad unit by the definition above. C still passed fewer than
+     F, H and I in every model.
+6. **Throughput.** In every benchmark cell, C makes fewer good units per hour than F and
+   I. On heldout2 it makes more in the unseen-yaw and tight-tolerance families.
    - On standard: 55% of F's on the gantry and 65% on the arm.
-   - On latching: 87-90% of I's.
+   - On latching and latch_spread: 87.5-90.2% of I's.
    - On gantry standard, about two-thirds of the gap is VERIFY's 1.89 s (POST HOC phase
      split).
    - C's p95 cycle is above 1.5 x its median almost everywhere, and the tail is retries.
@@ -151,26 +178,30 @@ conventional cell.
    - The protocol and the BOM are fixed against the 35.2 N force budget. Several listed
      sensors and stages were under-rated, and the BOM named the wrong Micro-Fit part.
    - Power analysis:
-     - C vs I on the housing-only part needs 70-100 paired trials for 80% power.
+     - C vs I on the rig's four housing-only conditions needs 70-100 paired trials for
+       80% power. The full standard suite would need 350 (gantry) and 810 (arm).
      - Micro-Fit good-part differences need 780 or more, so the rig reports rates only
        for that part.
    - The simulation's predictions for the rig conditions are frozen (seed 20261201, 100
      per condition), with the rule for judging a rig result.
    - The latch fitter fails its own synthetic rule on hook stiffness (6 of 10 parts
      against 8 required).
-   - C's per-tick work fits a 2 ms loop on this laptop: worst 0.6-0.9 ms at low load,
-     and 1.2-1.5 ms under heavy load.
+   - Development measurement on this laptop: C's own per-tick work fits a 2 ms loop.
+     - Its worst replayed tick is 0.62-0.64 ms at low load and 1.21-1.28 ms under heavy
+       load (G's: 0.81-0.89 and up to 1.50 ms).
+     - In the loop, ticks over 2 ms still occur from Python garbage collection and
+       preemption: C had 29 at low load and 1,341 under heavy load.
 8. **Fairness items, both ways.**
    - **Against C:** no fair baseline re-zeroes the F/T sensor during contact, or squares
      the part after seating. A conventional "seat-and-align" step might close much of
      C's tilt, yaw and bad-unit edge.
    - **Against the baselines:** C caps its retract pull on a latching part at 36 N, and
      D, F, H and I do not. H's retry retract tore 2 good latches on the development
-     seeds.
+     seeds (POST HOC observation).
 
 ## What the docs said before, and what changed
 
-- "C led in all 13 simulators by 8-12 points" (v0.2a code, gantry only) is replaced by
+- "C led in all 13 simulators by 8.3-12.5 points" (v0.2a code, gantry only) is replaced by
   item 5.
 - The old `heldout` suite was used in W4 development, so it is not a clean held-out
   test. heldout2 is.
@@ -211,6 +242,9 @@ All are in the bundle `defex_robotics_v0.2_branches_2026-11-02.bundle`.
 - Its parts:
   - `v0.2f/pack`, `v0.2f/hw`, `v0.2f/latchfit`, `v0.2f/simrand`;
   - `v0.2f/heldout2`, `v0.2f/h2-diagnosis`, `v0.2f/friction-diagnosis`;
-  - `v0.2f/tilt` (default-off options), `v0.2f/docs`, `v0.2f/realtime`.
+  - `v0.2f/tilt` (default-off options), `v0.2f/docs`, `v0.2f/realtime`,
+    `v0.2f/tolerance-3seeds`.
+- `v0.2f/replay-v02d` is in the bundle as the record of how the v0.2d-code replays
+  were made. Do not merge it: it is built on the v0.2d code.
 - The earlier chain (`v0.2/*` through `v0.2e/*`) is unchanged, and
   `results/benchmark_v0.1` is untouched.

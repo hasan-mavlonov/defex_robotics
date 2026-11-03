@@ -138,7 +138,8 @@ pre-registered
 * **C passed 8 bad units**, all on the arm at 0.3 N/s drift (H 0, I 1; p = 0.0078 and
   0.016). They are C's first in a reported run since Checkpoint 2. A POST HOC trace
   ([`results/v0.2f_h2_diagnosis/REPORT.md`](results/v0.2f_h2_diagnosis/REPORT.md))
-  found the mechanism. The plug was at the floor when C saw the bottoming force.
+  found the mechanism (traced in 6 of the 8; the depth and drift ranges cover all 8). The
+  plug was at the floor when C saw the bottoming force.
   VERIFY then holds a 1 N preload on the *read* axial force. With more than 1 N of
   push-out drift since C's last tare, that is about 0 N or a pull in truth, and the
   plug rose 0.6-1.8 mm during the wall probes. Nothing re-checks depth before SUCCESS.
@@ -184,7 +185,7 @@ comparisons; the arm holds 24 of 29
   There, on friction_1, C seats 1 of 90 against 89-90 of 90 for F, H and I. With the
   elliptic cone it seats 81 of 90. On the gantry, with the same contact draws, C seats
   90 of 90 under the pyramidal cone (counted from `arm/trials.csv` and
-  `gantry/trials.csv`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
+  `gantry/trials.csv`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): in 85 of C's 89 failures C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
 * The v0.2a statement "C leads in all 13 simulators" is not repeated in that form.
 
 **Rig plan.** Nothing has been bought. [`hardware/TEST_PROTOCOL.md`](hardware/TEST_PROTOCOL.md)
@@ -236,8 +237,9 @@ the results were seen.
   - It rests partly on the simulator's constant, tared-out F/T bias. Under F/T drift
     on the arm (heldout2), C passed 8 of the 40 trials at 0.3 N/s, because VERIFY's
     force-target preload lifted seated plugs (POST HOC trace).
-  - Across 12 randomized simulators it is not exactly zero: C passed 1 bad unit per
-    machine, both in variant 10. C still passed fewer than F, H and I in all 12
+  - Across 12 randomized simulators it is not exactly zero, both cases in variant 10:
+    on the arm a latched plug at 3.11 deg; on the gantry a seated plug that
+    over-penetrated (a failed trial declared good, not a mis-seat). C still passed fewer than F, H and I in all 12
     variants on both machines (`results/sim_randomization_v0.2f`).
   - Tilt check, POST HOC diagnosis (`results/v0.2f_tilt_diagnosis/REPORT.md`, development seeds 2026/2027): the latching tilt check compares the plug with C's own socket-axis estimate, the axis C aimed it along, so it cannot see tilt that comes from an error in that estimate. G's 3.01 deg unit is this case (estimate 2.87 deg off the true axis after a wrong 'flat' fold). On the development seeds 234 of 8,320 C/G verdicts read more than 1 deg under the true tilt; none became a bad unit. What keeps tilted bad units rare is the Micro-Fit cavity, which stops a latched plug at about 3.2 deg, and a camera tilt error rarely over 3 deg. Near misses (declared, 2.5-3.0 deg) were 5 in about 3,540 declared latching trials. J's empty first tilt window comes from its hand-over code and cannot happen to C. On the gantry the housing-only VERIFY has no yaw check (its sweep always ends in SUCCESS); on the arm the wall-yaw check bounds |yaw| at 2.0 deg. Two default-off options (push below the force floor; J's hand-over window) passed a no-harm rule on validation seed 4007 but changed no outcome; whether to use them is Hasan's call.
 * **On heldout2, a clean held-out test, C seats more than every fair baseline on unseen
@@ -258,7 +260,7 @@ the results were seen.
   latch_spread good parts on both machines and all three seeds.
 * **That C copes better with a camera worse than it is told.** F and I match C on
   `heldout` on both machines on seed 20261130. With a 1.5 mm hand-eye bias, and in the
-  worst case, I seats more than C on all three seeds.
+  worst case, I seats more than C on all three seeds (per-condition, POST HOC).
 * **That C copes with an unseen grasp offset.** On heldout2, F seats more Micro-Fit
   parts than C when the plug sits off in the fingers (gantry 98.8% against 75.0%, arm
   95.0% against 76.2%). The cause, from a POST HOC trace, is C's jam branch looping on
@@ -1121,8 +1123,8 @@ The project targets the existing `.venv` on the Mac mini (Python 3.12, MuJoCo
 source .venv/bin/activate
 pip install -e ".[dev,video]"     # mujoco, numpy, matplotlib; pytest; imageio + ffmpeg for MP4
 
-pytest -q                         # 296 tests (physics, geometry, sensing, controllers, reports)
-pytest -q -m "not slow"           # 254 tests: skips the closed-loop controller tests
+pytest -q                         # 299 tests (physics, geometry, sensing, controllers, reports)
+pytest -q -m "not slow"           # 257 tests: skips the closed-loop controller tests
 python -m experiments.baseline    # one-minute check: all controllers at 100% on easy conditions
 ```
 
@@ -1218,7 +1220,7 @@ experiments/              baseline check, robustness benchmark, evaluation + plo
 demos/                    live viewer, video recorder, replay, investor video
   media/                  rendered investor video and its README still
 simulations/              generated workcell MJCF, original prototype, viewer script
-tests/                    296 tests: geometry, physics, sensing, controllers, metrics
+tests/                    299 tests: geometry, physics, sensing, controllers, metrics
 results/benchmark_v0.1/   the reported benchmark: trials.csv, summary.json/.csv, report.md,
                           plots/, events.json.gz, trajectories/ (replayable),
                           earlier_runs/ (superseded reports)
@@ -1276,9 +1278,10 @@ order they matter for transfer to hardware.
    A real vision stack would mostly help C (it could re-measure after a failure),
    but its failure modes are not represented.
 6. **The hole localizer is two-dimensional.** It estimates x and y; yaw is handled
-   by a bounded search sequence. All of C's failures occurred under 2 mm vision
-   noise, and they concentrate where the vision yaw error exceeds 4 degrees (10 of
-   33 such trials failed, against 5 of 67 otherwise).
+   by a bounded search sequence. (V0.1 observation, benchmark_v0.1: C's failures were
+   all under 2 mm vision noise, concentrated where the vision yaw error exceeded 4
+   degrees. It does not hold for the current code: C also fails at nominal vision on
+   arm friction_1, in `mf_noise_1mm`, `heldout` and heldout2.)
 7. **Characterized vision.** In the `standard` and `latching` suites C is told
    each condition's true vision accuracy. The mis-characterized-vision families
    test a camera worse than told, and that is where F matches or beats C.
@@ -1335,8 +1338,9 @@ The V0.2 plan (brief of 2026-10-26) runs in workstreams, one branch each:
     section).
 14. v0.2f, analysis and rig preparation, no controller change: the evidence analysis
     (`results/v0.2f_evidence`), heldout2 (seed 20261207) and its diagnosis, frozen
-    rig predictions (seed 20261201), the rig protocol and power analysis, and the
-    latch-model fitter.
+    rig predictions (seed 20261201), the rig protocol and power analysis, the
+    latch-model fitter, the simulator randomization rerun (seed 20261205), the friction
+    and tilt diagnoses, and the real-time and pull-overshoot measurements.
 
 Open after v0.2f, none of it implemented:
 - C's VERIFY holds a force-target preload and does not re-check depth before

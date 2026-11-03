@@ -43,7 +43,7 @@ Mixed.
   (95.2% against 92.0%, p = 0.014).
 - **Bad parts and bad units.** Both C and I pass 0 of 2,200 bad parts. C passed no
   out-of-tolerance plug in 7,400 good-part trials; I passed 138.
-- **heldout2.** C is well ahead on unseen receptacle yaw (100% against 37.5% on the
+- **heldout2.** C is ahead on unseen receptacle yaw (100% against 37.5% on the
   gantry). It is below F on an unseen grasp offset (gantry 75.0% against 98.8%).
 
 Files: `results/benchmark_v0.2e/REPORT.md`, `results/v0.2f_evidence/CONCENTRATION.md`,
@@ -57,7 +57,7 @@ against 387 (`results/benchmark_v0.2e/HEADLINE_TABLES.md` (c)).
 - About two-thirds of C's extra time on gantry standard is VERIFY: 1.89 s of 2.94 s
   (POST HOC, `results/v0.2f_evidence/PHASES.md`).
 - What C buys is fewer out-of-tolerance housing-only plugs leaving the cell, in the
-  high-camera-error trials.
+  high-camera-error trials (POST HOC per-condition breakdown).
 - J (F's insertion plus C's VERIFY) gets most of that: 2 bad units against F's 178.
   J makes 643 good units per hour on gantry standard.
 - Whether the trade pays depends on what a mis-seated connector costs the customer,
@@ -78,9 +78,9 @@ You should not trust absolute numbers.
     the 6 pyramidal-cone variants, seating 1 of 90 against 89-90 of 90 (the split by
     cone is POST HOC). Arm latching C below F does not hold per simulator (9 of 12;
     pooled still C below F, p = 0.038). C against I there is not resolved (low power).
-  - C's zero bad units does not hold on every simulator: 1 per machine, both in
+  - C's zero bad units does not hold on every simulator (arm: a 3.11 deg plug; gantry: an over-penetrated seated plug): 1 per machine, both in
     variant 10. C still passes fewer than F, H and I in all 12 variants.
-  - Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
+  - Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): in 85 of C's 89 failures C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
 - The earlier run (`results/sim_randomization_v0.2/REPORT.md`) used the v0.2a code
   (fe48eca), gantry only. Do not cite its "C led in all 13" for the current code.
 - One known way the simulator flatters C: its F/T bias is constant and tared out. Under
@@ -91,8 +91,9 @@ You should not trust absolute numbers.
 ## 4. "What happens with a stubbed pin, or a part at the edge of the datasheet?"
 
 **Stubbed pin.** C passed 0 of 400 stubbed-terminal parts, and so did I. F passed 259
-and D 117. The plug stops short and the pull test moves it. C's median cycle on a bad
-part is 8.9 s on the gantry and 13.0 s on the arm (`results/benchmark_v0.2e/TABLES.md`,
+and D 117. The plug stops short and the pull test moves it. C's median cycle on a
+stubbed-terminal part is 8.46 s on the gantry and 12.04 s on the arm (8.9 s and 13.0 s
+over all four latching defects; `results/benchmark_v0.2e/TABLES.md` and `trials.csv`,
 latching).
 
 **Edge of the datasheet.** Every controller pushes to 35.2 N (1.1 x the 32 N maximum
@@ -109,9 +110,10 @@ We tried a learned piece where it can help without hardware data: G, a small net
 that predicts where the hole is from a blocked contact.
 - In benchmark_v0.2e, G beats C on 6 of 8 cells (for example arm standard, 98.8%
   against 98.1%, p = 0.0044). It shows no gain on latch_spread.
-- G passed one bad unit (question 9).
-- On heldout2, G gave no measurable gain in any cell. Its gains come from the same
-  camera-error conditions as C's lead.
+- G passed one bad unit in benchmark_v0.2e (question 9). On heldout2 it passed the
+  same 8 F/T-drift bad units as C.
+- On heldout2, G gave no measurable gain in any cell. Its benchmark gains come from the
+  same camera-error conditions as C's lead (POST HOC).
 - End-to-end learned policies need real force traces, which we do not have.
 
 ## 6. "What is the cycle time on a real line?"
@@ -166,7 +168,8 @@ ground truth (`tests/test_motion_and_estimation.py::test_controller_code_cannot_
 Being told the camera's accuracy cuts both ways. C sizes its search from that figure.
 - When the camera is worse than told (`heldout`), F and I match C on both machines in
   benchmark_v0.2e (gantry 81.4% against 83.8%, arm 76.8% against 78.4%).
-- With a 1.5 mm hand-eye bias, I seats more than C on all three seeds.
+- With a 1.5 mm hand-eye bias, I seats more than C on all three seeds (per-condition,
+  POST HOC).
 - On heldout2's unseen grasp offset, C was not told the offset and fell below F. A
   POST HOC trace found that the cause is C's in-hand estimate. With the true grasp
   given to C, 5 of 5 replays seat (`results/v0.2f_h2_diagnosis/REPORT.md`).
@@ -192,8 +195,9 @@ force and a movement limit of 0.6 x the 1.75 mm terminal wipe.
   - **heldout2:** C passed 8 of 400 on the arm, all at 0.3 N/s F/T drift. They are
     short plugs at 13.05-14.40 mm, against the 14.5 mm limit. H passed 0 and I 1 in
     that cell (p = 0.0078 and 0.016).
-- **Why heldout2's 8 happened (POST HOC trace,
-  `results/v0.2f_h2_diagnosis/REPORT.md`).**
+- **Why heldout2's 8 happened (POST HOC trace of 6 of the 8,
+  `results/v0.2f_h2_diagnosis/REPORT.md`; the depth and drift ranges cover all 8).**
+  G passed the same 8 and J 5.
   - The plug was at the floor when C saw the bottoming force.
   - VERIFY then holds a 1 N preload on the *read* axial force. With more than 1 N of
     push-out drift since C's last tare, that is about 0 N or a pull in truth. The plug

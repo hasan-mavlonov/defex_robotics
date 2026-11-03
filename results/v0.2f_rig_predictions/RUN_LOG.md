@@ -35,3 +35,33 @@
   arm latching trials 33 s, at `--workers 2`. Its output stayed in the session's scratch
   area.
 - `events.json.gz` is not committed: no reported number needs it.
+
+## Extension to 100 trials per condition (PREREGISTRATION.md item 7)
+
+- Asked for by the lead agent after the 50-trial report, so that the predictions cover
+  the protocol's 100 trials per condition.
+- Run from a clean, detached checkout of dc938d1, made with `git worktree add --detach`
+  in the session's scratch area and removed after the run. The commands are the
+  pre-registered ones with `--trials 100` and
+  `--name v0.2f_rig_predictions/ext100/<machine>_<suite>`. The runner has no start-index
+  option, so indices 0-49 were run again; that also gives the identity check below.
+- Start check: `git status --porcelain --untracked-files=all -- . ':(exclude)results'`
+  printed 0 lines at HEAD dc938d1.
+- Started 2026-11-02 16:43:01 PST and finished 18:16:15 PST (1 h 33 min), at
+  `--workers 2`. No run was repeated, skipped or dropped. Load averages were 17-90
+  (other agents).
+  - gantry standard 16:43:01-16:52:08;
+  - gantry latching 16:52:08-17:25:24;
+  - arm standard 17:25:24-17:39:50;
+  - arm latching 17:39:50-18:16:15.
+- All four `ext100/*/config.json`: `git_commit` dc938d1062a62a183606e54e8a6d41b7dcd5390d,
+  `git_dirty: false`, `base_seed` 20261201, `workers` 2. Rows: 2,400 per standard run
+  and 4,200 per latching run, so 13,200 in all.
+- **Identity check** (`ext100/check_first50.py`, output in `ext100/CHECK_FIRST50.txt`):
+  trial indices 0-49 of the extension against the committed 50-trial rows. 6,600 rows,
+  237,600 fields, **0 differences**; `wall_time_s` was not compared. So the extension
+  is used, as item 7 says.
+- `TABLES.md` was regenerated from `ext100/` with the pre-registered `tables.py`. The
+  50-trial tables and report are kept as `TABLES_50.md` and `REPORT_50.txt`.
+  `REPORT.txt` is the 100-trial report.
+- `events.json.gz` is not committed.

@@ -33,6 +33,7 @@ searches, within F's attempt budget.
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import replace
 from typing import Callable
 
@@ -66,6 +67,10 @@ class CompliantSpiralSearchVerifyController(CompliantSpiralSearchController):
     # 1295 against 1282 of 1360 seated, 0 bad units for both).
     on_verify_fail: str | None = "research"
     rcc_terms = True
+    # v0.2f, off by default (results/v0.2f_tilt_diagnosis): hand C's VERIFY F's last samples (the push at which F
+    # declared the seat) as its recent window, so that the first latch check's tilt evidence has a bottoming wrench.
+    # Off: the window is empty and the tilt check gives no verdict there.
+    handover_window = False
 
     def __init__(self, on_verify_fail: str | None = None) -> None:
         super().__init__()
@@ -87,10 +92,13 @@ class CompliantSpiralSearchVerifyController(CompliantSpiralSearchController):
             v._probe_lead += v.cfg.verify_force_n / self._k_lat
         self._verifying = False
         self._descent: list[tuple[float, float]] = []  # (depth reading, axial force) of F's current attempt
+        self._f_recent: deque[Observation] = deque(maxlen=v.cfg.recent_samples)
 
     def step(self, obs: Observation) -> Command:
         if self._verifying:
             return self._mirror(self.verifier.step(self._plug_obs(obs)))
+        if self.handover_window:
+            self._f_recent.append(obs)
         if self.state == TARE:
             self._descent = []
         elif self.state in (DESCEND, INSERT) and self.verifier.latching:
@@ -114,6 +122,8 @@ class CompliantSpiralSearchVerifyController(CompliantSpiralSearchController):
         v.adm_conf.reset()
         # Every hand-over starts as the first: no samples, diagnosis or fold left from an earlier VERIFY.
         v._recent.clear()
+        if self.handover_window:
+            v._recent.extend(self._plug_obs(o) for o in self._f_recent)
         v.diagnosis = None
         v.R_corr = np.eye(3)
         v.yaw_adj = 0.0

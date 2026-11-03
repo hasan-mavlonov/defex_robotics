@@ -955,6 +955,11 @@ class AdaptiveConfig:
     # carried from the insert target reaches the edge bound (1 mm x 35.2 N / (0.875 x 3.425 mm) = 11.7 N for the
     # Micro-Fit). Under it the check is skipped, exactly as with tilt_check off.
     tilt_check_force_guard: bool = True
+    # v0.2f, off by default (results/v0.2f_tilt_diagnosis): where the guard would give no verdict (window under the
+    # floor or empty: the arm's floor-impact settle, a timed-out proof push, J's hand-over), first hold the plug at the
+    # proof force (the bottom-proof push C makes after a slide-out), then check the window of that push. A push that
+    # advances the plug past proof_advance_mm goes back to INSERT, as the bottom-proof push does.
+    tilt_check_push_below_floor: bool = False
     # VERIFY
     verify_probe_margin_mm: float = 0.35  # probe travel beyond 2 x clearance
     seat_conform_min_s: float = 0.08

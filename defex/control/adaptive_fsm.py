@@ -1029,6 +1029,10 @@ class AdaptiveInsertionController(InsertionController):
         return best >= self.cfg.click_drop_fraction * m.latch_peak_force_n, best
 
     def _begin_latch_verify(self, obs: Observation) -> Command:
+        c = self.cfg
+        if c.tilt_check and c.tilt_check_force_guard and c.tilt_check_push_below_floor and self._verdict \
+                and self.phase != "bottom_proof" and self._tilt_window_force() < self._tilt_force_floor():
+            return self._begin_tilt_push(obs)
         if self.cfg.tilt_check and not self._tilt_verdict(obs):
             return self._verify_failed(obs)
         m = self.ctx.connector.mating
@@ -1184,6 +1188,23 @@ class AdaptiveInsertionController(InsertionController):
         bound (Micro-Fit: 1 mm x 35.2 N / (0.875 x 3.425 mm) = 11.7 N)."""
         c = self.cfg
         return c.cavity_tilt_lever_mm * c.insert_force_n / (c.tilt_check_edge_fraction * min(self.plug_half) / MM)
+
+    def _tilt_window_force(self) -> float:
+        """Mean bias-corrected axial force (N) of the tilt check's window; 0 without samples."""
+        wrench = self._tilt_window()
+        return float(wrench[0][2]) if wrench is not None else 0.0
+
+    def _begin_tilt_push(self, obs: Observation) -> Command:
+        """v0.2f (AdaptiveConfig.tilt_check_push_below_floor): hold the plug at the proof force before the tilt check.
+
+        Runs the bottom-proof push; when it has held (or timed out) it calls _begin_latch_verify again from the
+        "bottom_proof" phase, which takes the tilt verdict on the push's window under the same guard."""
+        self.log(obs.t, "tilt_push", f"window at {self._tilt_window_force():.1f} N, under the "
+                                     f"{self._tilt_force_floor():.1f} N floor: push at {self._proof_force:.1f} N first")
+        self._proof_t_force = None
+        self._proof_depth0 = float(obs.depth)
+        self._enter(obs.t, VERIFY, "bottom_proof")
+        return self._verify_step(obs)
 
     def _tilt_verdict(self, obs: Observation) -> bool:
         """False when the plug is turned off the socket axis and held there by the walls (AdaptiveConfig.tilt_check).

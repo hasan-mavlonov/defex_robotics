@@ -1,0 +1,78 @@
+(20261130, 'arm', 'mf_noise_1mm', 'adaptive', 130): success=False reason=aborted:time_limit declared=False depth=-2.46 tilt=0.03 yaw=2.88 cycle=26.39
+scenario: dist_tilt=0.79 az=134.3 grasp_tilt=0.00
+    0.200 state            APPROACH
+    1.610 state            ALIGN
+    1.732 attempt          #1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg
+    1.732 state            INSERT
+    3.928 state            DETECT: stall
+    4.962 conform          flat, rotation=(-0.27,+1.17) deg
+    4.962 touch_calibration mouth +0.94 mm below vision estimate
+    4.962 surface_alignment tilt corrected (-0.27,+1.17) deg
+    4.962 detect           surface_block [stall] depth=0.00 mm Fax=8.0 N Flat=(+0.0,+0.0) N CoP=(+0.00,+0.00) mm at (+0.00,-0.00) mm
+    4.962 hard_stop        #1 raw depth 0.94 mm, 1 at this depth, 0 known in the cavity
+    4.962 state            RECOVER: surface_block
+    5.234 recover          localizer -> probe (-1.25,-1.25) mm, P(entry)=0.08
+    5.234 state            ALIGN: retry 1
+    5.500 attempt          #2 probe=(-1.25,-1.25) mm yaw_corr=+0.0 deg
+    5.500 state            INSERT
+    6.850 state            DETECT: stall
+    7.118 conform          flat, rotation=(-0.01,-0.04) deg
+    7.118 surface_alignment tilt corrected (-0.01,-0.04) deg
+    7.118 detect           surface_block [stall] depth=-0.02 mm Fax=17.6 N Flat=(-0.4,+0.1) N CoP=(+0.00,+0.00) mm at (-1.24,-1.25) mm
+    7.118 hard_stop        #2 raw depth 0.92 mm, 2 at this depth, 0 known in the cavity
+    7.118 capture_probe    repeated flat stop at 0.92 mm: probing for the walls
+   10.002 capture_probe    wall reactions [0.1, 0.3] N at travel [1.52, 1.52] mm -> not captured
+   10.002 state            RECOVER: surface_block
+   10.228 recover          localizer -> probe (+1.25,+1.25) mm, P(entry)=0.15
+   10.228 state            ALIGN: retry 2
+   10.606 attempt          #3 probe=(+1.25,+1.25) mm yaw_corr=-0.0 deg
+   10.606 state            INSERT
+   11.972 state            DETECT: stall
+   13.616 conform          tipped, rotation=(+0.04,-3.89) deg
+   13.616 detect           surface_block [stall] depth=0.23 mm Fax=8.0 N Flat=(+0.0,+0.0) N CoP=(+3.03,+0.00) mm at (+1.26,+1.29) mm
+   13.616 state            RECOVER: surface_block
+   13.902 recover          localizer -> probe (+0.75,+1.25) mm, P(entry)=0.52
+   13.902 state            ALIGN: retry 3
+   14.172 attempt          #4 probe=(+0.75,+1.25) mm yaw_corr=-0.0 deg
+   14.172 state            INSERT
+   15.650 state            DETECT: stall
+   15.906 conform          flat, rotation=(-0.01,-0.01) deg
+   15.906 surface_alignment tilt corrected (-0.01,-0.01) deg
+   15.906 detect           surface_block [stall] depth=0.41 mm Fax=18.9 N Flat=(-0.3,+0.1) N CoP=(+0.00,+0.00) mm at (+0.45,+1.30) mm
+   15.906 hard_stop        #3 raw depth 1.35 mm, 1 at this depth, 0 known in the cavity
+   15.906 state            RECOVER: surface_block
+   16.258 recover          localizer -> probe (-0.25,+0.25) mm, P(entry)=0.07
+   16.258 state            ALIGN: retry 4
+   16.494 attempt          #5 probe=(-0.25,+0.25) mm yaw_corr=-0.0 deg
+   16.494 state            INSERT
+   17.850 state            DETECT: stall
+   18.128 conform          flat, rotation=(+0.02,+0.01) deg
+   18.128 surface_alignment tilt corrected (+0.02,+0.01) deg
+   18.128 detect           surface_block [stall] depth=0.00 mm Fax=17.1 N Flat=(-0.5,+0.1) N CoP=(+0.00,+0.00) mm at (-0.24,+0.25) mm
+   18.128 hard_stop        #4 raw depth 0.94 mm, 3 at this depth, 0 known in the cavity
+   18.128 state            RECOVER: surface_block
+   18.442 recover          localizer -> probe (+1.25,-2.50) mm, P(entry)=0.08
+   18.442 state            ALIGN: retry 5
+   18.786 attempt          #6 probe=(+1.25,-2.50) mm yaw_corr=-0.0 deg
+   18.786 state            INSERT
+   20.146 state            DETECT: stall
+   21.992 conform          tipped, rotation=(+3.89,-0.07) deg
+   21.992 detect           surface_block [stall] depth=-0.07 mm Fax=8.0 N Flat=(+0.0,-0.0) N CoP=(+0.00,-0.96) mm at (+1.26,-2.50) mm
+   21.992 state            RECOVER: surface_block
+   22.260 recover          localizer -> probe (+2.50,-1.25) mm, P(entry)=0.12
+   22.260 state            ALIGN: retry 6
+   22.532 attempt          #7 probe=(+2.50,-1.25) mm yaw_corr=-0.0 deg
+   22.532 state            INSERT
+   23.900 state            DETECT: stall
+   24.154 conform          flat, rotation=(+0.01,-0.07) deg
+   24.154 surface_alignment tilt corrected (+0.01,-0.07) deg
+   24.154 detect           surface_block [stall] depth=0.01 mm Fax=18.4 N Flat=(-0.4,+0.1) N CoP=(+0.00,+0.00) mm at (+2.50,-1.25) mm
+   24.154 hard_stop        #5 raw depth 0.95 mm, 4 at this depth, 0 known in the cavity
+   24.154 state            RECOVER: surface_block
+   24.476 recover          localizer -> probe (+1.25,+1.50) mm, P(entry)=0.14
+   24.476 state            ALIGN: retry 7
+   24.836 attempt          #8 probe=(+1.25,+1.50) mm yaw_corr=-0.0 deg
+   24.836 state            INSERT
+   26.202 abort            time_limit
+   26.202 state            FAILURE: time_limit
+   26.594 finish           success=False reason=time_limit

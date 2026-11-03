@@ -1,0 +1,304 @@
+# v0.2f h2 diagnosis: why C fails on Micro-Fit unseen grasp and on arm F/T drift
+
+(Written as REPORT.txt: writing REPORT.md was blocked.)
+
+All of this report is post hoc: it was decided after the heldout2 results
+(`results/heldout2_v0.2f`) were read. It is diagnosis only. No controller code changed, no reported
+run was made, nothing was tuned or selected. The counterfactual replays below change one setting or
+one sensor on a single named trial to test a mechanism; they are not fix candidates, and no value in
+them was searched for.
+
+Code (commit 6bdd4b4 and the commit that adds this file): `experiments/v02f_h2_trace.py` (replay with
+the true contact force and depth next to C's view), `experiments/v02f_h2_drift_axes.py` (each drift
+trial's drift direction in the controllers' frame, from its seed; no simulation),
+`experiments/v02f_h2_dev_tables.py` (development-seed tables from trials.csv and events),
+`experiments/trace_trial.py` (now knows the heldout2 conditions), `tests/test_v02f_h2_diagnosis.py`.
+Seed 20261207 is replayed only for trials that `results/heldout2_v0.2f/*/trials.csv` lists as C
+failures; the script refuses any other. D and F were replayed on the same named trial indices, for
+comparison.
+
+## Result
+
+1. Micro-Fit unseen grasp. The told 0.3 mm sigma is part of it, but not the main cause: C's search
+   stops moving. With the same sign, the unseen slip and the in-hand rotation put the true tip
+   0.82 mm from where C's in-hand estimate puts it; with opposite signs they cancel (0.02 mm). C
+   computes the centre of pressure (CoP) about its estimated tip, so a plug resting on one edge reads
+   a CoP 3.75-4.16 mm off centre, outside the plug face (half-width 3.43 mm + 0.3 mm margin). DETECT
+   then relabels the top-face block as an in-cavity jam (`partial_jam`), even at 0.3-0.5 mm depth.
+   RECOVER's jam branch tells the localizer the plug *entered* at that probe and retries from the
+   same place. The attempts repeat until the retry limit (gantry) or the time limit (arm). F's spiral
+   never uses the CoP or a prior: it passes over the offset and finds the hole by depth.
+2. F/T drift on the arm. Neither DETECT nor the bottoming signature is wrong: in all 6 traced bad
+   units the plug was at the floor (14.86-15.00 mm true) when C saw the bottoming force. VERIFY then
+   pulled it out. VERIFY holds a 1 N axial preload on the force reading for 2-4 s. When the zero has
+   drifted more than 1 N in the push-out direction since C's last tare, 1 N on the reading is about
+   0 N or a pull in truth, and the plug rises 0.6-1.8 mm during the wall probes. The wall probes
+   still pass (the walls are there 13-14 mm down), and nothing re-checks the depth before SUCCESS.
+   All 8 reported bad units have an axial drift of +0.19 to +0.30 N/s in the push-out direction.
+   A lateral drift does a second thing: the lateral admittance, which zeroes the lateral reading,
+   presses the plug on a wall; the wall probes then measure no free travel, and the wall-yaw check
+   fails a seated plug at every retry until the time limit. D runs no low-force phase after the
+   seat, so a 1-2 N error never becomes a pull. It happens only on the arm because C's contact moves
+   are slower there: C reaches the probes 5-8 s after its tare, against 2-4 s on the gantry, and
+   only on the arm does the error pass the 1 N preload.
+3. Both mechanisms reproduce on development seeds 2026 and 2027. Mode 1: all 24 C failures show the
+   CoP relabel and the jam loop, and all are same-sign trials. Mode 2: 6 C bad units, all on the
+   arm at 0.3 N/s, all with push-out axial drift; the 8 other C failures there all end with a
+   wall-yaw FAIL. Gantry: 0 C failures in 160 drift trials.
+4. Neither mode shows in the committed standard or latching data: no C bad unit and no same-probe
+   jam loop there. The jam loop does occur in the W2 `heldout` suite, by another route (below).
+
+## Mode 1: `h2_mf_grasp_unseen` (Micro-Fit, plug off in the fingers)
+
+### Traces (seed 20261207, named C failures)
+
+Traced: gantry trials 2, 9, 37 and arm trials 2, 4 of `h2_mf_grasp_unseen_2deg` (all same sign).
+The replays reproduce trials.csv (gantry 2: `aborted:retry_limit`, 7 retries, final depth -3.04 mm;
+arm 2: `aborted:time_limit`, final -2.78 mm; arm 4: `aborted:time_limit`, final 7.35 mm).
+
+Gantry trial 2 (slip -0.4 mm, rotation -2 deg; arm trial 2 is the same scenario and the same story,
+slower):
+
+- Attempt 1: C's view (0, 0) mm; truth (+0.68, -1.29) mm off the socket axis (vision error plus the
+  unseen tip offset). The plug stops on the top face. The conform settles flat and measures
+  (+0.85, -1.72) deg, which C folds into its socket-tilt estimate. This absorbs most of the in-hand
+  rotation; it is not the failure. CoP (+0.26, -0.28) mm: a surface block. The localizer moves the
+  probe 0.25 mm, to (-0.25, 0).
+- Attempt 2: the conform tips to the 4 deg limit. CoP (-0.04, -3.55) mm, still a surface block. The
+  probe moves to (-0.50, +0.25).
+- Attempts 3-8: CoP -3.78 to -4.04 mm in y, past the 3.73 mm face bound (`_surface_consistent`,
+  `surface_cop_margin_mm` = 0.3). DETECT logs "contact signature inconsistent with the top face:
+  treated as in-cavity jam" at a depth of 0.35-0.37 mm, far short of the 1.8 mm engage threshold.
+  The `partial_jam` branch of `_plan_correction` calls `localizer.update_entered(probe)`, adds the
+  lateral admittance offset (about 0: a tipped face gives no lateral force) and re-aims the tilt.
+  Each attempt starts within 0.05 mm of the last. One surface block in between (attempt 5) moved the
+  probe to (-0.50, +0.50); then the loop resumed. To the end, the true tip stayed 0.82-1.07 mm off
+  the axis in y.
+- Gantry trial 9: the first stop is already relabelled (CoP +3.96 mm), so the localizer never moves:
+  8 attempts at (-0.04, -0.01 to -0.03) mm. Gantry 37 and arm 4: the same loop from attempt 2.
+
+F on gantry trial 2: face contact at 2.03 s, then the spiral. It found the hole with a 0.30 mm push
+at (-0.54, +1.03) mm and seated at 6.07 s, with 0 retries. The needed correction was about
+(-0.68, +1.29) mm.
+
+### Which of the candidate causes
+
+Single-trial counterfactual replays, diagnosis only (`--seen-grasp`, `--cfg NAME=VALUE`):
+
+| Replay of C | gantry 2 | gantry 9 | gantry 37 | arm 2 | arm 4 | arm 37 |
+|---|---|---|---|---|---|---|
+| as reported | fail | fail | fail | fail | fail | fail |
+| in-hand estimate sees the true grasp | seated | seated | seated | seated | seated | not run |
+| `surface_cop_margin_mm` 0.3 -> 1.0 | seated (6 retries) | seated | seated | fail | not run | protective stop |
+| `min_prior_sigma_mm` 0.15 -> 1.0 (prior 1.3 mm) | seated | fail | seated | seated | not run | seated |
+
+- The in-hand estimate is the root cause. The unseen offset puts C's CoP reference point 0.8 mm off,
+  which pushes the edge CoP outside the face, and it adds 0.8 mm to the lateral error the search
+  must cover. With the true grasp seen, 5 of 5 replays seat.
+- The CoP relabel and the jam branch are what stop the search. Widening only the CoP margin seats 3
+  of 5 replays. On arm trial 2 C then reached the right probe, (-0.75, +1.25) mm, at attempt 5 but
+  still blocked there; the repeated blocks started the yaw search (+3 deg, then -3 deg), which used
+  up the time.
+- The search size from the told sigma contributes, as the heldout2 report guessed. C's prior sigma
+  is hypot(1.3 x 0.3 mm, 0) = 0.39 mm, and C moves 0.25-0.56 mm per block. The needed 1.1-1.5 mm
+  lies about 3-4 prior sigmas out. A wider prior seats 4 of 5 replays, but not gantry 9, where every
+  stop is relabelled and the localizer is never consulted.
+- The tilt from the in-hand rotation is not a separate cause. The first flat conform measures it
+  and folds it in. Its contribution is the 0.42 mm it moves the tip.
+- C is never told any in-hand uncertainty. No code in `defex/control` or `defex/recovery` reads
+  `grasp_xy_sigma_mm` or `grasp_rot_sigma_deg`. Telling C a larger grasp sigma would change nothing
+  without a design change.
+
+Why the sign matters (consistent with the heldout2 post-hoc counts; at 2 deg on each machine: same
+sign C 6 of 24 seated, opposite sign 16 of 16): opposite signs leave the tip 0.02 mm from the
+estimate, so the edge CoP stays inside the face and the search stays small.
+
+## Mode 2: `h2_ft_drift_0.3` on the arm
+
+### Traces (seed 20261207, named C failures)
+
+Traced: bad units 4, 12, 19 and 28; time-limit failures 3 and 25; protective stop 20; D on trial 12;
+F on trial 29. Each replay reproduces trials.csv (for example trial 12: false accept, 9.40 s,
+0 retries, final depth 13.05 mm).
+
+C's only tare in these trials is at 1.80 s, in free space just before INSERT. C re-tares at the ALIGN
+of every attempt, and these bad units were all first attempts. The "error" below is C's reading minus
+the true contact force along the socket axis.
+
+| Trial | at bottoming: true depth, error | VERIFY preload start, then probe start: true / read Fz | true depth at SUCCESS | final depth |
+|---|---|---|---|---|
+| 4 | 14.88 mm, +1.20 N | 4.58 / 6.12 N, then -0.48 / +1.05 N | 14.29 mm | 14.21 mm |
+| 12 | 14.86 mm, +1.38 N | 4.45 / 6.17 N, then 0.00 / +1.89 N | 13.23 mm | 13.05 mm |
+| 19 | 14.97 mm, +1.31 N | 4.78 / 6.10 N, then -0.17 / +1.33 N | 14.32 mm | 14.19 mm |
+| 28 | 14.97 mm, +1.22 N | 4.89 / 6.15 N, then -0.40 / +0.98 N | 14.47 mm | 14.40 mm |
+
+In each bad unit:
+
+- INSERT's bottoming signature fired at the floor (correct). DETECT called a seated candidate
+  (correct).
+- VERIFY's seat conform ran, then `preload`: `_hold_preload` drives the *read* axial force to
+  `verify_preload_n` = 1.0 N. With +1.3 to +1.9 N of error, that is -0.5 to 0 N in truth. During the
+  two wall probes and the centring (about 1.5 s) the error grows to +1.7 to +3.0 N and the plug
+  climbs. In trial 12 it rose from 15.00 to 13.23 mm.
+- The wall probes pass (reactions 2.0-3.1 N, both walls found), because a plug 13-14 mm deep is
+  still between the walls. The wall-yaw check passes. SUCCESS. No step after the probes compares the
+  encoder depth with the depth at bottoming.
+
+Which check passes wrongly? None of the three misreads a short plug. The plug was seated when the
+depth and the bottoming force were checked. VERIFY itself unseated it, and the wall probes cannot see
+depth. The assumption that breaks is that VERIFY's force reading is still zeroed: the 1 N preload and
+the 2 N wall threshold are both smaller than the error after 5-8 s of drift.
+
+The drift direction, from `v02f_h2_drift_axes` (arm `h2_ft_drift_0.3`, all 40 trials, post-hoc
+grouping, no simulation):
+
+| Axial drift (C's frame) | trials | C seated | C bad units | C other failures |
+|---|---|---|---|---|
+| push-out, > +0.1 N/s | 13 | 1 | 8 | 4 (2 time limit, 2 protective stop) |
+| within +/-0.1 N/s | 16 | 12 | 0 | 4 (time limit) |
+| into the socket, < -0.1 N/s | 11 | 8 | 0 | 3 (time limit) |
+
+All 8 bad units have +0.19 to +0.30 N/s. D seated 40 of 40 across the three groups; F and I seated 39.
+
+The other two routes from the same drift:
+
+- Time limit (11 trials; traced 3 and 25). A lateral drift (0.14-0.30 N/s in the plane) makes the
+  lateral admittance, which zeroes the lateral reading, press the plug on the walls with a true force
+  the size of the drift. Trial 25 at the probes: read (-0.03, +0.09) N, true (-1.83, -1.35) N. Both
+  probes stop at once (0.25-0.27 mm of setpoint travel). The measured free travel between the walls
+  is 0.001-0.07 mm against the 0.293 mm needed, and `_wall_yaw_verdict` FAILs a plug seated at
+  14.72 mm true. RECOVER retries, each retry ends the same way, and the time limit stops it with the
+  plug retracted above the mouth. In trial 3 the axial drift is into the socket (-0.19 N/s). There
+  the true preload is 2.4-2.8 N instead of 1 N, which adds floor friction to the probes.
+- Protective stop (2 trials; traced 20). The force drift, acting at the 50-60 mm lever from the
+  sensor to the tip, reads as a tilt torque (DETECT CoP (+6.78, -1.58) mm on a seated plug). The seat
+  conform turns the plug towards it, to 3.4 deg, and the wall reaction trips the 0.6 N m stop.
+
+Why D does not suffer. D tares at the same time (1.80 s). But D declares the seat as soon as the
+encoder depth window is met at 0.8 x its insertion force or more (5-8 N on the arm), and the trial
+ends there. In trial 12, D seated at 4.97 s, true depth 14.96 mm, with a read error of +1.26 N. D has
+no low-force phase after the seat and no lateral probes, so a 1-2 N error only changes how hard D
+pushes. F's one bad unit (trial 29, axial +0.28 N/s) takes F's own route: during the free descent the
+false force reading passed F's contact threshold. F took the still-sliding plug for the floor at
+14.43 mm true, and it ended at 14.498 mm, 0.002 mm short of the limit.
+
+J (F's insertion plus C's VERIFY) shows how much of this comes from VERIFY. J passed 5 bad units in
+the same condition, all with axial drift above +0.1 N/s. It also had 9 `aborted:verify_failed`
+results, which include trials 3, 6, 9, 25 and 33, where C hit the time limit (heldout2 trials.csv,
+post hoc).
+
+Why only the arm, and only at 0.3 N/s. C's contact speeds are scaled down on the arm. INSERT took
+about 4.1 s on the arm against 1.8 s on the gantry, and VERIFY 2.4-3.4 s against about 1.9 s. At the
+probes the error is about 0.3 N/s x 5-7 s = 1.5-2.1 N on the arm (times the axial share of the
+drift), against at most about 1 N on the gantry. At 0.1 N/s the arm error stays under about 0.8 N,
+and C seated 40 of 40. In a gantry trace on development seed 2026 (trial 12) the axial error at the
+probes was -0.6 to -1.4 N, and every phase passed.
+
+## Development seeds 2026 and 2027
+
+Runs: `results/v0.2f_h2_diagnosis/dev_{2026,2027}_{gantry,arm}` (C, D, F, I, J; 20 trials per
+condition; `--suite heldout2 --conditions h2_ft_drift_0.1,h2_ft_drift_0.3,h2_mf_grasp_unseen_1deg,
+h2_mf_grasp_unseen_2deg`; run from 6bdd4b4, `git_dirty` false). Tables:
+`PYTHONPATH=. python -m experiments.v02f_h2_dev_tables results/v0.2f_h2_diagnosis/dev_*`.
+Counts below are seated of 20, or of the sign group.
+
+Mode 1, Micro-Fit unseen grasp:
+
+| Seed, machine, level | same sign: C / D / F / I / J | opposite sign: C / D / F / I / J | C failures: jam loop and CoP relabel |
+|---|---|---|---|
+| 2026 gantry 1 deg | 9/9: 9 9 9 9 9 | 11/11: 11 10 11 11 11 | 0 failures |
+| 2026 gantry 2 deg | 11: 4 10 11 11 11 | 9: 9 6 9 9 9 | 7 of 7 (retry limit) |
+| 2026 arm 1 deg | 9: 9 8 9 9 9 | 11: 11 11 11 11 11 | 0 failures |
+| 2026 arm 2 deg | 11: 7 5 10 10 10 | 9: 9 3 9 9 9 | 4 of 4 (time limit) |
+| 2027 gantry 1 deg | 14: 10 14 14 14 14 | 6: 6 6 6 6 6 | 4 of 4 (retry limit) |
+| 2027 gantry 2 deg | 11: 6 10 11 11 11 | 9: 9 8 9 9 9 | 5 of 5 (retry limit) |
+| 2027 arm 1 deg | 14: 13 13 14 14 14 | 6: 6 5 6 6 6 | 1 of 1 (time limit) |
+| 2027 arm 2 deg | 11: 8 7 11 11 11 | 9: 9 6 9 9 9 | 3 of 3 (time limit) |
+
+The mechanism reproduces. All 24 C failures are in same-sign trials, all end above the mouth, and
+every one shows both the CoP relabel and three or more same-probe jam retries (events.json.gz). With
+opposite signs C seated 80 of 80. F failed 1 trial in the 160 shown.
+
+Mode 2, F/T drift:
+
+| Seed, machine, level | seated C / D / F / I / J | bad units C / J | C bad units with push-out axial drift | other C failures with a wall-yaw FAIL |
+|---|---|---|---|---|
+| 2026 gantry 0.1 and 0.3 | 20 20 20 20 20 (both) | 0 / 0 | - | - |
+| 2027 gantry 0.1 and 0.3 | 20 20 20 20 20 (both) | 0 / 0 | - | - |
+| 2026 arm 0.1 | 20 20 20 20 20 | 0 / 0 | - | - |
+| 2026 arm 0.3 | 11 20 20 20 14 | 3 / 3 | 3 of 3 (of 4 such trials) | 6 of 6 |
+| 2027 arm 0.1 | 20 20 20 20 20 | 0 / 0 | - | - |
+| 2027 arm 0.3 | 15 20 19 19 13 | 3 / 2 | 3 of 3 (of 4 such trials) | 2 of 2 |
+
+The mechanism reproduces, on the arm only and at 0.3 N/s only. C's 6 bad units ended at 13.65-14.34
+mm. Traces of one per seed (arm 0.3, seed 2026 trial 0 and seed 2027 trial 4) show the same lift:
+true depth 14.97/14.89 mm at bottoming, 15.00 mm at the VERIFY preload, 14.06/13.81 mm at SUCCESS,
+with a read axial error of +2.1 N at SUCCESS.
+
+## Can either mode occur in the standard or latching suites?
+
+From the committed `results/benchmark_v0.2e` trials.csv and events.json.gz (post hoc):
+
+- Mode 2 needs an F/T error that builds up after C's tare. In standard, latching and latch_spread
+  the bias is constant and C tares it out at every attempt. The residual axial error in the traces
+  is 0.1-0.3 N (filtering at high forces). C passed 0 bad units in 7,400 good-part trials (v0.2e
+  report). C's 4,734 declared successes on the housing part (standard and heldout) all end within
+  0.30 mm of the floor: 16 end below 14.9 mm, 1 below 14.7 mm (arm standard `noise_2mm` trial 14,
+  14.70 mm), none below 14.5 mm. So C's VERIFY did not measurably lift seated plugs there. A real
+  sensor does drift, so this protection comes from the simulation, not from C.
+- Mode 1, the CoP relabel: 4 C trials in standard (3 gantry, 1 arm; 5 events), none in latching or
+  latch_spread. None of them looped, and none failed.
+- The same-probe jam loop (three or more consecutive "jam: re-aim" retries from the same probe): no
+  C trial in standard, latching or latch_spread on either machine, except 1 in arm latching
+  (`mf_stubbed_terminal`, a bad part) and 1 in arm latch_spread (`mf_terminal_max`). In the W2
+  `heldout` suite it ended 17 of 93 gantry and 18 of 116 arm C failures, 31 of them in
+  `heldout_mischar_2mm` (true vision sigma 2 mm, told 0.5 mm). There the camera's depth error, not
+  the CoP, makes a top-face stop at "3.69 mm" read as engaged, and the same jam branch keeps the same
+  probe. This is the same RECOVER weakness, reached by another route.
+
+## What a real cell would do
+
+Integrator settings that a fair comparison would grant to every controller:
+
+- Re-zero the F/T in free space as late as possible before contact. C (at the ALIGN of every
+  attempt) and D-J (at TARE) already do this, at about 1.8 s. It does not help here, because the
+  error builds during contact, after the last moment in free space. A sensor with less drift
+  (warm-up, temperature-compensated gauges, a cable dressed so its drag does not change) helps all
+  of them.
+- An in-hand camera, or fingers that centre the plug. This removes mode 1's cause for every
+  controller: D and F aim with the in-hand estimate too. In the replays C then seated 5 of 5.
+- A characterized in-hand accuracy, given to every controller. F and D would not use it (their
+  spiral size is fixed), and C does not use it today either.
+
+C design changes (not implemented; for a later, pre-registered round):
+
+- Mode 2: in VERIFY, do not let the preload loop withdraw the plug. For example, hold the encoder
+  depth found at bottoming during the probes (a position hold with a force ceiling) instead of a
+  force target, or cap the upward travel at about 0.1 mm. Re-check the encoder depth against the
+  bottoming depth just before SUCCESS, and re-seat or fail if it rose. C can also estimate the drift
+  at no extra cost: it tares before every attempt, so two tares give a drift rate. The same depth
+  re-check would fix J; D-I do not need it.
+- Mode 1: a stop short of the engage depth that is relabelled only by its CoP should update the
+  localizer as a block (with the unclean CoP sigma, or with no CoP), not as an entry. Widen the CoP
+  face bound and the localizer prior by a told in-hand uncertainty, once C is told one. After two
+  attempts from the same probe without progress, fall back to a bounded spiral, as F does.
+
+Fairness: the depth re-check and the jam-branch fix are C changes that D-F cannot use. An in-hand
+camera and a lower-drift sensor are integrator settings, for all controllers.
+
+## Limits
+
+- Traces on the reported seed: 5 of the 36 mode-1 failures at 2 deg; 4 of the 8 bad units and 3 of
+  the 11 other mode-2 failures. On the development seeds the event-log counts cover every failure.
+- The counterfactual replays are single trials, chosen because they failed. They show what each
+  factor does in those trials, not a rate.
+- The drift is mapped to the socket frame on the assumption that the F/T axes are the estimated
+  socket axes at the insertion pose (identity grasp rotation, sensor parallel to the TCP). The traced
+  axial errors agree with it to within about 0.2 N (trial 12: +0.298 N/s x 4.1 s = 1.22 N predicted,
+  1.38 N read at bottoming, which includes the filtered contact transient).
+- The drift is linear, and its rates are assumed (heldout2 PREREGISTRATION.md).
+- No events file exists for the reported heldout2 run, so on seed 20261207 the time-limit route was
+  confirmed only in the traced trials.
+- Committed per development run: trials.csv, summary.json, summary.csv, config.json, and
+  events.json.gz (about 30 KB each). The events files are needed for the jam-loop, CoP-relabel and
+  wall-yaw counts in the development-seed tables.

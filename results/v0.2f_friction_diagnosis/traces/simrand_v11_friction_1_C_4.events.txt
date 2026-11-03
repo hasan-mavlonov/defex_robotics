@@ -1,0 +1,71 @@
+simrand variant 11 cone pyramidal impratio 18.8906 solreffriction 0.0123784 s seed 20261205 friction_1 adaptive #4: success=False reason=aborted:time_limit depth=-1.77 mm retries=6
+    0.200 state              APPROACH
+    1.674 state              ALIGN
+    1.796 attempt            #1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg
+    1.796 state              INSERT
+    3.434 state              DETECT: stall
+    5.778 conform            flat, rotation=(-0.28,-1.21) deg
+    5.778 touch_calibration  mouth +0.96 mm below vision estimate
+    5.778 surface_alignment  tilt corrected (-0.28,-1.21) deg
+    5.778 detect             surface_block [stall] depth=0.00 mm Fax=8.0 N Flat=(-0.0,+0.0) N CoP=(+0.00,+0.00) mm at (-0.07,+0.02) mm
+    5.778 state              RECOVER: surface_block
+    6.068 recover            localizer -> probe (+0.25,-0.25) mm, P(entry)=0.04
+    6.068 state              ALIGN: retry 1
+    6.242 attempt            #2 probe=(+0.25,-0.25) mm yaw_corr=+0.0 deg
+    6.242 state              INSERT
+    7.494 state              DETECT: stall
+    9.836 conform            flat, rotation=(+0.03,-0.14) deg
+    9.836 touch_calibration  higher support found: mouth +0.64 mm (was +0.96)
+    9.836 surface_alignment  tilt corrected (+0.03,-0.14) deg
+    9.836 detect             surface_block [stall] depth=0.00 mm Fax=8.0 N Flat=(-0.0,-0.0) N CoP=(+0.00,+0.00) mm at (+0.26,-0.28) mm
+    9.836 state              RECOVER: surface_block
+   10.126 recover            localizer -> probe (-2.75,+2.75) mm, P(entry)=0.04
+   10.126 state              ALIGN: retry 2
+   10.554 attempt            #3 probe=(-2.75,+2.75) mm yaw_corr=-0.0 deg
+   10.554 state              INSERT
+   11.806 state              DETECT: stall
+   12.638 conform            flat, rotation=(+0.48,+0.75) deg
+   12.638 touch_calibration  higher support found: mouth +0.38 mm (was +0.64)
+   12.638 surface_alignment  tilt corrected (+0.48,+0.75) deg
+   12.638 detect             surface_block [stall] depth=0.00 mm Fax=8.0 N Flat=(+0.2,-0.0) N CoP=(+0.00,+0.00) mm at (-2.66,+2.69) mm
+   12.638 state              RECOVER: surface_block
+   12.926 recover            localizer -> probe (+3.00,-3.00) mm, P(entry)=0.07
+   12.926 state              ALIGN: retry 3
+   13.606 attempt            #4 probe=(+3.00,-3.00) mm yaw_corr=-0.0 deg
+   13.606 state              INSERT
+   14.942 state              DETECT: stall
+   15.246 conform            flat, rotation=(-0.01,-0.14) deg
+   15.246 surface_alignment  tilt corrected (-0.01,-0.14) deg
+   15.246 detect             surface_block [stall] depth=-0.03 mm Fax=7.5 N Flat=(+1.0,+0.3) N CoP=(+0.00,+0.00) mm at (+3.05,-3.01) mm
+   15.246 state              RECOVER: surface_block
+   15.532 recover            localizer -> probe (-5.25,-3.00) mm, P(entry)=0.18
+   15.532 state              ALIGN: retry 4
+   16.230 attempt            #5 probe=(-5.25,-3.00) mm yaw_corr=-0.0 deg
+   16.230 state              INSERT
+   17.584 state              DETECT: stall
+   17.902 conform            flat, rotation=(-0.00,+0.05) deg
+   17.902 surface_alignment  tilt corrected (-0.00,+0.05) deg
+   17.902 detect             surface_block [stall] depth=0.02 mm Fax=7.9 N Flat=(-1.0,+0.0) N CoP=(+0.00,+0.00) mm at (-5.15,-3.03) mm
+   17.902 state              RECOVER: surface_block
+   18.190 recover            localizer -> probe (+3.75,+3.25) mm, P(entry)=0.14
+   18.190 state              ALIGN: retry 5
+   19.064 attempt            #6 probe=(+3.75,+3.25) mm yaw_corr=-0.0 deg
+   19.064 state              INSERT
+   20.402 state              DETECT: stall
+   20.670 conform            flat, rotation=(+0.01,-0.03) deg
+   20.670 surface_alignment  tilt corrected (+0.01,-0.03) deg
+   20.670 detect             surface_block [stall] depth=-0.03 mm Fax=7.7 N Flat=(-0.6,+0.3) N CoP=(+0.00,+0.00) mm at (+3.79,+3.19) mm
+   20.670 state              RECOVER: surface_block
+   20.956 recover            localizer -> probe (-1.25,+1.25) mm, P(entry)=0.20
+   20.956 state              ALIGN: retry 6
+   21.460 attempt            #7 probe=(-1.25,+1.25) mm yaw_corr=-0.0 deg
+   21.460 state              INSERT
+   22.988 state              DETECT: stall
+   23.488 conform            plug slid into the lead-in: resuming insertion
+   23.488 state              INSERT
+   26.044 state              DETECT: bottomed
+   26.096 detect             seated_candidate [bottomed] depth=14.88 mm Fax=6.9 N Flat=(+0.5,+0.1) N CoP=(-5.86,-4.11) mm at (-1.06,+0.66) mm
+   26.096 state              VERIFY
+   26.202 abort              time_limit
+   26.202 state              FAILURE: time_limit
+   27.480 finish             success=False reason=time_limit

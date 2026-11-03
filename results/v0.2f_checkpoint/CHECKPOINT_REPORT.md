@@ -87,9 +87,9 @@ further out (median about 3.9-4.0 deg, up to 4.87 deg; POST HOC, from trials.csv
 
 Read POST HOC (`results/v0.2f_evidence/CONCENTRATION.md` (d)):
 - most of C's bad-unit edge, and its heldout2 tilt and yaw edge, is its VERIFY step;
-- on standard success, VERIFY accounts for about half of C's gantry lead over F (23 of
-  45, 35 of 58 and 30 of 59 net trials on the three seeds) and less than half of its arm
-  lead (11 of 38, 17 of 34, 12 of 40). The rest is C's own insertion.
+- on standard success, VERIFY accounts for about half of C's gantry lead over F (net trials
+  35 of 58, 30 of 59 and 23 of 45 on seeds 20261123, 20261124 and 20261130) and less
+  than half of its arm lead (17 of 34, 12 of 40, 11 of 38). The rest is C's own insertion.
 
 These runs do not decide whether the product is C, or a check sold on top of a
 conventional cell.

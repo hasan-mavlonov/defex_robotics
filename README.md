@@ -12,22 +12,231 @@ verifies the result before it declares success.
 Everything here runs in MuJoCo with a real socket cavity, bounded actuators and
 noisy sensors, on two machines: a gantry fixture and a UR5e arm (MuJoCo
 Menagerie). The first results section comes from
-[`results/benchmark_v0.2d`](results/benchmark_v0.2d). Every other benchmark number
-in this README comes from the files in
-[`results/benchmark_v0.2c`](results/benchmark_v0.2c) unless it is marked as
-benchmark_v0.2d, benchmark_v0.2b ([`results/benchmark_v0.2b`](results/benchmark_v0.2b)),
-benchmark_v0.2a ([`results/benchmark_v0.2a`](results/benchmark_v0.2a)), V0.1
-([`results/benchmark_v0.1`](results/benchmark_v0.1)) or a development
-measurement. The physics behavior is pinned by the test suite (see
-[Validation](#validation)). This is a research prototype: it has not been
+[`results/benchmark_v0.2e`](results/benchmark_v0.2e), the two earlier seeds on the
+v0.2d code, the evidence analysis in
+[`results/v0.2f_evidence`](results/v0.2f_evidence) and the clean held-out test in
+[`results/heldout2_v0.2f`](results/heldout2_v0.2f). The sections after it are earlier
+benchmarks, kept as the record of what was claimed then: benchmark_v0.2d
+([`results/benchmark_v0.2d`](results/benchmark_v0.2d)), benchmark_v0.2c
+([`results/benchmark_v0.2c`](results/benchmark_v0.2c)), benchmark_v0.2b
+([`results/benchmark_v0.2b`](results/benchmark_v0.2b)), benchmark_v0.2a
+([`results/benchmark_v0.2a`](results/benchmark_v0.2a)) and V0.1
+([`results/benchmark_v0.1`](results/benchmark_v0.1)). Each number names its run or is
+marked as a development measurement. The physics behavior is pinned by the test suite
+(see [Validation](#validation)). This is a research prototype: it has not been
 validated on hardware (see [Limitations](#assumptions-and-limitations)).
-The method sections below describe the v0.2d code, which benchmark_v0.2d ran and
-which differs from the code benchmark_v0.2c ran (see
-[The controllers](#the-controllers)). The code on branch `v0.2e/integration` adds
-three fixes on top of it (simulator reset, H/I pull retry rule version 5, C's
-tilt-check force guard), which benchmark_v0.2e ran.
+The method sections below describe the v0.2e code (frozen at ddd0d34), which
+benchmark_v0.2e and heldout2 ran. It is the v0.2d code plus three fixes: a simulator
+reset, H and I's pull retry rule version 5, and a force guard on C's tilt check,
+validated in [`results/v0.2e_validation`](results/v0.2e_validation/REPORT.md) (see
+[The controllers](#the-controllers)).
 
-## Results: benchmark_v0.2d, two machines, the same 35.2 N push for every cell
+## Current results: benchmark_v0.2e on three seeds, and heldout2
+
+Simulation only. POST HOC marks an analysis chosen after the results were seen; it
+explains the pre-registered verdicts and does not replace them. No p-value is pooled
+across seeds or corrected for multiple comparisons. The stop condition holds: a fair
+baseline matches or beats C on 6 of the 8 benchmark_v0.2e cells, and Hasan decides
+how the pitch changes.
+
+**benchmark_v0.2e** is pre-registered
+([`PREREGISTRATION.md`](results/benchmark_v0.2e/PREREGISTRATION.md)). It ran seed
+20261130 on code ddd0d34: 96,000 paired trials, ten controllers, four suites, two
+machines. Full report:
+[`results/benchmark_v0.2e/REPORT.md`](results/benchmark_v0.2e/REPORT.md); tables in
+[`HEADLINE_TABLES.md`](results/benchmark_v0.2e/HEADLINE_TABLES.md). The fair baselines
+are D, E, F, H and I. J (F's insertion plus C's VERIFY) is not one.
+
+| Machine, suite | C | Best fair baseline | C-only / other-only | p | Verdict | Bad units passed, C / I / J | Good units/h, C / I / J |
+|---|---|---|---|---|---|---|---|
+| gantry, standard | 99.1% | F/I 96.8% | 53 / 8 | < 1e-6 | C ahead | 0 / 32 / 0 of 2,000 | 601 / 1,100 / 643 |
+| gantry, latching good parts | 97.5% | F 98.8% | 6 / 14 | 0.12 | a fair baseline matches C | 0 / 0 / 0 of 600 | 449 / 498 / 498 |
+| gantry, mis-characterized vision | 81.4% | F/I 83.8% | 48 / 60 | 0.29 | a fair baseline matches C | 0 / 37 / 1 of 500 | 303 / 478 / 377 |
+| gantry, latch_spread good parts | 100.0% | I 100.0% | 0 / 0 | 1 | a fair baseline matches C | 0 / 0 / 0 of 600 | 526 / 604 / 623 |
+| arm, standard | 98.1% | F/I 96.2% | 54 / 16 | 5.9e-6 | C ahead | 0 / 32 / 0 of 2,000 | 387 / 593 / 381 |
+| arm, latching good parts | 92.0% | F 95.2% | 18 / 37 | 0.014 | **C below F** | 0 / 3 / 1 of 600 | 280 / 320 / 322 |
+| arm, mis-characterized vision | 76.8% | F/I 78.4% | 52 / 60 | 0.51 | a fair baseline matches C | 0 / 34 / 0 of 500 | 200 / 306 / 212 |
+| arm, latch_spread good parts | 99.5% | I 99.8% | 0 / 2 | 0.5 | a fair baseline matches C | 0 / 0 / 0 of 600 | 344 / 394 / 395 |
+
+Good units per hour count 0 s per protective stop. C, G, H, I and J passed 0 of 2,200
+deliberately bad parts (Wilson 95% upper bound 0.17%); D passed 1,275 and F 1,510.
+Over all 7,400 good-part trials, unseated plugs passed as good: C 0 (upper bound
+0.05%), G 1, J 2, H 101, I 138, D 136, F 178. G's one is an arm latching plug at
+3.01 deg of tilt that its tilt check passed. C's drop on gantry mis-characterized
+vision and arm latching comes from the seed, not the fixes: the same trials rerun on
+the v0.2d code gave identical rows
+([`v0.2e_postrun_check`](results/v0.2e_postrun_check/REPORT.md), not
+pre-registered).
+
+**Three seeds.** benchmark_v0.2d (seed 20261123) and its replication (20261124) ran
+the v0.2d code (42df5c8). On all three seeds, C is ahead of every fair baseline only
+on `standard`, on both machines: C-only / I-only gantry 60/2, 62/3, 53/8 and arm
+51/17, 51/11, 54/16, with p < 1e-4 on each seed. A fair baseline matches or beats C
+on every other cell on every seed, except gantry mis-characterized vision on seed
+20261123 (C ahead, p = 0.044), which did not replicate
+([`SEEDS.md`](results/v0.2f_evidence/SEEDS.md)). On every seed C passed no bad
+unit and no bad part, and made fewer good units per hour than F on `standard`
+(gantry 608, 611, 601 against 1,128, 1,096, 1,100).
+
+**Where C's standard lead and its zero bad units come from (POST HOC,
+[`results/v0.2f_evidence/REPORT.txt`](results/v0.2f_evidence/REPORT.txt)).**
+
+* **Three high-camera-error conditions.** The trials C seats and I does not are in
+  noise_1mm, noise_2mm (camera sigma 1 and 2 mm) and generalization_combined (0.8 mm
+  plus a 0.8 mm bias): gantry 60 of 60, 62 of 62, 53 of 53; arm 49 of 51, 49 of 51,
+  53 of 54 (the rest are generalization_tight). In the nominal (0.3 mm), noise_0mm and noise_0.5mm conditions, C and I
+  seat exactly the same trials on every seed and both machines
+  ([`PERCOND.md`](results/v0.2f_evidence/PERCOND.md)).
+* **More than half of those wins are I's bad units.** On seed 20261130, 30 of 53
+  (gantry) and 30 of 54 (arm). I's 32 gantry standard bad units are 14.38-14.98 mm
+  deep with 3.00-5.53 deg of yaw or tilt: just past the assumed 3 deg spec
+  ([`BAD_UNITS.md`](results/v0.2f_evidence/BAD_UNITS.md)).
+* **The bad-unit gap is C's VERIFY.** J runs F's insertion, then C's VERIFY, which
+  squares the plug to the floor and centres its yaw. J passed 3, 2 and 2 bad units on
+  the three seeds, against F's 197, 176 and 178. C's insertion adds a smaller edge
+  over J (C-only / J-only on standard, seed 20261130: gantry 32/10, arm 43/16). No fair
+  baseline has a seat-and-align step; that is an open fairness item.
+* **The 3 deg spec matters (POST HOC rescoring, seed 20261130 only).** An exact
+  replay (6,000 rows, identical to the benchmark) allowed rescoring at other yaw and
+  tilt limits ([`TOLERANCE.md`](results/v0.2f_evidence/TOLERANCE.md)). At 4 and 5 deg,
+  C-only / I-only on standard is 31/10 and 26/10 on the gantry (p = 0.0015, 0.011),
+  and 30/17 and 27/18 on the arm (p = 0.079, 0.23). I's bad units fall from 32 to 8
+  and 3 (gantry) and from 32 to 7 and 3 (arm); C's stay at 0. At 2 deg the lead widens
+  (122/2, 119/7) and C passes 3 and 1.
+* **C loses where it runs out of retries or time.** On all three seeds I seats more
+  than C on heldout_worst_case and the 1.5 mm hand-eye bias (both machines), arm
+  friction_1 and gantry latching mf_noise_1mm.
+* **C's slow tail is its retries.** On gantry standard C's p95 is 1.63 x its median
+  (target 1.5); over the successes that did not retry it is 1.11. VERIFY costs C 1.89 s
+  of its 2.94 s mean extra cycle over F there
+  ([`PHASES.md`](results/v0.2f_evidence/PHASES.md)).
+
+**heldout2: a clean held-out test.** The `heldout` suite was used in W4 development
+([`results/w4_development/REPORT.md`](results/w4_development/REPORT.md), lines 7-10),
+so it is no longer out of sample. heldout2 is five new families that no one had
+developed against. Each is one error no sensor reports, on nominal vision. It is
+pre-registered
+([`PREREGISTRATION.md`](results/heldout2_v0.2f/PREREGISTRATION.md)) and ran seed
+20261207 on the frozen ddd0d34 controllers: 8,000 paired trials, 40 per condition
+([`REPORT.txt`](results/heldout2_v0.2f/REPORT.txt),
+[`HELDOUT2_TABLES.md`](results/heldout2_v0.2f/HELDOUT2_TABLES.md)).
+
+| Family (80 paired trials per cell) | gantry: C vs best fair, p | arm: C vs best fair, p |
+|---|---|---|
+| unseen receptacle tilt, 2 and 3 deg | 100% vs E 92.5%, 0.031: C ahead | 100% vs E 85.0%, 0.00049: C ahead |
+| unseen receptacle yaw, 2.5 and 4 deg | 100% vs D 37.5%, < 1e-6: C ahead | 97.5% vs F 37.5%, < 1e-6: C ahead |
+| F/T zero drift, 0.1 and 0.3 N/s | 100% vs D 100%, 1: matches | 76.2% vs D 100%, 3.8e-6: **C below D** |
+| Micro-Fit tighter than drawn | 95.0% vs F 88.8%, 0.12: matches | 93.8% vs F 80.0%, 0.0034: C ahead |
+| Micro-Fit unseen grasp offset | 75.0% vs F 98.8%, 3.8e-6: **C below F** | 76.2% vs F 95.0%, 0.00073: **C below F** |
+| whole suite (400) | 94.0% vs F 83.2%, 2.4e-6: C ahead | 88.8% vs F 79.2%, 0.00037: C ahead |
+
+* C is ahead in 5 of 10 family cells, matched in 2 and below in 3. The pre-registered
+  expectation ("matches in most cells") was wrong. Most of the whole-suite lead comes
+  from the yaw family.
+* On unseen tilt and yaw, F's and I's plugs go to full depth still rotated. J seats
+  96-100% there, so most of C's lead there likely comes from VERIFY (POST HOC).
+* **C passed 8 bad units**, all on the arm at 0.3 N/s drift (H 0, I 1; p = 0.0078 and
+  0.016). They are C's first in a reported run since Checkpoint 2. A POST HOC trace
+  ([`results/v0.2f_h2_diagnosis/REPORT.txt`](results/v0.2f_h2_diagnosis/REPORT.txt))
+  found the mechanism. The plug was at the floor when C saw the bottoming force.
+  VERIFY then holds a 1 N preload on the *read* axial force. With more than 1 N of
+  push-out drift since C's last tare, that is about 0 N or a pull in truth, and the
+  plug rose 0.6-1.8 mm during the wall probes. Nothing re-checks depth before SUCCESS.
+  In the other suites the F/T bias is constant and tared out, so C's zero bad units
+  there rely partly on that simulator assumption.
+* **On the unseen grasp offset (POST HOC trace),** the offset moves C's
+  centre-of-pressure reference 0.8 mm. A plug resting on one edge then reads as jammed
+  inside the cavity, and C's jam branch retries from the same probe until the retry or
+  time limit. F's spiral does not use the centre of pressure. All 24 C failures on
+  development seeds 2026 and 2027 show the same loop.
+* G gave no measurable gain in any cell. One seed and 40 trials per condition: a
+  "matches" verdict here is weak evidence of equality.
+
+**Rig plan.** Nothing has been bought. [`hardware/TEST_PROTOCOL.md`](hardware/TEST_PROTOCOL.md)
+fixes the rig test: C, I, J and F (plus A, optionally H) on a housing-only part and a
+Micro-Fit 3.0, a jig that sets each trial's socket pose, and a measured final plug
+pose. Trial counts come from [`hardware/RIG_POWER.md`](hardware/RIG_POWER.md): 100 per
+condition. On the housing-only part, at the simulated rates, C against I needs 70-100
+paired trials in all for 80% power on success and 90-100 on bad units, so 400 per
+controller covers it. On Micro-Fit good parts it would take 780-1,200 pairs (gantry)
+or 7,800 or more (arm), so the rig reports rates only there. The simulation's
+predictions for these conditions are frozen
+([`results/v0.2f_rig_predictions`](results/v0.2f_rig_predictions/REPORT.txt), seed
+20261201, code ddd0d34). At 50 trials per condition, housing-only C seats 194/200
+against F/I 175/200 on the gantry and 190/200 against 168/200 on the arm. Its bad units
+are 0/200 against 13/200 and 18/200. <!-- RIGPRED: update to 100 --> The latch-model
+fitter for rig force-depth curves fails its own synthetic rule on hook stiffness and
+has not seen a real curve
+([`results/v0.2f_latch_fit/REPORT.txt`](results/v0.2f_latch_fit/REPORT.txt)).
+
+## What we can claim / what we cannot claim yet
+
+Simulation only. Each claim gives its scope. POST HOC parts are analyses chosen after
+the results were seen.
+
+**Can claim:**
+
+* **On `standard`, C seats more housing-only connectors than every fair baseline,** on
+  both machines and on all three seeds (seed 20261130: gantry 99.1% against 96.8%, arm
+  98.1% against 96.2%; `results/benchmark_v0.2e`). Scope (POST HOC,
+  `results/v0.2f_evidence`):
+  - The lead is in the 1-2 mm camera-error conditions (noise_1mm, noise_2mm) and
+    generalization_combined.
+  - In nominal, noise_0mm and noise_0.5mm (camera sigma 0.3, 0 and 0.5 mm), C and I
+    seat exactly the same trials on every seed.
+  - More than half of the lead is trials where I passed an out-of-tolerance plug.
+  - Under a looser seating spec the lead shrinks: on the arm it is not significant at
+    4 deg (POST HOC rescoring, seed 20261130 only).
+* **C passed no unseated good part as good in 7,400 good-part trials on each of the
+  three seeds** (Wilson 95% upper bound 0.05% per seed). H passed 101-118 and I
+  138-161. Scope:
+  - The gap comes from C's VERIFY, not C's insertion. J, F's insertion plus C's
+    VERIFY, passed 2-3. Fair baselines have no seat-and-align step; that is an open
+    fairness item.
+  - It rests on an assumed 3 deg yaw and tilt spec. I's bad units sit just past it, and
+    at 4 and 5 deg they fall from 32 to 8 and 3 (gantry standard; POST HOC rescoring,
+    seed 20261130 only).
+  - It rests partly on the simulator's constant, tared-out F/T bias. Under F/T drift
+    on the arm (heldout2), C passed 8 of the 40 trials at 0.3 N/s, because VERIFY's
+    force-target preload lifted seated plugs (POST HOC trace).
+  - <!-- PENDING: tilt diagnosis -->
+* **On heldout2, a clean held-out test, C seats more than every fair baseline on unseen
+  receptacle tilt and yaw** on both machines, and on the tighter Micro-Fit on the arm.
+  Scope: one seed and 80 trials per cell. J matches C on tilt and yaw, so VERIFY likely
+  carries that lead (POST HOC).
+* **The comparisons are paired, pre-registered and regenerable** from committed
+  per-trial files.
+
+**Cannot claim yet:**
+
+* **That C rejects bad parts better than a fair cell.** With the same pull test, H and
+  I passed 0 of 2,200 bad parts on every seed, as C did.
+* **That C seats more latching parts.** Gantry latching: F seats more than C on seeds
+  20261123 and 20261124 (p = 0.012, 0.0026) and matches it on 20261130. Arm latching:
+  F seats more on 20261130 (95.2% against 92.0%, p = 0.014).
+* **That C handles part-to-part variation better.** A fair baseline matches C on
+  latch_spread good parts on both machines and all three seeds.
+* **That C copes better with a camera worse than it is told.** F and I match C on
+  `heldout` on both machines on seed 20261130. With a 1.5 mm hand-eye bias, and in the
+  worst case, I seats more than C on all three seeds.
+* **That C copes with an unseen grasp offset.** On heldout2, F seats more Micro-Fit
+  parts than C when the plug sits off in the fingers (gantry 98.8% against 75.0%, arm
+  95.0% against 76.2%). The cause, from a POST HOC trace, is C's jam branch looping on
+  one probe.
+* **That C copes with F/T drift.** On heldout2, at 0.3 N/s on the arm, D seats 40 of
+  40 and C 21, and C passed 8 bad units.
+* **That C is faster or cheaper per good unit.** It makes fewer good units per hour
+  than F and I on every cell, and the cost of a passed bad unit is not priced.
+* **That C or J is the better product.** J seats more than C on some cells and fewer
+  on others. These runs do not decide it.
+* **Robustness across simulators for the current code.**
+  <!-- PENDING: sim_randomization_v0.2f -->
+  The only randomized-simulator run (`results/sim_randomization_v0.2`) used the v0.2a
+  code.
+* **Anything on hardware.** The latch snap force and the latch spread are assumed.
+  There is one latching connector and one simulated arm, and no rig yet.
+
+## Earlier result: benchmark_v0.2d, two machines, the same 35.2 N push for every cell
 
 Pre-registered ([`PREREGISTRATION.md`](results/benchmark_v0.2d/PREREGISTRATION.md),
 code frozen at 42df5c8): seed 20261123, gantry and UR5e arm, ten controllers,
@@ -106,27 +315,8 @@ The other two changes: G also helps on arm standard (p = 0.0074), and J seats
 more gantry latching good parts than C (98.7% against 96.5%, p = 0.011).
 Simulation only.
 
-**Third seed, v0.2e code.**
-[`results/benchmark_v0.2e`](results/benchmark_v0.2e/REPORT.md) is pre-registered.
-It ran on seed 20261130 with the code on this branch, which adds three fixes
-validated in [`results/v0.2e_validation`](results/v0.2e_validation/REPORT.md): a
-simulator reset, a depth gate and lateral compliance in H and I's pull retry, and a
-force guard on C's tilt check.
-
-- **Standard suite:** C is again ahead of every conventional cell on both machines
-  (gantry 99.1% against 96.8%, arm 98.1% against 96.2%).
-- **Gantry latching good parts:** F now matches C (98.8% against 97.5%, p = 0.12).
-- **Arm latching good parts:** C is below F (92.0% against 95.2%, p = 0.014).
-- **Bad parts:** C, G, H, I and J passed 0 of 2,200.
-- **Mis-seated good parts passed:** C 0, H 101, I 138, J 2, and G 1. G's is a plug at
-  3.01 deg tilt, the first C or G has passed on any seed.
-
-C's trials in the conditions where it fell most (gantry mis-characterized vision,
-arm latching) were rerun on the v0.2d code. They gave identical rows
-([`results/v0.2e_postrun_check`](results/v0.2e_postrun_check/REPORT.md)), so C's drop
-there comes from the seed, not the fixes. C is ahead on all three seeds only on the
-standard suite.
-
+**Third seed, v0.2e code:** see
+[Current results](#current-results-benchmark_v02e-on-three-seeds-and-heldout2) above.
 
 ## Earlier result: benchmark_v0.2c, two machines, conventional cells with the same pull test
 
@@ -295,40 +485,6 @@ gantry baselines were never tuned with the latching connector: re-tuned, F seats
 * **Simulation only.** The latch model is partly assumed; there is one latching
   connector family and one arm model.
 
-## What we can claim / what we cannot claim yet
-
-**Can claim (simulation, benchmark_v0.2d, seed 20261123):**
-
-* C passed none of 7,400 good-part trials as good when the connector was not
-  seated (Wilson 95% upper bound 0.05%). The conventional cells with a pull test
-  passed 118 (H) and 161 (I), mostly yawed or tilted plugs under camera error that
-  their depth check accepts; the difference is significant on each housing-only
-  suite on both machines.
-* Under the standard conditions C seats more housing-only connectors than every
-  conventional cell tested, on both machines (gantry 99.2% against 96.3%, arm
-  97.8% against 96.1%).
-* The comparison is paired, pre-registered and regenerable from committed
-  per-trial files. benchmark_v0.2c (seed 20261116) gave the same two results.
-
-**Cannot claim yet:**
-
-* That C rejects bad parts better than a conventional cell. With the same pull
-  test, H and I passed 0 of 2,200 bad parts, as C did.
-* That C seats more latching parts. F seats more good latching parts than C on
-  the gantry (98.5% against 96.5%, p = 0.012) and matches it on the arm. On
-  benchmark_v0.2e (seed 20261130) the two machines swap: F matches C on the gantry
-  and seats more on the arm (95.2% against 92.0%, p = 0.014).
-* That C handles part-to-part variation better. With every controller pushing to
-  35.2 N and H and I re-pushing after a failed pull, a conventional cell matches C
-  on latch_spread good parts on both machines.
-* That C copes better when the camera is worse than believed. F matches C on the
-  arm; on the gantry C led at p = 0.044 on seed 20261123 and matched F on seed
-  20261124 (p = 0.67).
-* That C is faster or cheaper per good unit. It makes fewer good units per hour
-  than I on every suite, and the cost of a passed bad unit is not priced.
-* Anything on hardware. The latch snap force is assumed, there is one latching
-  connector and one simulated arm, and no rig yet.
-
 ## Earlier result: benchmark_v0.2a, gantry only
 
 This section is the previous pre-registered run (seed 20261031, before latch
@@ -407,12 +563,19 @@ worst case, and C passed 29 bad units (details below).
   across the two mis-characterized families (7 and 22), every one a plug seated
   more than 3 degrees off in yaw: VERIFY re-centred yaw only when the camera
   claimed poor yaw accuracy. The W4 branch re-centres yaw every cycle, which
-  removed this escape in development at about 1.4 s per cycle.
+  removed this escape in development at about 1.4 s per cycle. W4 used these
+  families for that development
+  ([`results/w4_development/REPORT.md`](results/w4_development/REPORT.md), lines
+  7-10), so `heldout` has not been out of sample since. The clean held-out test is
+  now heldout2 ([`results/heldout2_v0.2f`](results/heldout2_v0.2f/REPORT.txt)).
 * **The comparison does not hinge on one MuJoCo tuning.** On 12 randomized
   simulators plus the nominal one (contact stiffness and damping, solver
   softness, elliptic or pyramidal friction cone, servo stiffness 7-19 N/mm),
   C led the best of D, E, F in all 13, by 8.3 to 12.5 points
   ([`results/sim_randomization_v0.2`](results/sim_randomization_v0.2/REPORT.md)).
+  That run used the v0.2a code (frozen at fe48eca), before the baseline re-tuning,
+  the latching parts, the arm and H, I and J. It has not been repeated on later
+  code. <!-- PENDING: sim_randomization_v0.2f -->
 * **No cliffs in C's own constants.** Every one of 113 configured constants,
   scaled by +/-20% one at a time, cost at most 10 points; the worst +/-50% change
   cost 8.3 (two hard-coded thresholds were not in the sweep; see the report)
@@ -425,8 +588,21 @@ A, B and C are consistent with V0.1: their 95% intervals overlap (V0.1: 23.5%,
 These are simulation results with assumed physical parameters.
 
 **Code has changed since these runs.** benchmark_v0.2a, the held-out run and the
-simulator randomization used C as frozen at commit 56707fa / fe48eca. Checkpoint
-2 (benchmark_v0.2b, above) measured the code after W3-W9.
+simulator randomization used C as frozen at commit 56707fa / fe48eca. Each later
+benchmark measured later code: benchmark_v0.2b the code after W3-W9 (8e29f2e),
+benchmark_v0.2c 45f8b06, benchmark_v0.2d and its replication 42df5c8, and
+benchmark_v0.2e and heldout2 ddd0d34, the code the method sections describe.
+
+### Historical table: benchmark_v0.2a
+
+The block below is the benchmark_v0.2a table (gantry, controllers A-F, seed
+20261031). It is kept as the record and is not current. It was not regenerated from
+benchmark_v0.2e, because `experiments/readme_results.py` reads one run folder with a
+`plots/` dashboard and labels only controllers A-G; benchmark_v0.2e has eight run
+folders, no plots and controllers H-J. The current tables are in
+[`results/benchmark_v0.2e/HEADLINE_TABLES.md`](results/benchmark_v0.2e/HEADLINE_TABLES.md)
+and [`TABLES.md`](results/benchmark_v0.2e/TABLES.md), and in
+[Current results](#current-results-benchmark_v02e-on-three-seeds-and-heldout2).
 
 <!-- RESULTS:START -->
 Source: [`results/benchmark_v0.2a`](results/benchmark_v0.2a) (seed 20261031, commit `082f95e`, 20 conditions x 100 paired trials per controller; pre-registration in [`PREREGISTRATION.md`](results/benchmark_v0.2a/PREREGISTRATION.md)). Generated by `python -m experiments.readme_results results/benchmark_v0.2a`.
@@ -568,7 +744,12 @@ characterized accuracy (its noise sigma and bias magnitude, never the error
 itself). C uses the accuracy figure to size its search prior and its approach
 height. The standard and latching conditions hand it the correct figure; the
 mis-characterized-vision suite (`heldout`) hands it a figure better than the
-camera's real accuracy.
+camera's real accuracy. `heldout` was pre-registered as held out, but it was then
+used in W4 development
+([`results/w4_development/REPORT.md`](results/w4_development/REPORT.md), lines
+7-10), so it is no longer an out-of-sample test. The clean held-out test is
+heldout2 ([`results/heldout2_v0.2f`](results/heldout2_v0.2f/REPORT.txt)). It hands
+every controller the nominal accuracy and adds one error that no sensor reports.
 
 Ground truth (true poses, contact forces, penetration, contact count) lives in a
 separate `GroundTruth` type that only the scoring code reads. The separation is
@@ -628,7 +809,7 @@ value that has not been measured on real parts.
 | Protective stop | 30 N or 0.6 N m measured; Micro-Fit 48 N or 0.6 N m | assumed cobot-style cell limit; Micro-Fit 1.5 x the datasheet's 32 N maximum mating force |
 | Damage | 45 N contact force sustained over 10 ms; Micro-Fit 58 N | assumed conservative limit for a small plastic housing on a PCB; Micro-Fit: the datasheet's minimum latch strength |
 | Micro-Fit insert target and abort | 35.2 N and 40 N, every controller (30 N insert target in benchmark_v0.2c) | 1.1 x and 1.25 x the datasheet's 32 N maximum mating force; the margins are assumed |
-| Success tolerances | depth within 0.5 mm, lateral within clearance + 0.15 mm, tilt and yaw within 3 deg | assumed seating specification |
+| Success tolerances | depth within 0.5 mm, lateral within clearance + 0.15 mm, tilt and yaw within 3 deg | assumed seating specification; a POST HOC rescoring of seed 20261130 at 2-5 deg is in [`results/v0.2f_evidence/TOLERANCE.md`](results/v0.2f_evidence/TOLERANCE.md) |
 
 ## The controllers
 
@@ -718,9 +899,13 @@ aligns the plug's tilt to the cavity floor, then runs guarded probes along the
 socket's short axis: both opposing walls must push back with at least 2 N within
 the clearance budget (1.35 mm of travel for the 0.5 mm socket), which a plug
 perched on a ledge or caught in the chamfer cannot produce. The probe positions
-also locate the cavity center, and C centers the plug between them. When the
-vision yaw is uncertain (sigma above 1 degree) it also finds both rotational
-limits and centers the yaw between them.
+also locate the cavity center, and C centers the plug between them. On the gantry
+it also finds both rotational limits and centers the yaw between them, on every
+cycle since W4 (`yaw_center_policy` "always"; V0.1 did this only when the vision
+yaw sigma was above 1 degree). During the probes VERIFY holds a 1 N axial preload
+on the measured force, and it does not re-check depth before SUCCESS. Under F/T
+drift that preload can lift a seated plug
+([`results/v0.2f_h2_diagnosis`](results/v0.2f_h2_diagnosis/REPORT.txt), POST HOC).
 
 On a latching connector VERIFY is the latch check: a retention pull at 1.1 x the
 datasheet's 32 N maximum mating force, which the plug must hold before it has
@@ -731,6 +916,7 @@ beyond 0.875 of the plug's half-width, which a plug latched wedged at the
 cavity's tilt limit produces
 ([`results/v0.2d_tilt_check`](results/v0.2d_tilt_check/REPORT.md)). A failed check
 takes the normal failed-VERIFY path. The housing-only VERIFY has no tilt check.
+<!-- PENDING: tilt diagnosis -->
 
 **D: spiral search** ([`defex/control/spiral_search.py`](defex/control/spiral_search.py)).
 The conventional force-controlled routine cobot vendors ship (Flexiv Adaptive
@@ -829,6 +1015,12 @@ the controllers never ran on them while being tuned, but they are given the
 connector's drawing dimensions (including the tighter socket) as they would be in
 production.
 
+Those 20 conditions are the `standard` suite. The same file defines the other
+suites: `latching` (Micro-Fit good and bad parts), `heldout` (camera worse than told;
+used in W4 development), `latch_spread` (latch and terminal forces varied) and
+`heldout2` (five families of an error no sensor reports, two levels each; see its
+[pre-registration](results/heldout2_v0.2f/PREREGISTRATION.md)).
+
 Trials are paired. Trial *i* of a condition derives its disturbance and every
 sensor noise stream from `SeedSequence(base_seed, crc32(condition), i)`, so every
 controller faces the identical socket, grasp and sensor noise in that trial, and differences
@@ -885,8 +1077,8 @@ The project targets the existing `.venv` on the Mac mini (Python 3.12, MuJoCo
 source .venv/bin/activate
 pip install -e ".[dev,video]"     # mujoco, numpy, matplotlib; pytest; imageio + ffmpeg for MP4
 
-pytest -q                         # 221 tests (physics, geometry, sensing, controllers, reports)
-pytest -q -m "not slow"           # skip the closed-loop controller tests
+pytest -q                         # 266 tests (physics, geometry, sensing, controllers, reports)
+pytest -q -m "not slow"           # 227 tests: skips the closed-loop controller tests
 python -m experiments.baseline    # one-minute check: all controllers at 100% on easy conditions
 ```
 
@@ -925,7 +1117,7 @@ python -m experiments.robustness --suite latching --backend arm --trials 200 --s
   --controllers fixed,correction,adaptive,spiral,correction_rcc,spiral_rcc,adaptive_learned
 python -m experiments.checkpoint_report results/benchmark_v0.2b   # all Checkpoint 2 tables
 python -m experiments.robustness --trials 100 --seed 20261031 --name benchmark_v0.2a --record 1
-python -m experiments.readme_results results/benchmark_v0.2a   # regenerate the README results block
+python -m experiments.readme_results results/benchmark_v0.2a   # regenerate the historical v0.2a README block
 python -m experiments.tune_baselines --controller spiral --stage coarse   # baseline tuning, dev seed only
 python -m experiments.evaluate results/benchmark_v0.1        # re-plot without re-running
 python -m experiments.robustness --list                      # condition names
@@ -982,7 +1174,7 @@ experiments/              baseline check, robustness benchmark, evaluation + plo
 demos/                    live viewer, video recorder, replay, investor video
   media/                  rendered investor video and its README still
 simulations/              generated workcell MJCF, original prototype, viewer script
-tests/                    221 tests: geometry, physics, sensing, controllers, metrics
+tests/                    266 tests: geometry, physics, sensing, controllers, metrics
 results/benchmark_v0.1/   the reported benchmark: trials.csv, summary.json/.csv, report.md,
                           plots/, events.json.gz, trajectories/ (replayable),
                           earlier_runs/ (superseded reports)
@@ -1027,8 +1219,8 @@ order they matter for transfer to hardware.
    Molex Micro-Fit 3.0 from its datasheet (`results/w3_development`), but there is
    no measured force-depth curve yet. The `standard` suite is housing only.
 2. **Rigid grasp.** The in-hand pose error is sampled once per trial
-   (`generalization_combined`), but the connector cannot slip or rotate in the
-   gripper during contact.
+   (`generalization_combined`, and heldout2's unseen grasp offset), but the
+   connector cannot slip or rotate in the gripper during contact.
 3. **One arm model.** Besides the gantry, the UR5e from MuJoCo Menagerie runs the
    same suites. Its PD servos lag 0.2 s, which may be more than a real UR5e under
    servoj; on hardware, lag and wrist stiffness must be identified.
@@ -1046,6 +1238,8 @@ order they matter for transfer to hardware.
 7. **Characterized vision.** In the `standard` and `latching` suites C is told
    each condition's true vision accuracy. The mis-characterized-vision families
    test a camera worse than told, and that is where F matches or beats C.
+   heldout2 tests errors no sensor reports (receptacle tilt and yaw, F/T drift, a
+   tighter part, a grasp offset).
 8. **One connector family.** Generalization is tested on unseen clearance, chamfer,
    friction and combined disturbances, not on other connector shapes.
 9. **Determinism is per platform.** Trials are bit-for-bit reproducible on a given
@@ -1056,6 +1250,13 @@ order they matter for transfer to hardware.
    (MuJoCo 3.17.0): all 6,000 trials had the same success outcome as the reported
    Linux run, with small floating-point differences in the continuous metrics
    ([`results/repro_v0.1_apple_m5`](results/repro_v0.1_apple_m5/REPORT.md)).
+10. **Constant F/T bias.** Outside heldout2, the F/T bias is constant per trial and
+    tared out before each attempt. A real sensor drifts. heldout2 shows that C's
+    VERIFY can lift a seated plug under drift, so C's zero bad units in the other
+    suites rest partly on this assumption.
+11. **Assumed seating spec.** The 3 deg yaw and tilt limit is assumed. Most fair
+    baseline bad units sit just past it, so the bad-unit comparison depends on it
+    (POST HOC rescoring, `results/v0.2f_evidence/TOLERANCE.md`).
 
 ## Roadmap (V0.2)
 
@@ -1064,7 +1265,8 @@ The V0.2 plan (brief of 2026-10-26) runs in workstreams, one branch each:
 1. W0, done: CI, payload identification from F/T readings, Apple Silicon reproduction.
 2. W1, done: fair baselines D, E, F and benchmark_v0.2a.
 3. W2, done: tuned constants moved into configuration (behaviour identical),
-   sensitivity sweep, pre-registered held-out families and simulator randomization.
+   sensitivity sweep, pre-registered held-out families (later used in W4 development)
+   and simulator randomization.
 4. W3, done: terminal and latch physics (Micro-Fit 3.0), push-click-pull
    verification, four deliberately bad parts.
 5. W4, done: yaw re-centred every cycle.
@@ -1079,19 +1281,32 @@ The V0.2 plan (brief of 2026-10-26) runs in workstreams, one branch each:
 
 11. v0.2c, done: wall-yaw fix, defect verdict, datasheet-based latch check,
     arm tuning of D, E and F, gantry re-tuning with latching parts, H and I,
-    benchmark_v0.2c (this README's results).
+    benchmark_v0.2c.
 12. v0.2d, development done: Micro-Fit insert target 35.2 N for every
     controller, arm overtravel along the push, one pull retry for H and I, tilt
     check in the latching VERIFY, controller J; benchmark_v0.2d (seed 20261123,
-    A-J, this README's first results section); replication on seed 20261124.
+    A-J); replication on seed 20261124.
+13. v0.2e, done: simulator reset, H and I pull retry rule version 5, force guard on
+    C's tilt check; benchmark_v0.2e (seed 20261130, this README's first results
+    section).
+14. v0.2f, analysis and rig preparation, no controller change: the evidence analysis
+    (`results/v0.2f_evidence`), heldout2 (seed 20261207) and its diagnosis, frozen
+    rig predictions (seed 20261201), the rig protocol and power analysis, and the
+    latch-model fitter.
 
-Open after benchmark_v0.2c: the connector file's 30 N insert target was below
-the datasheet's 32 N maximum mating force; a conventional cell with C's
-stall push (H and I plus that push) was untested; VERIFY did not check tilt.
-v0.2d addresses each in development (35.2 N insert target; H and I push again
-and pull once more after a failed pull; a tilt check in the latching VERIFY,
-none for the housing-only connector). benchmark_v0.2d will test them on a fresh
-seed.
+Open after v0.2f, none of it implemented:
+- C's VERIFY holds a force-target preload and does not re-check depth before
+  SUCCESS, so F/T drift can lift a seated plug (heldout2).
+- C's jam branch can loop on one probe when an unseen grasp offset makes an edge
+  contact read as a jam (heldout2).
+- No fair baseline has a seat-and-align step after insertion. J shows what C's
+  VERIFY adds to F.
+- No controller re-zeroes the F/T sensor just before contact.
+- The seating spec is assumed at 3 deg. A rig or pilot customer has to give the real
+  one.
+- Robustness across simulators has not been measured on current code.
+  <!-- PENDING: sim_randomization_v0.2f -->
+- Any fix to C needs a new pre-registration and a fresh seed.
 
 ## Porting to another simulator
 

@@ -35,6 +35,9 @@ class SensorReadings:
     ft_torque: np.ndarray  # sensor frame (N m)
 
 
+FT_DRIFT_SPAWN_KEY = 16
+
+
 class SensorSuite:
     def __init__(self, noise: SensorNoiseConfig, seed: int) -> None:
         self.noise = noise
@@ -50,14 +53,14 @@ class SensorSuite:
         self._enc_rot_sigma = noise.encoder_rot_sigma_deg * DEG
         bias_dir = self._rng_vision.uniform(0.0, 2.0 * np.pi)
         self.vision_bias = noise.vision_bias_mm * MM * np.array([np.cos(bias_dir), np.sin(bias_dir), 0.0])
-        # heldout2 (v0.2f): zero drift, linear in time from the first reading, in a fixed random
-        # direction per trial. Its own stream (a fifth child, spawned only when drift is on), so
-        # every other stream is unchanged.
+        # heldout2: zero drift, linear in time from the first reading, in a fixed random direction
+        # per trial. spawn_key (16,) keeps it apart from the sensor children (0-3) and from the
+        # scenario disturbance stream, which is spawn_key (4,) of the same trial seed.
         self.ft_force_drift = np.zeros(3)
         self.ft_torque_drift = np.zeros(3)
         self._t_first: float | None = None
         if noise.ft_drift_force_n_per_s > 0.0 or noise.ft_drift_torque_nm_per_s > 0.0:
-            rng = np.random.default_rng(ss.spawn(1)[0])
+            rng = np.random.default_rng(np.random.SeedSequence(seed, spawn_key=(FT_DRIFT_SPAWN_KEY,)))
             u_f = rng.standard_normal(3)
             u_t = rng.standard_normal(3)
             self.ft_force_drift = noise.ft_drift_force_n_per_s * u_f / np.linalg.norm(u_f)

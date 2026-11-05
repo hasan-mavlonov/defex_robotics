@@ -80,7 +80,7 @@ You should not trust absolute numbers.
     pooled still C below F, p = 0.038). C against I there is not resolved (low power).
   - C's zero bad units does not hold on every simulator (arm: a 3.11 deg plug; gantry: an over-penetrated seated plug): 1 per machine, both in
     variant 10. C still passes fewer than F, H and I in all 12 variants.
-  - Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): in 85 of C's 89 failures C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
+  - Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): in 85 of C's 89 failures C reaches the floor (a seated candidate), then VERIFY rejects it (`simrand_friction_1_classes.txt`). At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model (the simulator-randomization report, written earlier, treats the two cones as equally plausible). On the nominal arm, C's 18 friction_1 losses over three seeds are 5 of these wall-probe stalls, 1 time-limit failure after a correct wall-yaw reject (true yaw 3.95 deg), 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
 - The earlier run (`results/sim_randomization_v0.2/REPORT.md`) used the v0.2a code
   (fe48eca), gantry only. Do not cite its "C led in all 13" for the current code.
 - One known way the simulator flatters C: its F/T bias is constant and tared out. Under
@@ -195,7 +195,7 @@ force and a movement limit of 0.6 x the 1.75 mm terminal wipe.
   - **heldout2:** C passed 8 of 400 on the arm, all at 0.3 N/s F/T drift. They are
     short plugs at 13.05-14.40 mm, against the 14.5 mm limit. H passed 0 and I 1 in
     that cell (p = 0.0078 and 0.016).
-- **Why heldout2's 8 happened (POST HOC trace of 6 of the 8,
+- **Why heldout2's 8 happened (POST HOC trace of 4 of the 8, plus 2 development-seed trials,
   `results/v0.2f_h2_diagnosis/REPORT.md`; the depth and drift ranges cover all 8).**
   G passed the same 8 and J 5.
   - The plug was at the floor when C saw the bottoming force.
@@ -293,5 +293,5 @@ cycle, and measure the planning tick on the rig PC
 Related, same report: the gantry pull test's force ringing (up to 1.11 x the 35.2 N
 command) comes from the simulator's undamped latch hook. No pull exceeded the 58 N
 retention force. One fairness item runs against the baselines: C caps any retract pull
-on a latching part at 36 N, and D, F, H and I have no such cap. H's retry retract tore
-the latch of 2 good gantry parts on the development seeds (POST HOC observation).
+on a latching part at 36 N, and D, F, H and I have no such cap. D's and H's retry retracts
+each tore the latch of 2 good gantry parts on the development seeds (POST HOC observation).

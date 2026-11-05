@@ -76,7 +76,7 @@ on every other cell on every seed, except gantry mis-characterized vision on see
 20261123 (C ahead, p = 0.044), which did not replicate
 ([`SEEDS.md`](results/v0.2f_evidence/SEEDS.md)). On every seed C passed no bad
 unit and no bad part, and made fewer good units per hour than F on `standard`
-(gantry 608, 611, 601 against 1,128, 1,096, 1,100).
+(gantry 608, 614, 601 against 1,128, 1,096, 1,100).
 
 **Where C's standard lead and its zero bad units come from (POST HOC,
 [`results/v0.2f_evidence/REPORT.md`](results/v0.2f_evidence/REPORT.md)).**
@@ -139,7 +139,7 @@ pre-registered
 * **C passed 8 bad units**, all on the arm at 0.3 N/s drift (H 0, I 1; p = 0.0078 and
   0.016). They are C's first in a reported run since Checkpoint 2. A POST HOC trace
   ([`results/v0.2f_h2_diagnosis/REPORT.md`](results/v0.2f_h2_diagnosis/REPORT.md))
-  found the mechanism (traced in 6 of the 8; the depth and drift ranges cover all 8). The
+  found the mechanism (traced in 4 of the 8, plus 2 development-seed trials; the depth and drift ranges cover all 8). The
   plug was at the floor when C saw the bottoming force.
   VERIFY then holds a 1 N preload on the *read* axial force. With more than 1 N of
   push-out drift since C's last tare, that is about 0 N or a pull in truth, and the
@@ -186,7 +186,7 @@ comparisons; the arm holds 24 of 29
   There, on friction_1, C seats 1 of 90 against 89-90 of 90 for F, H and I. With the
   elliptic cone it seats 81 of 90. On the gantry, with the same contact draws, C seats
   90 of 90 under the pyramidal cone (counted from `arm/trials.csv` and
-  `gantry/trials.csv`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): in 85 of C's 89 failures C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
+  `gantry/trials.csv`). Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): in 85 of C's 89 failures C reaches the floor (a seated candidate), then VERIFY rejects it (`simrand_friction_1_classes.txt`). At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model (the simulator-randomization report, written earlier, treats the two cones as equally plausible). On the nominal arm, C's 18 friction_1 losses over three seeds are 5 of these wall-probe stalls, 1 time-limit failure after a correct wall-yaw reject (true yaw 3.95 deg), 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
 * The v0.2a statement "C leads in all 13 simulators" is not repeated in that form.
 
 **Rig plan.** Nothing has been bought. [`hardware/TEST_PROTOCOL.md`](hardware/TEST_PROTOCOL.md)

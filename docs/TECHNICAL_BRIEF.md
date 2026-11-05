@@ -106,7 +106,7 @@ What C's zero rests on:
   VERIFY holds a 1 N preload on the *read* axial force. Once the zero has drifted more
   than 1 N in the push-out direction, that preload is about 0 N or a pull in truth.
   The seated plug then rises 0.6-1.8 mm, and nothing re-checks depth before SUCCESS
-  (traced in 6 of the 8; the depth and drift ranges cover all 8)
+  (traced in 4 of the 8, plus 2 development-seed trials; the depth and drift ranges cover all 8)
   ([`v0.2f_h2_diagnosis/REPORT.md`](../results/v0.2f_h2_diagnosis/REPORT.md)). In
   standard and latching the bias is constant and tared out, so this cannot happen
   there. Part of C's zero comes from that simulator assumption, not from C.
@@ -187,7 +187,7 @@ Nothing has been bought and no vendor contacted.
   machines and all three seeds. Scope (POST HOC): the lead sits in the conditions with camera sigma
   1-2 mm or the combined condition. In nominal, noise_0mm and noise_0.5mm (sigma 0.3, 0
   and 0.5 mm), C and I seat exactly the same trials. It shrinks under a looser seating
-  spec (POST HOC, one seed). Across 12 randomized simulators it holds on the gantry,
+  spec (POST HOC, all three seeds; on the arm it is not significant at 4 deg on any seed). Across 12 randomized simulators it holds on the gantry,
   and narrowly on the arm (10 of 12 against F and I).
 - C passed no bad unit in 7,400 good-part trials on each of three seeds. Scope: this
   rests on C's VERIFY (J has the same edge), on the assumed 3 deg spec, and on a
@@ -227,7 +227,7 @@ variants keeping benchmark_v0.2e's verdict, of 12; 10 are needed
   - Neutral success, C against F, H and I, does not hold (6 of 12; pooled C worse,
     0 / 15, p = 6.1e-05). POST HOC split: the 6 failing variants are the 6 with the
     pyramidal friction cone. On friction_1 there C seats 1 of 90 against 89-90 of 90.
-    Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): in 85 of C's 89 failures C seats the part correctly, then VERIFY rejects it. At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model. On the nominal arm, C's 18 friction_1 losses over three seeds are 6 of these wall-probe stalls, 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
+    Cause (POST HOC, `results/v0.2f_friction_diagnosis/REPORT.md`): in 85 of C's 89 failures C reaches the floor (a seated candidate), then VERIFY rejects it (`simrand_friction_1_classes.txt`). At mu = 1 the floor friction under the 1 N preload reaches the wall probe's 2 N stop before the plug meets a wall, so the wall-yaw check reads too little free travel; recovery repeats the same probe until the time limit. Under the pyramidal cone MuJoCo ignores the repo's 20 ms friction time constant (solreffriction); setting only that to 2 ms on the nominal elliptic arm gives the same failure. MuJoCo's documentation calls the elliptic cone the closer model (the simulator-randomization report, written earlier, treats the two cones as equally plausible). On the nominal arm, C's 18 friction_1 losses over three seeds are 5 of these wall-probe stalls, 1 time-limit failure after a correct wall-yaw reject (true yaw 3.95 deg), 11 torque protective stops at 0.61-0.71 N m (limit 0.6) and 1 mouth stall. J (same VERIFY on F's RCC stage) seated 300 of 300. A rig test of C's wall probe at C's preload settles whether it transfers.
   - Latching good parts, C below F, does not hold per simulator (9 of 12). Pooled, C is
     still below F (p = 0.038). C against I is not resolved (low power).
 - **Bad units:** C passed 1 per machine, both in variant 10 (gantry: a seated plug

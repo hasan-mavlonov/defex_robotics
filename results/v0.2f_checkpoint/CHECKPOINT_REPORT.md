@@ -1,8 +1,11 @@
 # v0.2f checkpoint report for Hasan
 
-Simulation only. No controller behaviour changed in v0.2f. Every v0.2f run used the frozen
-v0.2e controllers (ddd0d34), except the exact replays of seeds 20261123 and 20261124 in
-item 2, which used those benchmarks' own v0.2d code (42df5c8) plus logging only. The brief's stop condition still holds, so the pitch
+Simulation only. No controller behaviour changed in v0.2f. Every v0.2f benchmark-type run
+(heldout2, simulator randomization, rig predictions, the seed-20261130 replay) used the frozen
+v0.2e controllers (ddd0d34). The exact replays of seeds 20261123 and 20261124 in item 2 used
+those benchmarks' own v0.2d code (42df5c8) plus logging only. Two development runs also
+exercised new default-off code with its flag on: the tilt options' seed-4007 check and the
+baseline retract cap. The brief's stop condition still holds, so the pitch
 is your decision. This report does not pick it.
 
 ## Words used here
@@ -67,19 +70,24 @@ passes 518 of 800 (gantry) and 468 of 800 (arm) deliberately bad parts as good.
 
 I's and H's bad units in the benchmarks are mostly plugs at about full depth, just past
 the assumed 3 deg limit (item 2 below). In heldout2's 4 deg unseen-yaw condition they sit
-further out (median about 3.9-4.0 deg, up to 4.87 deg; POST HOC, from trials.csv).
+further out (medians 3.77-3.99 deg, up to 4.87 deg; POST HOC, from trials.csv).
 
 **C or J?** J is a conventional spiral + RCC insertion with C's VERIFY bolted on.
 - On the benchmarks it nearly matches C's protection against bad units (2-3 against 0
   per 7,400), at about C's cycle time. Not everywhere:
-  - across simulators on the arm J passed 31 of 2,210 against C's 1, 30 of them under the
-    pyramidal cone (`results/sim_randomization_v0.2f`);
+  - across simulators on the arm J passed 30 of 2,210 against C's 1, all 30 under the
+    pyramidal cone (`results/sim_randomization_v0.2f`; that report's rule also counts one
+    over-penetrated J plug, giving 31);
   - on heldout2 arm it passed 5 against C's 8.
 - Its success against C is mixed:
   - J is below C on standard on both machines (gantry 98.0% against 99.1%, arm 96.8%
     against 98.1%).
-  - J is ahead of C on gantry `heldout` on all three seeds, and on arm latching on seed
-    20261130 only (95.3% against 92.0%; level on the earlier two seeds).
+  - On gantry `heldout`, J's rate is above C's on all three seeds, but the difference is
+    significant on one (J-only / C-only 71/34, p = 0.00039, seed 20261130; 46/37, p = 0.38
+    and 47/31, p = 0.089 on 20261123 and 20261124).
+  - J is ahead of C on gantry latching on seed 20261124 (592 against 579 of 600, 18/5,
+    p = 0.011), and on arm latching on seed 20261130 (95.3% against 92.0%). It is level
+    with C in those cells on the other seeds.
   - On heldout2, J is ahead on the gantry whole suite (97.2% against 94.0%, p = 0.019),
     mostly in the plug-offset family (98.8% against 75.0%). On the arm whole suite it
     matches C, but it is ahead on plug offset (96.2% against 76.2%) and below on the
@@ -88,8 +96,8 @@ further out (median about 3.9-4.0 deg, up to 4.87 deg; POST HOC, from trials.csv
 Read POST HOC (`results/v0.2f_evidence/CONCENTRATION.md` (d)):
 - most of C's bad-unit edge, and its heldout2 tilt and yaw edge, is its VERIFY step;
 - on standard success, VERIFY accounts for about half of C's gantry lead over F (net trials
-  35 of 58, 30 of 59 and 23 of 45 on seeds 20261123, 20261124 and 20261130) and less
-  than half of its arm lead (17 of 34, 12 of 40, 11 of 38). The rest is C's own insertion.
+  35 of 58, 30 of 59 and 23 of 45 on seeds 20261123, 20261124 and 20261130) and half or
+  less of its arm lead (17 of 34, 12 of 40, 11 of 38). The rest is C's own insertion.
 
 These runs do not decide whether the product is C, or a check sold on top of a
 conventional cell.
@@ -115,7 +123,8 @@ conventional cell.
    - Arm standard: the lead is still significant at 3.5 deg, but not at 4 deg on any
      seed (27/21, 24/13, 30/17; p = 0.47, 0.099, 0.079).
    - At 2 deg the lead widens on every seed (gantry 113/0, 114/1, 122/2), and C then
-     passes 0-3 bad units.
+     passes 0-3 bad units on standard. On latching good parts C does not hold zero under a
+     tighter spec: it passes 10-21 bad units at 2 deg and 0-8 at 2.5 deg (I: 20-48 and 4-11).
    - Old `heldout` at 5 deg: I has more discordant wins than C on both machines and all
      seeds.
    - The v0.2d-code replays reproduce 12,400 of 12,800 rows exactly; the other 400 (I and
@@ -125,8 +134,8 @@ conventional cell.
 3. **C's zero bad units rests partly on the simulator.**
    - Under F/T drift (heldout2, arm), VERIFY's 1 N force-target preload lifts a seated
      plug, and nothing re-checks depth (`results/v0.2f_h2_diagnosis`).
-     - It was traced POST HOC in 6 of the 8 bad units; the depth and drift ranges cover
-       all 8.
+     - It was traced POST HOC in 4 of the 8 heldout2 bad units (arm trials 4, 12, 19 and
+       28) and in 2 development-seed trials; the depth and drift ranges cover all 8.
      - G passed the same 8, and J passed 5.
    - Everywhere else the simulated sensor bias is constant and tared out. A real sensor
      drifts.
@@ -137,14 +146,16 @@ conventional cell.
      (`results/v0.2f_h2_diagnosis`).
    - **Arm friction 1.0** (`results/v0.2f_friction_diagnosis`).
      - On the nominal (elliptic-cone) benchmarks, C's 18 friction_1 losses over three
-       seeds are 11 torque protective stops just over the 0.6 N m limit, 6 wall-probe
-       stalls and 1 mouth stall.
+       seeds are 11 torque protective stops just over the 0.6 N m limit, 5 wall-probe
+       stalls, 1 time-limit failure after a correct wall-yaw reject (true yaw 3.95 deg) and
+       1 mouth stall.
      - In a wall-probe stall, the probe stops on floor friction before it reaches the
        wall, so C rejects a seated plug.
      - Under MuJoCo's pyramidal cone the stall decides the result: C seats 1 of 90,
        against 89-90 for F, H and I (cone split POST HOC).
      - MuJoCo's documentation calls the elliptic cone, the nominal setting, the closer
-       model.
+       model (quotes in `results/v0.2f_friction_diagnosis`). The simulator-randomization
+       report, written before that reading, treats the two cones as equally plausible.
    - **The tilt check.** It compares the plug with the axis C aimed it along, so it
      cannot see an error in C's socket-axis estimate (`results/v0.2f_tilt_diagnosis`).
      - G's 3.01 deg bad unit is this case.
@@ -157,19 +168,22 @@ conventional cell.
    - Gantry: every primary comparison keeps its benchmark direction in at least 10 of
      the 12 models (29 of 29).
    - Arm: 24 of 29.
-     - C's high-camera-error lead keeps its direction in exactly 10 of 12, the minimum.
-       Pooled, it is not significant.
+     - C's high-camera-error lead keeps its direction in exactly 10 of 12 against F and I,
+       the minimum (12 of 12 against H). Pooled, it is not significant.
      - The friction_1 loss above appears (cone split POST HOC).
      - "C below F" on arm latching keeps its direction in 9 of 12 (pooled still C
        below F, p = 0.038).
    - C's bad units are not exactly zero across simulators: 1 on the arm (a latched plug at
      3.11 deg). On the gantry C declared 1 seated plug good that had over-penetrated: a
-     failed trial, but not a bad unit by the definition above. C still passed fewer than
+     failed trial, but not a bad unit by the definition above. The simulator-randomization
+     report's own rule counts it as one, so that report gives 1 per machine. C still passed fewer than
      F, H and I in every model.
 6. **Throughput.** In every benchmark cell, C makes fewer good units per hour than F and
-   I. On heldout2 it makes more in the unseen-yaw and tight-tolerance families.
+   I. On heldout2 it makes more than both in the unseen-yaw family (gantry 714 against
+   490). In tight tolerance it makes more than I but fewer than F (gantry 416 against 570,
+   arm 279 against 301).
    - On standard: 55% of F's on the gantry and 65% on the arm.
-   - On latching and latch_spread: 87.5-90.2% of I's.
+   - On latching and latch_spread: 87.0-90.2% of I's.
    - On gantry standard, about two-thirds of the gap is VERIFY's 1.89 s (POST HOC phase
      split).
    - C's p95 cycle is above 1.5 x its median almost everywhere, and the tail is retries.
@@ -196,8 +210,8 @@ conventional cell.
      the part after seating. A conventional "seat-and-align" step might close much of
      C's tilt, yaw and bad-unit edge.
    - **Against the baselines:** C caps its retract pull on a latching part at 36 N, and
-     D, F, H and I do not. H's retry retract tore 2 good latches on the development
-     seeds (POST HOC observation). A port of C's cap to D, F, H and I was tried under a
+     D, F, H and I do not. D's and H's retry retracts each tore 2 good latches on the
+     development seeds (POST HOC observation). A port of C's cap to D, F, H and I was tried under a
      committed rule and dropped by it: at the baselines' 40 mm/s retract it moved a tear
      rather than preventing one (`results/v0.2f_baseline_retract_cap`). The item stays
      open; a slower baseline retract would need your approval.
@@ -230,13 +244,15 @@ conventional cell.
    retract (the direct port of C's cap failed its rule; see item 8).
 5. Whether to switch on either default-off tilt option. Each passed a no-harm rule on
    validation seed 4007, gives rows identical to v0.2e with the flag off, and changed no
-   outcome.
+   outcome. (The v0.2e side of that identity check ran from a git archive of 4df8cae, so its
+   config.json records no commit; `results/v0.2f_tilt_diagnosis/run.sh` shows how.)
 6. Whether to keep committing `events.json.gz`. The brief asked to stop adding binaries.
 7. The rig: which option, what budget, which target connector. Nothing is bought.
 
-## Branches (local only; no push access)
+## Branches
 
-All are in the bundle `defex_robotics_v0.2_branches_2026-11-02.bundle`.
+All 45 v0.2 branches are on GitHub (pushed 2026-11-05). PR #2 merges `v0.2f/integration` into
+`main`.
 
 - **`v0.2f/integration`** holds all of v0.2f on top of `v0.2e/integration` (4df8cae).
   - It fast-forwards `main`.

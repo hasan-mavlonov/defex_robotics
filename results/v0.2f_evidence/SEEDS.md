@@ -134,5 +134,5 @@ Each line is checked on every seed by the script; `yes` means it holds on all th
 | arm standard friction_1: I seats more than C (C-only/I-only) | 0/7 | 0/6 | 0/5 | yes |
 | C passes no bad unit and no bad part (all eight runs) | 0 | 0 | 0 | yes |
 | C's p95/median above 1.5 on every run | 1.47-2.61 | 1.47-2.65 | 1.48-2.67 | no |
-| C makes fewer good units per hour than F on standard, both machines | gantry 608 vs 1128, arm 374 vs 593 | gantry 611 vs 1096, arm 384 vs 586 | gantry 601 vs 1100, arm 377 vs 593 | yes |
+| C makes fewer good units per hour than F on standard, both machines (60 s per protective stop) | gantry 608 vs 1128, arm 374 vs 593 | gantry 611 vs 1096, arm 384 vs 586 | gantry 601 vs 1100, arm 377 vs 593 | yes |
 

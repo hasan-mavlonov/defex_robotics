@@ -1411,7 +1411,7 @@ def part5(runs, out: Out) -> None:
             good.append(u[C] < u[F])
             txt.append(f"{m} {u[C]:.0f} vs {u[F]:.0f}")
         vals.append((all(good), ", ".join(txt)))
-    line("C makes fewer good units per hour than F on standard, both machines", vals)
+    line("C makes fewer good units per hour than F on standard, both machines (60 s per protective stop)", vals)
     out.w(f, "")
 
 
@@ -1449,7 +1449,7 @@ def checkpoint_table(runs, out: Out) -> None:
         out.w(f, f"| {L(c)} {c} | {cells[0]} | {cells[1]} | {' / '.join(p95)} | {' / '.join(upht)} | {bpt} | {but} | "
               f"{ps} / {len(allr)} ({psg} on good parts, {ps - psg} on bad) |")
         out.k(f"checkpoint, seed 20261130, {L(c)}: seated gantry std {cells[0]}, arm std {cells[1]}; p95 {'/'.join(p95)} s; "
-              f"units/h {'/'.join(upht)}; bad parts {bpt}; bad units {but}; stops {ps} ({psg} good, {ps - psg} bad) "
+              f"units/h at 60 s per stop {'/'.join(upht)}; bad parts {bpt}; bad units {but}; stops {ps} ({psg} good, {ps - psg} bad) "
               "(CHECKPOINT_TABLE.md)")
     out.w(f, "", "A, B and E do not declare success or failure, so bad parts passed and bad units do not apply.", "")
     for c in (C, F, I, J):
@@ -1496,7 +1496,7 @@ def main() -> None:
     for name, lines in out.files.items():
         (outdir / name).write_text("\n".join(lines) + "\n")
     (outdir / "KEY_NUMBERS.md").write_text(
-        "# Key numbers\n\n" + HEADER + "\n\nEvery number quoted in REPORT.md and CHECKPOINT_REPORT.md, "
+        "# Key numbers\n\n" + HEADER + "\n\nEvery number quoted in this folder's REPORT.md and CHECKPOINT_REPORT.md (not results/v0.2f_checkpoint/CHECKPOINT_REPORT.md), "
         "with the table it comes from.\n\n" + "\n".join(f"- {k}" for k in out.key) + "\n")
 
 

@@ -14,7 +14,7 @@ direction came from the same child random stream as the socket disturbance (spaw
 of the trial seed). The pre-registration said "random directions". The direction was a
 fixed function of the disturbance draws. The reviewer measured, over 40,000 trial seeds,
 a correlation of 0.34 between |drift x| and the lateral offset angle, and +0.09 between
-|drift z| and the yaw draw. Each direction was still uniform on the sphere and pairing
+|drift z| and the yaw draw. (Those correlations come from the reviewer's scratch script, not committed; the shared stream itself is shown by the new test.) Each direction was still uniform on the sphere and pairing
 across controllers was intact.
 
 Fix: `defex/perception/sensors.py` draws the drift from spawn_key (16,). Only trials with

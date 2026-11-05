@@ -8,6 +8,21 @@ exercised new default-off code with its flag on: the tilt options' seed-4007 che
 baseline retract cap. The brief's stop condition still holds, so the pitch
 is your decision. This report does not pick it.
 
+## Corrections on 2026-11-05
+
+An independent code review and an independent audit of every number ran on 2026-11-05.
+Neither changed a pre-registered verdict.
+- **Code (fixed on `v0.2g/drift-stream`, not on this branch).** In heldout2, the F/T-drift
+  direction was drawn from the same random stream as the socket disturbance, so it was
+  not an independent random direction. With the stream fixed, the drift family was rerun
+  on the same seed. No heldout2 verdict changes. C still passes 8 bad units in arm drift
+  (`results/v0.2g_drift_stream_fix/REPORT.md` on that branch). The same branch makes the
+  hardware backend score with the nominal grasp, as its docstring said.
+- **Text (fixed here).** J vs C on gantry `heldout` is significant on one seed of three.
+  J is also ahead on gantry latching, seed 20261124. The heldout2 drift trace covers 4 of
+  the 8 bad units, not 6. On tight tolerance, C makes fewer good units per hour than F.
+  Smaller wording fixes are in commit d139491.
+
 ## Words used here
 
 - **C**: the adaptive controller (the product). **G**: C plus a learned contact prior.

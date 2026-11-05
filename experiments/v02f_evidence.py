@@ -1218,7 +1218,7 @@ def part4(runs, out: Out) -> dict:
           "trial spent time in a retry or a re-insert after a failed verify. The last column is the "
           "p95 / median ratio over C's successful trials that never retried, with their count.", "",
           "| Seed | Cell | median | p95 | p95/median | successes | retried | slow | slow and retried | "
-          "mean retry s on slow | slow by condition (top 5) | no-retry p95/median (n) |",
+          "mean retry s on slow | slow by condition (top 5) | no-retry p95 / median of all successes (n) |",
           "|---|---|---|---|---|---|---|---|---|---|---|---|")
     for seed in SEEDS:
         for m in MACHINES:
@@ -1237,7 +1237,7 @@ def part4(runs, out: Out) -> dict:
                 if seed == "20261130" and s in ("standard", "latching"):
                     out.k(f"seed 20261130, {m} {s}, C: median {med:.2f} s, p95 {p95:.2f} s ({p95 / med:.2f}x); "
                           f"{int(x['retried'].sum())} of {x['n']} successes retried; {int(slow.sum())} above 1.5x median, "
-                          f"{int((slow & x['retried']).sum())} of them retried; no-retry p95/median {pct(nr, 95) / med:.2f} "
+                          f"{int((slow & x['retried']).sum())} of them retried; no-retry p95 / median of all successes {pct(nr, 95) / med:.2f} "
                           "(PHASES.md (d))")
     out.w(f, "")
 

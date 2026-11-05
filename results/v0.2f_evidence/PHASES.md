@@ -215,7 +215,7 @@ Over all successful trials of the run, as `checkpoint_report`'s cycle column.
 
 `slow` = successful cycle above 1.5 x the run's median (the W6 target line). `retried` = the trial spent time in a retry or a re-insert after a failed verify. The last column is the p95 / median ratio over C's successful trials that never retried, with their count.
 
-| Seed | Cell | median | p95 | p95/median | successes | retried | slow | slow and retried | mean retry s on slow | slow by condition (top 5) | no-retry p95/median (n) |
+| Seed | Cell | median | p95 | p95/median | successes | retried | slow | slow and retried | mean retry s on slow | slow by condition (top 5) | no-retry p95 / median of all successes (n) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 20261123 | gantry standard | 5.30 | 8.26 | 1.56 | 1984 | 178 | 126 | 122 | 5.23 | noise_2mm 62, noise_1mm 32, generalization_combined 25, generalization_tight 6, friction_1 1 | 1.10 (1806) |
 | 20261123 | gantry latching | 6.16 | 13.41 | 2.18 | 579 | 210 | 85 | 85 | 6.67 | mf_noise_1mm 79, mf_moderate 4, mf_nominal 2 | 1.04 (369) |

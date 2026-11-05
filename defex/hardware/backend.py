@@ -138,7 +138,8 @@ class HardwareBackend:
         if self._last is not None and t > self._last[0]:
             speed = norm3(tcp.p - self._last[1]) / (t - self._last[0])
         self._last = (t, tcp.p.copy())
-        grasp = self.params.grasp_offset if self.params is not None else Pose.identity()
+        # The scenario's grasp error is a simulation draw that no rig applies: use the nominal grasp.
+        grasp = Pose.identity()
         return GroundTruth(
             t=t,
             socket_pose=self.params.socket_pose if self.params is not None else self._nominal_socket,

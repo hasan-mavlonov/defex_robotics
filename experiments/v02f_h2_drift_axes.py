@@ -23,8 +23,12 @@ CONTROLLERS = ("adaptive", "spiral", "spiral_rcc", "spiral_rcc_pull", "spiral_rc
 SHORT = {"adaptive": "C", "spiral": "D", "spiral_rcc": "F", "spiral_rcc_pull": "I", "spiral_rcc_verify": "J"}
 
 
-def drift_rates(condition_name: str, base_seed: int, indices) -> dict[int, np.ndarray]:
-    """Per trial: the force drift rate (N/s) as it enters the controllers' force, socket frame."""
+def drift_rates(condition_name: str, base_seed: int, indices, stream: str = "v0.2f") -> dict[int, np.ndarray]:
+    """Per trial: the force drift rate (N/s) as it enters the controllers' force, socket frame.
+
+    stream="v0.2f" rebuilds the drift the heldout2_v0.2f run used, which shared the scenario
+    disturbance stream (fixed on v0.2g/drift-stream); stream="current" uses SensorSuite as it is now.
+    """
     from defex.perception.sensors import SensorSuite
     from defex.tasks.conditions import heldout2_conditions_by_name
     from defex.tasks.scenarios import sample_scenario
@@ -35,7 +39,13 @@ def drift_rates(condition_name: str, base_seed: int, indices) -> dict[int, np.nd
     for i in indices:
         sc = sample_scenario(cond, i, base_seed, Pose(np.zeros(3), np.eye(3)))
         assert np.allclose(sc.grasp_offset.R, np.eye(3)), "drift trials have no in-hand rotation"
-        out[i] = -SensorSuite(sc.noise, sc.seed).ft_force_drift
+        if stream == "v0.2f":
+            u_f = np.random.default_rng(np.random.SeedSequence(sc.seed).spawn(5)[4]).standard_normal(3)
+            out[i] = -sc.noise.ft_drift_force_n_per_s * u_f / np.linalg.norm(u_f)
+        elif stream == "current":
+            out[i] = -SensorSuite(sc.noise, sc.seed).ft_force_drift
+        else:
+            raise ValueError(stream)
     return out
 
 

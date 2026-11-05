@@ -149,3 +149,16 @@ def test_suite_needs_an_explicit_seed():
     r = subprocess.run([sys.executable, "-m", "experiments.robustness", "--suite", "heldout2", "--trials", "1"],
                        cwd=REPO_ROOT, capture_output=True, text=True)
     assert r.returncode != 0 and "explicit --seed" in r.stderr
+
+
+def test_ft_drift_direction_is_independent_of_the_scenario_disturbance_stream():
+    import numpy as np
+    from defex.perception.sensors import FT_DRIFT_SPAWN_KEY, SensorSuite
+
+    on = replace(SensorNoiseConfig(), ft_drift_force_n_per_s=0.3, ft_drift_torque_nm_per_s=0.003)
+    seed = 12345
+    disturbance = np.random.default_rng(np.random.SeedSequence(seed).spawn(5)[4]).standard_normal(3)
+    drift = SensorSuite(on, seed).ft_force_drift
+    assert not np.allclose(drift / np.linalg.norm(drift), disturbance / np.linalg.norm(disturbance))
+    expected = np.random.default_rng(np.random.SeedSequence(seed, spawn_key=(FT_DRIFT_SPAWN_KEY,))).standard_normal(3)
+    assert np.allclose(drift, 0.3 * expected / np.linalg.norm(expected))

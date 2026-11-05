@@ -120,3 +120,13 @@ def test_hardware_backend_refuses_uncharacterized_fixture_dynamics():
             HardwareBackend(stage, ft, SENSOR, MOUTH, replace(MOCK_DYNAMICS, **{field: None}))
     with pytest.raises(ValueError):
         HardwareBackend(stage, ft, SENSOR, MOUTH, FixtureDynamics(8.0, 400.0, 6.3, 0.006))
+
+
+def test_hardware_ground_truth_uses_the_nominal_grasp_not_the_scenario_draw():
+    task, be = _mock_task(floor_depth_mm=15.0)
+    sc = sample_scenario(conditions_by_name()["generalization_combined"], 0, 2026, be.nominal_socket_pose)
+    sc = replace(sc, noise=hardware_noise(sc.noise))
+    assert not np.allclose(sc.grasp_offset.p, 0.0)
+    task.run(make_controller("fixed"), sc)
+    gt = be.ground_truth()
+    assert np.allclose(gt.connector_pose.p, be.motion.read_tcp_pose().p)

@@ -7,7 +7,7 @@ import pytest
 from defex.config import AdaptiveConfig
 from defex.control.adaptive_fsm import RECOVER, VERIFY
 from defex.control.registry import make_controller
-from tests.test_tilt_check import _ctrl, _fill, _obs
+from test_tilt_check import _ctrl, _fill, _obs
 
 
 def test_both_options_are_off_by_default():

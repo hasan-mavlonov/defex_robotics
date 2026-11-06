@@ -1,5 +1,7 @@
 # YC answers, explained (study guide for Hasan)
 
+> **Update 2026-11-06:** the company site (defexrobotics.com) has now been read. Where this file disagrees with [`YC_ANSWERS_SITE_WORDING.md`](YC_ANSWERS_SITE_WORDING.md), that file wins: the site sells a $65,000 robot (not software per cell) and says 27 factories paid to be first in line.
+
 For each question:
 - **Say this:** the words to use. Learn the facts in it; don't recite it word for word.
 - **What it means:** every part of the answer, in plain English.

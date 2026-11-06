@@ -1,5 +1,7 @@
 # YC interview prep: Defex Robotics (draft for Hasan)
 
+> **Update 2026-11-06:** the company site (defexrobotics.com) has now been read. Where this file disagrees with [`YC_ANSWERS_SITE_WORDING.md`](YC_ANSWERS_SITE_WORDING.md), that file wins: the site sells a $65,000 robot (not software per cell) and says 27 factories paid to be first in line.
+
 How to use this file:
 - Draft answers come from this repo, as of commit 9aab5a6 (2026-11-06).
 - Every number names its source file, so you can defend it when a partner pushes.

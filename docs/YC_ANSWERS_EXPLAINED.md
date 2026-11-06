@@ -544,3 +544,247 @@ The script needs matplotlib only.
    really are: 32 of I's are over 3 deg, none of Defex's (gantry standard, seed 20261130).
 7. ![Speed](yc_figures/fig7_speed.png) The price: 5.30 s against 2.43 s per good part
    (`results/benchmark_v0.2e/HEADLINE_TABLES.md` (c)).
+
+---
+
+## Part 5: Fourteen more questions (from a founder who just got in)
+
+Source: a LinkedIn post by Soham Mehta, listing the questions a friend was asked in a
+YC interview this batch. The founder's advice: if you can't answer some of them because
+you have no customers yet, go and get some, as soon as possible.
+
+New fact used below: **Defex without VERIFY** (`results/v0.2g_noverify_dev/REPORT.md`,
+development seed 2026, gantry, 2,000 sockets). With VERIFY switched off, Defex is faster
+(3.4 s against 5.3 s), but it called **41** crooked plugs "done", the same as spiral
+search's **40**. With VERIFY it called **0**. So VERIFY is the product.
+
+### 1. "What are you building? Be specific."
+
+**Say this:**
+> Software for robot arms that plugs electrical connectors into boards and proves each
+> one is seated right before it says "done." It uses the robot's wrist force sensor to
+> find the hole, then feels both walls of the socket and straightens the plug's twist
+> and lean. Today it's a simulation prototype, tested on a gantry and a UR5e arm model.
+
+**What it means:**
+- "Be specific" means **what it is, who uses it, how it works, and how far along it
+  is**, in four short sentences. Don't use "AI-powered," "platform" or "revolutionize."
+- "Robot arms": it runs on robots factories already buy.
+- "Feels both walls and straightens": this is VERIFY, the part that matters (Part 1,
+  idea 7).
+- "Simulation prototype": say it yourself, before they ask.
+
+### 2. "Pick one customer. Walk us through how they use your product."
+
+You have no customer yet. **Don't invent one.** Describe the customer you are designing
+for, and say clearly that it is a target:
+
+**Say this:**
+> We don't have one yet, so here's the one we're designing for. A contract manufacturer
+> whose robot plugs a cable connector into a board that's already mounted in a box, so
+> the socket's position varies by 1-2 mm. Today the robot runs spiral search and they
+> catch bad connectors at final test. They'd install Defex as software on the same
+> robot. Every part: the robot inserts the plug, Defex feels the walls and straightens
+> it, about 2 more seconds, and only then says done. If it can't prove the seat, it
+> retries, or flags the part for a person instead of shipping it.
+
+**What it means:**
+- **Why this customer:** our data shows Defex helps *only* when the socket's position
+  is uncertain by 1-2 mm. On precisely fixed sockets, spiral search does the same job
+  faster. So pick a customer where the socket moves.
+- **"Catch bad connectors at final test":** that is the pain. Finding a bad connector
+  late costs much more than finding it at the robot.
+- **Replace this with a real customer as soon as you have one.** This is the question
+  that most needs a real name.
+
+### 3. "What does your product actually do for them?"
+
+**Say this:**
+> It stops bad connectors leaving the station. In our simulation, when the socket
+> position varies, spiral search calls about 2 in 100 crooked plugs "done." Ours called
+> none in 22,000. For them that means fewer failures at final test and fewer returns.
+> The cost is about 2 seconds more per part.
+
+**What it means:**
+- **"2 in 100":** spiral search passed 138-178 bad plugs out of 7,400 per run (Part 1).
+- **"None in 22,000":** 3 runs x 7,400 = 22,200 good parts, 0 bad plugs called "done."
+- **Say the cost yourself.** That shows honesty, and it starts the right conversation:
+  is a bad connector worth more than 2 seconds to them?
+- **Don't say "it inserts better."** Without VERIFY, Defex is no cleaner than spiral
+  (41 against 40). The value is the proof, not the insertion.
+
+### 4. "Are people using it yet?"
+
+**Say this:**
+> No. Nobody uses it yet. It runs in simulation only. The next steps are a real robot
+> rig, then pilots in customers' own cells.
+
+**What it means:** short and honest. Don't stretch the truth with "we're in talks."
+Mention talks only if they are real, and then give a number.
+
+### 5. "How much are they paying?"
+
+**Say this:**
+> Nothing yet, there are no customers. The plan is [$X] per robot cell per year, priced
+> below what bad connectors cost them.
+
+**What it means:**
+- "Priced below what bad connectors cost them" is value pricing (Part 2, Q7). If a cell
+  loses $100,000 a year to bad connectors, $10,000 a year is an easy yes.
+- [$X] must come from customer calls. Ask them what one bad connector costs.
+
+### 6. "We see this idea a lot. Why will you be the one to crack it?"
+
+**Say this:**
+> Most teams try to make the robot insert better. We found the real problem is the
+> robot being confidently wrong: spiral search's failures are mostly plugs at full depth,
+> just crooked, that it calls good. We tested against what vendors actually ship, on
+> about 100,000 cases per round, and published where we lose. We even turned off our
+> own checking step to test it: without it, we're no better than spiral. So we know
+> exactly what the product is. [FILL: your personal edge, such as factory access or
+> background.]
+
+**What it means:**
+- YC hears "robot insertion" pitches often, from research labs and from robot-learning
+  startups. They want to know what you see that others miss.
+- **Your insight is the confident wrong seat** (Part 1, idea 4). That is specific and
+  backed by data.
+- **"Turned off our own checking step":** the new test. It shows you test your own
+  ideas hard, which is rare and convincing.
+- [FILL] is the human part: why *you*.
+
+### 7. "Aren't you just building custom software for every customer?"
+
+**Say this:**
+> No. The method is the same for every connector: find the hole by touch, feel the
+> walls, straighten, prove the seat. What changes per customer is a small connector
+> file: the sizes, the gap and the force limits from the datasheet. We have files for
+> four connector types, and we've tested two in simulation: a plain housing and a Molex
+> Micro-Fit. The honest risk is setup in each cell: the fixture, the robot brand, the
+> spec. The first 2-3 pilots will show how much of that is custom.
+
+**What it means:**
+- YC fears a "services business": a company that writes new code for each client and
+  can't scale.
+- **Your answer:** the core is general, and each connector is just data.
+- **Check before saying it.** The four files are in `assets/connectors/`: the plain
+  housing, the Micro-Fit, a Samtec ERM8 and an RJ45. Only the first two are used by any
+  test. Say "two tested."
+- Admitting setup work is a risk is honest, and it shows you've thought about it.
+
+### 8. "What will you get done by demo day?"
+
+Demo day comes about 3 months after the batch starts.
+
+**Say this:**
+> Three things:
+> 1. The rig running and the real-robot test done, compared against the simulation's
+>    predictions, which we froze in advance.
+> 2. Two or three paid pilots on customers' own connectors.
+> 3. [FILL: a revenue target, such as $X in signed pilots.]
+
+**What it means:**
+- **"Frozen predictions":** the simulation already predicted, for example, Defex 387 of
+  400 against spiral 336 of 400 on the gantry. If the real robot matches, the
+  simulation becomes believable (Part 2, Q8).
+- YC wants **measurable goals with dates**. Not "grow a lot."
+
+### 9. "Who does what on the team?"
+
+**Say this:** [FILL, your real team.] If you are solo:
+> It's me. I do the product, the software, the tests and the customer calls. My first
+> hire is a robotics hardware engineer to run the rig and pilots.
+
+**What it means:**
+- They check that every important job has one clear owner, and that founders don't
+  overlap or fight.
+- **Solo founders do get in, but YC will probe it.** Show you know your gaps (hardware
+  and sales) and how you'll fill them.
+
+### 10. "How many customers have you spoken to?"
+
+**Say this:** a real number. [FILL]
+> I've spoken to [N]. [One sentence on the most useful thing one of them said.]
+
+If the number is low:
+> Not enough, [N]. That's my top priority. I'm doing [X] calls this week.
+
+**What it means:**
+- This is the question the LinkedIn post is really about. **Fix it before the
+  interview.** Aim for 15-20 conversations with people who own a connector step.
+- Use the call questions in Part 2, Q6.
+- **Zero is the worst possible answer.** Even 10 real conversations change the whole
+  interview.
+
+### 11. "How are you selling?"
+
+**Say this:**
+> We aren't selling yet. The plan:
+> - Sell through robot integrators, the companies that build these cells and get blamed
+>   when they ship bad parts.
+> - Sell directly to 2-3 lighthouse manufacturers.
+> - Open with a paid feasibility test: we run their connector in our simulation and on
+>   our rig, and show them the result.
+
+**What it means:**
+- **Integrators** are companies that design and install robot cells for factories.
+  They work with many factories, so one integrator can bring many customers.
+- **Lighthouse customer:** a well-known first customer whose name convinces others.
+- **Paid feasibility test:** a small, cheap first project. It proves value fast, and it
+  is real revenue.
+
+### 12. "What's actually built? Show us."
+
+**Say this:**
+> Built:
+> - A full simulation of the workcell: socket, robot, camera noise and force sensor.
+> - Defex's controller, plus 9 other methods, including the spiral search vendors ship.
+> - A test system that runs about 100,000 paired trials per round, with 315 automated
+>   tests.
+> - A frozen plan for the real-robot test.
+>
+> Not built: anything on real hardware.
+>
+> [Then show the demo: spiral search calling a 3.7-degree crooked plug "done," and
+> Defex fixing the same socket.]
+
+**What it means:**
+- **"Show us" means demo, not slides.** Have the simulation ready to share on screen.
+  The best example is gantry `noise_1mm` trial 38 (Part 3).
+- **Say "not built" yourself.** Partners respect founders who are clear about what is
+  real.
+- **Also not built yet:** the depth re-check against sensor drift, and testing the
+  gripper letting go.
+
+### 13. "Will your first customers actually use it?"
+
+**Say this:**
+> Only if it fits into their cell without replacing anything, and doesn't slow the line
+> past their budget. That's why we start as software on the robot they already have.
+> The speed is the real risk: if their cycle can't take 2 more seconds, they won't use
+> it. I'll know from [FILL: the first pilots / the calls].
+
+**What it means:**
+- YC asks this because many products get bought but never used. Industrial customers
+  especially resist anything that slows the line.
+- **The 2 seconds are your biggest adoption risk.** Say so.
+- **What could make it easier later:** run VERIFY only where it's needed. The new test
+  shows that turning VERIFY off makes Defex faster but ships crooked plugs, so you can't
+  simply drop it. You *could* make it shorter, or use it only on high-risk parts. Don't
+  claim that works; it hasn't been tested.
+
+### 14. "Where do they need it most?"
+
+**Say this:**
+> Where the socket's position isn't precise: connectors on boards already mounted in an
+> enclosure, and cables plugged into modules in final assembly, in car electronics,
+> appliances and wire harnesses. Our data shows no advantage when the socket is
+> precisely fixed. All our lead comes from 1-2 mm of position error.
+
+**What it means:**
+- **Picture 5 proves this.** In 17 of 20 test situations, Defex and spiral tie at 100%.
+  Defex wins only when the camera, and so the socket position, is 1-2 mm off.
+- In factories, position error is large when the part is already inside a box, on a
+  moving conveyor, or held loosely, as in final assembly.
+- **This is a strength.** It shows you know exactly where you win and where you don't.
+- **Confirm the segments in customer calls** ([FILL]).

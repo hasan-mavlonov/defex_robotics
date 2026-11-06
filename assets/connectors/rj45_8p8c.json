@@ -1,0 +1,27 @@
+{
+  "name": "rj45_8p8c",
+  "description": "RJ45 8P8C modular plug into TE 5520251-4 jack, unshielded (W3 candidate 3).",
+  "plug": {"size_x_mm": 11.684, "size_y_mm": 6.604, "length_mm": 23.114, "mass_g": 2.0, "grip_length_mm": 8.0},
+  "socket": {"clearance_mm": 0.114, "depth_mm": 14.6, "chamfer_mm": 0.3, "wall_mm": 1.0, "floor_mm": 1.5, "pcb_thickness_mm": 1.6},
+  "friction": 0.3,
+  "mating": {
+    "circuits": 8,
+    "mating_force_total_max_n": 22.2,
+    "unmating_force_unlatched_max_n": 22.2,
+    "latch_retention_proof_n": 89.0,
+    "latched_axial_play_max_mm": 1.143,
+    "contact_normal_force_min_per_contact_n": 0.98,
+    "polarization": "asymmetric latch and tab",
+    "durability_cycles": 750
+  },
+  "basis": {
+    "datasheet": "plug width 11.684 mm and height 6.604 mm (FCC 68.500(c), height read off a scanned figure), length 23.114 mm max, jack opening 11.9126 mm (clearance = (11.9126 - 11.684) / 2), tab length 14.605 mm (used as depth), forces from TE 108-1163 Rev H",
+    "assumed": "lead-in, wall/floor, mass. Latch model not yet parameterized."
+  },
+  "sources": {
+    "TE_108-1163_H": "https://www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Specification+Or+Standard%7F108-1163%7FH%7Fpdf%7FEnglish%7FENG_SS_108-1163_H.pdf%7F5555764-3",
+    "TE_108-133010_B": "https://www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Specification+Or+Standard%7F108-133010%7FB%7Fpdf%7FEnglish%7FENG_SS_108-133010_B.pdf%7F2213145-1",
+    "47_CFR_68.500_2000": "https://www.govinfo.gov/content/pkg/CFR-2000-title47-vol3/pdf/CFR-2000-title47-vol3-sec68-500.pdf",
+    "TE_5520251-4": "https://www.te.com/en/product-5520251-4.html"
+  }
+}

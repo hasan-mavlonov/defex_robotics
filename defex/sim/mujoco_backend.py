@@ -8,7 +8,8 @@ import mujoco
 import numpy as np
 
 from defex.config import MM, ConnectorSpec, FixtureConfig, SimConfig
-from defex.sim.backend import GroundTruth, PayloadModel, RawSensorData, SceneParams
+from defex.sim.backend import FixtureDynamics, GroundTruth, PayloadModel, RawSensorData, SceneParams
+from defex.sim.mating import MatingForce
 from defex.sim.scene_builder import (
     FIXTURE_JOINTS,
     FT_SITE_Z,
@@ -36,6 +37,8 @@ class MuJoCoBackend:
     the Z-Y'-X'' Euler angles of the TCP orientation.
     """
 
+    joint_names: tuple[str, ...] = FIXTURE_JOINTS
+
     def __init__(self, sim: SimConfig | None = None, fixture: FixtureConfig | None = None) -> None:
         self.sim_cfg = sim or SimConfig()
         self.fixture_cfg = fixture or FixtureConfig()
@@ -47,13 +50,15 @@ class MuJoCoBackend:
 
     # ------------------------------------------------------------------ setup
     @staticmethod
-    def _spec_key(spec: ConnectorSpec) -> str:
-        return repr((spec.name, spec.plug, spec.socket))
+    def _spec_key(spec: ConnectorSpec, compliance=None) -> str:
+        return repr((spec.name, spec.plug, spec.socket, compliance))
 
     def load(self, params: SceneParams) -> None:
-        key = self._spec_key(params.connector)
+        key = self._spec_key(params.connector, params.compliance)
         if key not in self._cache:
-            xml = build_workcell_xml(params.connector, self.fixture_cfg, self.sim_cfg, params.connector.friction)
+            xml = build_workcell_xml(
+                params.connector, self.fixture_cfg, self.sim_cfg, params.connector.friction, params.compliance
+            )
             model = mujoco.MjModel.from_xml_string(xml)
             self._cache[key] = _CompiledModel(model, WorkcellLayout.from_spec(params.connector, self.fixture_cfg))
         compiled = self._cache[key]
@@ -67,23 +72,41 @@ class MuJoCoBackend:
         # Friction coefficient of every connector/socket contact pair.
         m.pair_friction[:, 0] = params.friction
         m.pair_friction[:, 1] = params.friction
-        # In-hand grasp offset of the connector relative to the fixture TCP.
-        m.body_pos[self._connector_body] = params.grasp_offset.p
-        m.body_quat[self._connector_body] = params.grasp_offset.quat()
+        self._set_grasp(params.grasp_offset)
+        self._setup_mating(params)
         self.reset()
+
+    def _set_grasp(self, grasp_offset: Pose) -> None:
+        """In-hand grasp offset of the connector relative to the fixture TCP."""
+        self.model.body_pos[self._connector_body] = grasp_offset.p
+        self.model.body_quat[self._connector_body] = grasp_offset.quat()
+
+    def _setup_mating(self, params: SceneParams) -> None:
+        """Terminal and latch forces for connectors that model them (W3); None keeps V0.1 physics."""
+        spec = params.connector
+        self._mating = MatingForce(spec, params.defect, params.part_variation) if spec.mating is not None else None
+        if self._mating is None and params.defect is not None:
+            raise ValueError(f"defect {params.defect!r} needs a connector with a mating model")
+        if self._mating is None and params.part_variation is not None:
+            raise ValueError("a part variation needs a connector with a mating model")
 
     def _index_model(self) -> None:
         m = self.model
         self._connector_body = m.body("connector").id
+        # The model is cached per connector and wrist and reused across trials, and load() writes
+        # each trial's grasp offset into it. Put the nominal grasp back before anything below
+        # derives from the model (payload, fixture dynamics), so they do not depend on which
+        # trial last used this model in the worker; load() sets the trial's own grasp after.
+        self._set_grasp(Pose.identity())
         self._tool_body = m.body("tool").id
         self._socket_mocap = m.body("socket").mocapid[0]
         self._marker_est_mocap = m.body("marker_estimate").mocapid[0]
         self._marker_sp_mocap = m.body("marker_setpoint").mocapid[0]
         self._tcp_site = m.site("tcp").id
         self._ft_site = m.site("ft_site").id
-        self._qadr = np.array([m.joint(j).qposadr[0] for j in FIXTURE_JOINTS])
-        self._vadr = np.array([m.joint(j).dofadr[0] for j in FIXTURE_JOINTS])
-        self._jrange = np.array([m.joint(j).range for j in FIXTURE_JOINTS])
+        self._qadr = np.array([m.joint(j).qposadr[0] for j in self.joint_names])
+        self._vadr = np.array([m.joint(j).dofadr[0] for j in self.joint_names])
+        self._jrange = np.array([m.joint(j).range for j in self.joint_names])
         self._ctrlrange = m.actuator_ctrlrange.copy()
         self._forcerange = m.actuator_forcerange.copy()
         s_f = m.sensor("ft_force")
@@ -97,10 +120,11 @@ class MuJoCoBackend:
         self._socket_mask = np.zeros(m.ngeom, dtype=bool)
         self._socket_mask[list(socket)] = True
         self._elliptic = m.opt.cone == mujoco.mjtCone.mjCONE_ELLIPTIC
-        self._payload = self._identify_payload()
+        self._payload = self._true_payload()
+        self._dynamics = self._fixture_dynamics()
 
-    def _identify_payload(self) -> PayloadModel:
-        """Mass properties below the F/T sensor with a nominal grasp (identified once)."""
+    def _true_payload(self) -> PayloadModel:
+        """Exact mass properties below the F/T sensor with a nominal grasp (reporting only)."""
         m = self.model
         d = mujoco.MjData(m)
         saved_pos = m.body_pos[self._connector_body].copy()
@@ -130,6 +154,8 @@ class MuJoCoBackend:
         d.ctrl[:] = 0.0
         self._ctrl_clipped = False
         self._socket_pose_true = Pose(sp.p.copy(), sp.R.copy())
+        if getattr(self, "_mating", None) is not None:
+            self._mating.reset()
         mujoco.mj_forward(m, d)
 
     # ------------------------------------------------------------------ properties
@@ -145,8 +171,46 @@ class MuJoCoBackend:
     def nominal_socket_pose(self) -> Pose:
         return Pose(self._layout.socket_mouth.copy(), np.eye(3))
 
+    def _tool_effective_mass_z(self) -> float:
+        m = self.model
+        d = mujoco.MjData(m)
+        d.qpos[:] = self.data.qpos if self.data is not None else 0.0
+        mujoco.mj_forward(m, d)
+        M = np.zeros((m.nv, m.nv))
+        mujoco.mj_fullM(m, d, M)
+        jp = np.zeros((3, m.nv))
+        jr = np.zeros((3, m.nv))
+        mujoco.mj_jacBody(m, d, jp, jr, self._tool_body)
+        return float(1.0 / (jp @ np.linalg.solve(M, jp.T))[2, 2])
+
+    def _servo_following_lag(self, actuators) -> float:
+        """Slowest kv / kp of the position servos: steady following error per unit speed (s)."""
+        m = self.model
+        return float(max(-m.actuator_biasprm[a, 2] / m.actuator_gainprm[a, 0] for a in actuators))
+
+    def _fixture_dynamics(self) -> FixtureDynamics:
+        f = self.fixture_cfg
+        act = {j: self.model.actuator("act_" + j).id for j in self.joint_names}
+        return FixtureDynamics(
+            translational_stiffness_n_per_mm=f.linear_kp_n_per_m * MM,
+            yaw_stiffness_nm_per_rad=f.angular_kp_nm_per_rad,
+            effective_mass_kg=self._tool_effective_mass_z(),
+            command_latency_s=0.0,
+            tilt_stiffness_nm_per_rad=f.angular_kp_nm_per_rad,
+            following_lag_s=self._servo_following_lag(act[j] for j in ("fx", "fy", "fz")),  # x carriage
+            rotational_following_lag_s=self._servo_following_lag(act[j] for j in ("rz", "ry", "rx")),
+        )
+
     @property
-    def payload(self) -> PayloadModel:
+    def fixture_dynamics(self) -> FixtureDynamics:
+        return self._dynamics
+
+    @property
+    def ft_sensor_in_tcp(self) -> Pose:
+        return Pose(np.array([0.0, 0.0, FT_SITE_Z]), np.eye(3))
+
+    @property
+    def true_payload(self) -> PayloadModel:
         return self._payload
 
     @property
@@ -173,7 +237,25 @@ class MuJoCoBackend:
 
     def step(self, duration: float) -> None:
         n = max(1, int(round(duration / self.model.opt.timestep)))
-        mujoco.mj_step(self.model, self.data, nstep=n)
+        if getattr(self, "_mating", None) is None:
+            mujoco.mj_step(self.model, self.data, nstep=n)  # V0.1 path, unchanged
+            return
+        m, d = self.model, self.data
+        S = self._socket_pose_true
+        vel = np.zeros(6)
+        for _ in range(n):
+            tip = d.site_xpos[self._tcp_site]
+            rel = S.R.T @ (tip - S.p)
+            mujoco.mj_objectVelocity(m, d, mujoco.mjtObj.mjOBJ_SITE, self._tcp_site, vel, 0)
+            v_in = -float((S.R.T @ vel[3:])[2])
+            f_out = self._mating.axial_force(-float(rel[2]), v_in, rel[:2])
+            # Cartesian force at the plug tip, applied on the connector body (at its centre of
+            # mass, plus the moment of the tip offset). Unlike a generalized joint force this
+            # passes through the body chain, so the wrist F/T sensor measures it.
+            force = S.R[:, 2] * f_out
+            d.xfrc_applied[self._connector_body, :3] = force
+            d.xfrc_applied[self._connector_body, 3:] = np.cross(tip - d.xipos[self._connector_body], force)
+            mujoco.mj_step(m, d)
 
     # ------------------------------------------------------------------ sensing
     def read_sensors(self) -> RawSensorData:
@@ -238,6 +320,8 @@ class MuJoCoBackend:
             tcp_speed=norm3(d.qvel[self._vadr[:3]]),
             joint_limit_hit=near_limit or self._ctrl_clipped,
             actuator_saturated=saturated,
+            latched=None if getattr(self, "_mating", None) is None else self._mating.state.latched,
+            latch_broken=False if getattr(self, "_mating", None) is None else self._mating.state.broken,
         )
 
     # ------------------------------------------------------------------ visualization helpers

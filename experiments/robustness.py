@@ -16,11 +16,19 @@ commit) and, with ``--record N``, replayable trajectories. Plots are produced by
 from __future__ import annotations
 
 import argparse
+import os
+import sys
 from pathlib import Path
 
 from defex.config import REPO_ROOT
-from defex.control.registry import CONTROLLERS
-from defex.tasks.conditions import standard_conditions
+from defex.control.registry import BENCHMARK_CONTROLLERS
+from defex.tasks.conditions import (
+    heldout2_conditions,
+    heldout_conditions,
+    latch_spread_conditions,
+    latching_conditions,
+    standard_conditions,
+)
 from experiments.runner import default_workers, run_suite
 
 
@@ -30,14 +38,25 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=default_workers())
     ap.add_argument("--seed", type=int, default=2026, help="base seed (paired across controllers)")
     ap.add_argument("--conditions", type=str, default="", help="comma-separated condition names (default: all)")
-    ap.add_argument("--controllers", type=str, default=",".join(CONTROLLERS), help="comma-separated controllers")
+    ap.add_argument("--controllers", type=str, default=",".join(BENCHMARK_CONTROLLERS),
+                    help="comma-separated controllers (default A-F; G is adaptive_learned)")
     ap.add_argument("--name", type=str, default="robustness", help="output folder name under results/")
     ap.add_argument("--record", type=int, default=0, help="save trajectories for the first N trials of each cell")
     ap.add_argument("--list", action="store_true", help="list the available conditions and exit")
     ap.add_argument("--no-plots", action="store_true")
+    ap.add_argument("--backend", choices=["gantry", "arm"], default="gantry",
+                    help="arm: UR5e serial arm (W5; run scripts/fetch_menagerie.py first)")
+    ap.add_argument("--suite", choices=["standard", "heldout", "latching", "latch_spread", "heldout2"], default="standard",
+                    help="heldout: the W2 held-out families (pre-registered runs only); "
+                         "latch_spread: Micro-Fit mating values off nominal (v0.2c review); "
+                         "heldout2: the v0.2f held-out families (pre-registered runs only)")
     args = ap.parse_args()
+    os.environ["DEFEX_BACKEND"] = args.backend
 
-    conds = standard_conditions()
+    if args.suite in ("heldout", "heldout2") and "--seed" not in sys.argv and not args.list:
+        raise SystemExit(f"--suite {args.suite} needs an explicit --seed (the default 2026 is the tuning seed)")
+    conds = {"standard": standard_conditions, "heldout": heldout_conditions, "latching": latching_conditions,
+             "latch_spread": latch_spread_conditions, "heldout2": heldout2_conditions}[args.suite]()
     if args.list:
         for c in conds:
             print(f"{c.name:26s} [{c.group}] {c.description}")

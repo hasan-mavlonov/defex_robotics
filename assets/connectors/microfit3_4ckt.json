@@ -1,0 +1,39 @@
+{
+  "name": "microfit3_4ckt",
+  "description": "Molex Micro-Fit 3.0, 4-circuit dual-row receptacle housing 43025-0408 into vertical header 43045-0429. Latching wire-to-board (W3 candidate 1).",
+  "plug": {"size_x_mm": 6.85, "size_y_mm": 6.86, "length_mm": 14.0, "mass_g": 1.0, "grip_length_mm": 4.0},
+  "socket": {"clearance_mm": 0.15, "depth_mm": 8.0, "chamfer_mm": 0.4, "wall_mm": 1.0, "floor_mm": 1.5, "pcb_thickness_mm": 1.6},
+  "friction": 0.3,
+  "mating": {
+    "circuits": 4,
+    "terminal_wipe_mm": 1.75,
+    "terminal_mating_force_max_per_circuit_n": 8.0,
+    "terminal_unmating_force_min_per_circuit_n": 2.4,
+    "latch_retention_force_min_n": 58.0,
+    "latch_retention_note": "PS-43045 thumb-latch-to-ramp strength, minimum (full mate then unmate)",
+    "latch_type": "positive thumb latch on the receptacle over a header ramp",
+    "polarization": "polarized housing (keying: none)",
+    "durability_cycles": 30,
+    "model": {
+      "terminal_peak_per_circuit_n": 5.0,
+      "terminal_slide_per_circuit_n": 3.0,
+      "terminal_lead_mm": 0.3,
+      "latch_onset_depth_mm": 6.4,
+      "latch_peak_depth_mm": 7.4,
+      "latch_peak_force_n": 6.0,
+      "latch_snap_depth_mm": 7.5,
+      "latch_post_snap_stroke_mm": 0.5
+    }
+  },
+  "force_budget": {"insert_target_n": 35.2, "abort_n": 40.0, "protective_stop_n": 48.0, "damage_n": 58.0},
+  "basis": {
+    "datasheet": "terminal wipe, mating/unmating force per circuit, latch strength, durability, cross-section 6.85 x 6.86 mm, body length 14 mm",
+    "assumed": "cavity clearance 0.15 mm, mating depth 8 mm, lead-in 0.4 mm, wall/floor, mass, terminal peak/slide split, latch ramp geometry and 6 N peak (no latch engagement force is published), force budget margins (insert target 1.1 x the 32 N datasheet maximum mating force = 35.2 N, the factor C uses for its stall push and pull test; abort 40 N = 1.25 x that maximum, stop at 1.5 x it, damage at the 58 N minimum latch strength), grip length 4 mm so the fingers clear the housing top by 2 mm at full seat"
+  },
+  "sources": {
+    "product_spec_PS-43045_revN": "https://static.chipdip.ru/lib/159/DOC011159301.pdf",
+    "drawing_SD-43025-001_A8": "https://www.farnell.com/cad/2673247.pdf",
+    "part_sheet_43045-0429": "https://docs.rs-online.com/8771/A700000013692906.pdf",
+    "drawing_SD-43045-001_H": "https://store.comet.bg/download-file.php?id=29300"
+  }
+}

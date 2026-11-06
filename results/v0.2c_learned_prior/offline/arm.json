@@ -1,0 +1,1077 @@
+{
+ "backend": "arm",
+ "sources": [
+  "results/checkpoint2_prep/arm_prior/data/arm/train_main",
+  "results/checkpoint2_prep/arm_prior/data/arm/train_noise05",
+  "results/checkpoint2_prep/arm_prior/data/arm/dev_seed2026",
+  "results/v0.2c_learned_prior/data/arm/dagger_g_main",
+  "results/v0.2c_learned_prior/data/arm/dagger_g_noise05"
+ ],
+ "models": {
+  "C": [
+   null,
+   0.0
+  ],
+  "g_v1": [
+   "results/v0.2c_learned_prior/models/v1_contact_prior_arm.json",
+   1.0
+  ],
+  "residual_k2_tempered": [
+   "results/v0.2c_learned_prior/models/arm_residual_k2_tempered.json",
+   1.0
+  ],
+  "residual_k2": [
+   "results/v0.2c_learned_prior/models/arm_residual_k2.json",
+   1.0
+  ],
+  "residual_k3": [
+   "results/v0.2c_learned_prior/models/arm_residual_k3.json",
+   1.0
+  ],
+  "posterior_k3": [
+   "results/v0.2c_learned_prior/models/arm_posterior_k3.json",
+   1.0
+  ],
+  "ratio_k3": [
+   "results/v0.2c_learned_prior/models/arm_ratio_k3.json",
+   1.0
+  ]
+ },
+ "splits": {
+  "stop": {
+   "n": 1432,
+   "n_on_grid": 1432,
+   "n_first_contact": 564,
+   "replay_max_dev_mm": 4.440892098500626e-15,
+   "candidates": {
+    "C": {
+     "weight": 0.0,
+     "all": {
+      "n": 1432,
+      "grid_nll_nats": 6.313642414713052,
+      "mean_radial_error_mm": 1.6617959525184485,
+      "outside_hpd50": 0.6662011173184358,
+      "outside_hpd95": 0.44692737430167595,
+      "next_probe_in_capture": 0.41131284916201116,
+      "next_probe_in_strict_clearance": 0.13477653631284917
+     },
+     "first_contact": {
+      "n": 564,
+      "grid_nll_nats": 3.535899050637454,
+      "mean_radial_error_mm": 1.397604762769476,
+      "outside_hpd50": 0.4219858156028369,
+      "outside_hpd95": 0.2322695035460993,
+      "next_probe_in_capture": 0.49113475177304966,
+      "next_probe_in_strict_clearance": 0.20035460992907803
+     },
+     "later_contact": {
+      "n": 868,
+      "grid_nll_nats": 8.118535568328994,
+      "mean_radial_error_mm": 1.8334593523092562,
+      "outside_hpd50": 0.8248847926267281,
+      "outside_hpd95": 0.586405529953917,
+      "next_probe_in_capture": 0.35944700460829493,
+      "next_probe_in_strict_clearance": 0.09216589861751152
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 65,
+       "grid_nll_nats": 6.88922717456617,
+       "mean_radial_error_mm": 0.7514188016755695,
+       "outside_hpd50": 0.8769230769230769,
+       "outside_hpd95": 0.6923076923076923,
+       "next_probe_in_capture": 0.6923076923076923,
+       "next_probe_in_strict_clearance": 0.16923076923076924
+      },
+      "mf_noise_1mm": {
+       "n": 555,
+       "grid_nll_nats": 4.781625510024138,
+       "mean_radial_error_mm": 1.096743721152077,
+       "outside_hpd50": 0.581981981981982,
+       "outside_hpd95": 0.3333333333333333,
+       "next_probe_in_capture": 0.42702702702702705,
+       "next_probe_in_strict_clearance": 0.08108108108108109
+      },
+      "noise_0.5mm": {
+       "n": 1,
+       "grid_nll_nats": 1.396736161260955,
+       "mean_radial_error_mm": 0.5573101579858575,
+       "outside_hpd50": 1.0,
+       "outside_hpd95": 0.0,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 1.0
+      },
+      "noise_1mm": {
+       "n": 165,
+       "grid_nll_nats": 5.764519467518889,
+       "mean_radial_error_mm": 1.3788438064350517,
+       "outside_hpd50": 0.6484848484848484,
+       "outside_hpd95": 0.42424242424242425,
+       "next_probe_in_capture": 0.5151515151515151,
+       "next_probe_in_strict_clearance": 0.23636363636363636
+      },
+      "noise_2mm": {
+       "n": 646,
+       "grid_nll_nats": 7.719801184453584,
+       "mean_radial_error_mm": 2.312833248356555,
+       "outside_hpd50": 0.7213622291021672,
+       "outside_hpd95": 0.5263157894736842,
+       "next_probe_in_capture": 0.34210526315789475,
+       "next_probe_in_strict_clearance": 0.15015479876160992
+      }
+     }
+    },
+    "g_v1": {
+     "weight": 1.0,
+     "all": {
+      "n": 1432,
+      "grid_nll_nats": 3.5283238442658487,
+      "mean_radial_error_mm": 1.087638253112548,
+      "outside_hpd50": 0.7262569832402235,
+      "outside_hpd95": 0.44553072625698326,
+      "next_probe_in_capture": 0.7094972067039106,
+      "next_probe_in_strict_clearance": 0.2884078212290503
+     },
+     "first_contact": {
+      "n": 564,
+      "grid_nll_nats": 2.466293063338606,
+      "mean_radial_error_mm": 1.113167355141067,
+      "outside_hpd50": 0.5602836879432624,
+      "outside_hpd95": 0.25177304964539005,
+      "next_probe_in_capture": 0.7145390070921985,
+      "next_probe_in_strict_clearance": 0.3280141843971631
+     },
+     "later_contact": {
+      "n": 868,
+      "grid_nll_nats": 4.218399144315348,
+      "mean_radial_error_mm": 1.071050219075584,
+      "outside_hpd50": 0.8341013824884793,
+      "outside_hpd95": 0.5714285714285714,
+      "next_probe_in_capture": 0.706221198156682,
+      "next_probe_in_strict_clearance": 0.2626728110599078
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 65,
+       "grid_nll_nats": 4.112206864746055,
+       "mean_radial_error_mm": 0.49370180663540164,
+       "outside_hpd50": 0.8769230769230769,
+       "outside_hpd95": 0.5538461538461539,
+       "next_probe_in_capture": 0.9076923076923077,
+       "next_probe_in_strict_clearance": 0.7230769230769231
+      },
+      "mf_noise_1mm": {
+       "n": 555,
+       "grid_nll_nats": 2.572547820476938,
+       "mean_radial_error_mm": 0.7108383556559649,
+       "outside_hpd50": 0.7153153153153153,
+       "outside_hpd95": 0.43783783783783786,
+       "next_probe_in_capture": 0.6936936936936937,
+       "next_probe_in_strict_clearance": 0.14954954954954955
+      },
+      "noise_0.5mm": {
+       "n": 1,
+       "grid_nll_nats": 0.308687068263513,
+       "mean_radial_error_mm": 0.21204468308767582,
+       "outside_hpd50": 0.0,
+       "outside_hpd95": 0.0,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 1.0
+      },
+      "noise_1mm": {
+       "n": 165,
+       "grid_nll_nats": 2.8620297935918892,
+       "mean_radial_error_mm": 0.8873269739976122,
+       "outside_hpd50": 0.6848484848484848,
+       "outside_hpd95": 0.34545454545454546,
+       "next_probe_in_capture": 0.8181818181818182,
+       "next_probe_in_strict_clearance": 0.46060606060606063
+      },
+      "noise_2mm": {
+       "n": 646,
+       "grid_nll_nats": 4.46588027152411,
+       "mean_radial_error_mm": 1.5236394400063675,
+       "outside_hpd50": 0.7321981424148607,
+       "outside_hpd95": 0.4674922600619195,
+       "next_probe_in_capture": 0.6749226006191951,
+       "next_probe_in_strict_clearance": 0.3188854489164087
+      }
+     }
+    },
+    "residual_k2_tempered": {
+     "weight": 1.0,
+     "all": {
+      "n": 1432,
+      "grid_nll_nats": 1.9076909455670932,
+      "mean_radial_error_mm": 1.1408973699648135,
+      "outside_hpd50": 0.5432960893854749,
+      "outside_hpd95": 0.09567039106145252,
+      "next_probe_in_capture": 0.729050279329609,
+      "next_probe_in_strict_clearance": 0.29399441340782123
+     },
+     "first_contact": {
+      "n": 564,
+      "grid_nll_nats": 1.8362781206725798,
+      "mean_radial_error_mm": 1.0806570763620538,
+      "outside_hpd50": 0.5212765957446809,
+      "outside_hpd95": 0.06914893617021277,
+      "next_probe_in_capture": 0.7163120567375887,
+      "next_probe_in_strict_clearance": 0.28900709219858156
+     },
+     "later_contact": {
+      "n": 868,
+      "grid_nll_nats": 1.9540928271805789,
+      "mean_radial_error_mm": 1.180039680554625,
+      "outside_hpd50": 0.5576036866359447,
+      "outside_hpd95": 0.11290322580645161,
+      "next_probe_in_capture": 0.7373271889400922,
+      "next_probe_in_strict_clearance": 0.29723502304147464
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 65,
+       "grid_nll_nats": 1.7851167536971861,
+       "mean_radial_error_mm": 0.6253204625309922,
+       "outside_hpd50": 0.6461538461538462,
+       "outside_hpd95": 0.09230769230769231,
+       "next_probe_in_capture": 0.9076923076923077,
+       "next_probe_in_strict_clearance": 0.6615384615384615
+      },
+      "mf_noise_1mm": {
+       "n": 555,
+       "grid_nll_nats": 1.1811163590121514,
+       "mean_radial_error_mm": 0.7570917783650993,
+       "outside_hpd50": 0.5333333333333333,
+       "outside_hpd95": 0.11891891891891893,
+       "next_probe_in_capture": 0.7225225225225225,
+       "next_probe_in_strict_clearance": 0.19099099099099098
+      },
+      "noise_0.5mm": {
+       "n": 1,
+       "grid_nll_nats": -0.12116514183388327,
+       "mean_radial_error_mm": 0.21358122935929125,
+       "outside_hpd50": 1.0,
+       "outside_hpd95": 0.0,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 1.0
+      },
+      "noise_1mm": {
+       "n": 165,
+       "grid_nll_nats": 1.465013142612638,
+       "mean_radial_error_mm": 0.8309745581805155,
+       "outside_hpd50": 0.45454545454545453,
+       "outside_hpd95": 0.024242424242424242,
+       "next_probe_in_capture": 0.8909090909090909,
+       "next_probe_in_strict_clearance": 0.4484848484848485
+      },
+      "noise_2mm": {
+       "n": 646,
+       "grid_nll_nats": 2.6604570625708437,
+       "mean_radial_error_mm": 1.6031097266305325,
+       "outside_hpd50": 0.5634674922600619,
+       "outside_hpd95": 0.09442724458204334,
+       "next_probe_in_capture": 0.6749226006191951,
+       "next_probe_in_strict_clearance": 0.30495356037151705
+      }
+     }
+    },
+    "residual_k2": {
+     "weight": 1.0,
+     "all": {
+      "n": 1432,
+      "grid_nll_nats": 3.461391105634594,
+      "mean_radial_error_mm": 1.1285722417233812,
+      "outside_hpd50": 0.7115921787709497,
+      "outside_hpd95": 0.4001396648044693,
+      "next_probe_in_capture": 0.7081005586592178,
+      "next_probe_in_strict_clearance": 0.2786312849162011
+     },
+     "first_contact": {
+      "n": 564,
+      "grid_nll_nats": 2.535517225433173,
+      "mean_radial_error_mm": 1.1612661702124187,
+      "outside_hpd50": 0.5567375886524822,
+      "outside_hpd95": 0.22695035460992907,
+      "next_probe_in_capture": 0.700354609929078,
+      "next_probe_in_strict_clearance": 0.274822695035461
+     },
+     "later_contact": {
+      "n": 868,
+      "grid_nll_nats": 4.062995792770081,
+      "mean_radial_error_mm": 1.1073287213687528,
+      "outside_hpd50": 0.8122119815668203,
+      "outside_hpd95": 0.5126728110599078,
+      "next_probe_in_capture": 0.7131336405529954,
+      "next_probe_in_strict_clearance": 0.28110599078341014
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 65,
+       "grid_nll_nats": 4.959892640873336,
+       "mean_radial_error_mm": 0.5628593289719264,
+       "outside_hpd50": 0.8307692307692308,
+       "outside_hpd95": 0.6923076923076923,
+       "next_probe_in_capture": 0.9384615384615385,
+       "next_probe_in_strict_clearance": 0.5692307692307692
+      },
+      "mf_noise_1mm": {
+       "n": 555,
+       "grid_nll_nats": 2.3185567795961046,
+       "mean_radial_error_mm": 0.7288145367906185,
+       "outside_hpd50": 0.6684684684684684,
+       "outside_hpd95": 0.34954954954954953,
+       "next_probe_in_capture": 0.6828828828828829,
+       "next_probe_in_strict_clearance": 0.16396396396396395
+      },
+      "noise_0.5mm": {
+       "n": 1,
+       "grid_nll_nats": 0.9798016894213291,
+       "mean_radial_error_mm": 0.5211910006567158,
+       "outside_hpd50": 1.0,
+       "outside_hpd95": 0.0,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 1.0
+      },
+      "noise_1mm": {
+       "n": 165,
+       "grid_nll_nats": 2.7654299811676903,
+       "mean_radial_error_mm": 0.8190475943026488,
+       "outside_hpd50": 0.6727272727272727,
+       "outside_hpd95": 0.3515151515151515,
+       "next_probe_in_capture": 0.896969696969697,
+       "next_probe_in_strict_clearance": 0.4484848484848485
+      },
+      "noise_2mm": {
+       "n": 646,
+       "grid_nll_nats": 4.474062353489232,
+       "mean_radial_error_mm": 1.608937278305448,
+       "outside_hpd50": 0.7461300309597523,
+       "outside_hpd95": 0.42724458204334365,
+       "next_probe_in_capture": 0.6578947368421053,
+       "next_probe_in_strict_clearance": 0.30340557275541796
+      }
+     }
+    },
+    "residual_k3": {
+     "weight": 1.0,
+     "all": {
+      "n": 1432,
+      "grid_nll_nats": 3.3528610949917375,
+      "mean_radial_error_mm": 0.9828836030895871,
+      "outside_hpd50": 0.7136871508379888,
+      "outside_hpd95": 0.3931564245810056,
+      "next_probe_in_capture": 0.75768156424581,
+      "next_probe_in_strict_clearance": 0.2925977653631285
+     },
+     "first_contact": {
+      "n": 564,
+      "grid_nll_nats": 2.394512900555225,
+      "mean_radial_error_mm": 1.0844279833933095,
+      "outside_hpd50": 0.601063829787234,
+      "outside_hpd95": 0.21453900709219859,
+      "next_probe_in_capture": 0.7145390070921985,
+      "next_probe_in_strict_clearance": 0.2783687943262411
+     },
+     "later_contact": {
+      "n": 868,
+      "grid_nll_nats": 3.9755666038191495,
+      "mean_radial_error_mm": 0.9169031532148184,
+      "outside_hpd50": 0.7868663594470046,
+      "outside_hpd95": 0.5092165898617511,
+      "next_probe_in_capture": 0.7857142857142857,
+      "next_probe_in_strict_clearance": 0.30184331797235026
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 65,
+       "grid_nll_nats": 4.772844847129211,
+       "mean_radial_error_mm": 0.635561568096698,
+       "outside_hpd50": 0.8615384615384616,
+       "outside_hpd95": 0.676923076923077,
+       "next_probe_in_capture": 0.9230769230769231,
+       "next_probe_in_strict_clearance": 0.47692307692307695
+      },
+      "mf_noise_1mm": {
+       "n": 555,
+       "grid_nll_nats": 2.761968697370678,
+       "mean_radial_error_mm": 0.6747703505920881,
+       "outside_hpd50": 0.6594594594594595,
+       "outside_hpd95": 0.3837837837837838,
+       "next_probe_in_capture": 0.7315315315315315,
+       "next_probe_in_strict_clearance": 0.17297297297297298
+      },
+      "noise_0.5mm": {
+       "n": 1,
+       "grid_nll_nats": 0.6258044318731768,
+       "mean_radial_error_mm": 0.46793232270210633,
+       "outside_hpd50": 1.0,
+       "outside_hpd95": 0.0,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 1.0
+      },
+      "noise_1mm": {
+       "n": 165,
+       "grid_nll_nats": 2.3878656523073767,
+       "mean_radial_error_mm": 0.7451485777979104,
+       "outside_hpd50": 0.7333333333333333,
+       "outside_hpd95": 0.3151515151515151,
+       "next_probe_in_capture": 0.896969696969697,
+       "next_probe_in_strict_clearance": 0.503030303030303
+      },
+      "noise_2mm": {
+       "n": 646,
+       "grid_nll_nats": 3.9683373202189682,
+       "mean_radial_error_mm": 1.3440601013313274,
+       "outside_hpd50": 0.739938080495356,
+       "outside_hpd95": 0.3931888544891641,
+       "next_probe_in_capture": 0.7275541795665634,
+       "next_probe_in_strict_clearance": 0.3219814241486068
+      }
+     }
+    },
+    "posterior_k3": {
+     "weight": 1.0,
+     "all": {
+      "n": 1432,
+      "grid_nll_nats": 3.0617674172795897,
+      "mean_radial_error_mm": 0.795035749227943,
+      "outside_hpd50": 0.702513966480447,
+      "outside_hpd95": 0.4196927374301676,
+      "next_probe_in_capture": 0.7828212290502793,
+      "next_probe_in_strict_clearance": 0.3477653631284916
+     },
+     "first_contact": {
+      "n": 564,
+      "grid_nll_nats": 2.18873756994126,
+      "mean_radial_error_mm": 0.92547508051339,
+      "outside_hpd50": 0.6081560283687943,
+      "outside_hpd95": 0.26595744680851063,
+      "next_probe_in_capture": 0.7216312056737588,
+      "next_probe_in_strict_clearance": 0.34929078014184395
+     },
+     "later_contact": {
+      "n": 868,
+      "grid_nll_nats": 3.6290356590985047,
+      "mean_radial_error_mm": 0.7102802390378599,
+      "outside_hpd50": 0.7638248847926268,
+      "outside_hpd95": 0.5195852534562212,
+      "next_probe_in_capture": 0.8225806451612904,
+      "next_probe_in_strict_clearance": 0.3467741935483871
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 65,
+       "grid_nll_nats": 4.133842740696145,
+       "mean_radial_error_mm": 0.6629142927879995,
+       "outside_hpd50": 0.8461538461538461,
+       "outside_hpd95": 0.6461538461538462,
+       "next_probe_in_capture": 0.8923076923076924,
+       "next_probe_in_strict_clearance": 0.7846153846153846
+      },
+      "mf_noise_1mm": {
+       "n": 555,
+       "grid_nll_nats": 1.7596886448627922,
+       "mean_radial_error_mm": 0.47826911018352386,
+       "outside_hpd50": 0.6504504504504505,
+       "outside_hpd95": 0.35495495495495494,
+       "next_probe_in_capture": 0.7801801801801802,
+       "next_probe_in_strict_clearance": 0.23963963963963963
+      },
+      "noise_0.5mm": {
+       "n": 1,
+       "grid_nll_nats": 0.7666741255904794,
+       "mean_radial_error_mm": 0.2707016936011609,
+       "outside_hpd50": 1.0,
+       "outside_hpd95": 0.0,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 1.0
+      },
+      "noise_1mm": {
+       "n": 165,
+       "grid_nll_nats": 2.7127725444114295,
+       "mean_radial_error_mm": 0.6922342176774842,
+       "outside_hpd50": 0.6424242424242425,
+       "outside_hpd95": 0.3575757575757576,
+       "next_probe_in_capture": 0.8424242424242424,
+       "next_probe_in_strict_clearance": 0.49696969696969695
+      },
+      "noise_2mm": {
+       "n": 646,
+       "grid_nll_nats": 4.165247401775227,
+       "mean_radial_error_mm": 1.1075434366887809,
+       "outside_hpd50": 0.7476780185758514,
+       "outside_hpd95": 0.46904024767801855,
+       "next_probe_in_capture": 0.7585139318885449,
+       "next_probe_in_strict_clearance": 0.35758513931888547
+      }
+     }
+    },
+    "ratio_k3": {
+     "weight": 1.0,
+     "all": {
+      "n": 1432,
+      "grid_nll_nats": 3.7042161030879432,
+      "mean_radial_error_mm": 1.5502100202140963,
+      "outside_hpd50": 0.6934357541899442,
+      "outside_hpd95": 0.4085195530726257,
+      "next_probe_in_capture": 0.7220670391061452,
+      "next_probe_in_strict_clearance": 0.3170391061452514
+     },
+     "first_contact": {
+      "n": 564,
+      "grid_nll_nats": 2.438656904937204,
+      "mean_radial_error_mm": 1.0032852717467613,
+      "outside_hpd50": 0.5904255319148937,
+      "outside_hpd95": 0.24468085106382978,
+      "next_probe_in_capture": 0.6861702127659575,
+      "next_probe_in_strict_clearance": 0.3333333333333333
+     },
+     "later_contact": {
+      "n": 868,
+      "grid_nll_nats": 4.526537978384046,
+      "mean_radial_error_mm": 1.9055850871905677,
+      "outside_hpd50": 0.7603686635944701,
+      "outside_hpd95": 0.5149769585253456,
+      "next_probe_in_capture": 0.7453917050691244,
+      "next_probe_in_strict_clearance": 0.3064516129032258
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 65,
+       "grid_nll_nats": 5.579691944304629,
+       "mean_radial_error_mm": 1.8141728893692244,
+       "outside_hpd50": 0.8153846153846154,
+       "outside_hpd95": 0.6615384615384615,
+       "next_probe_in_capture": 0.7384615384615385,
+       "next_probe_in_strict_clearance": 0.676923076923077
+      },
+      "mf_noise_1mm": {
+       "n": 555,
+       "grid_nll_nats": 1.9308236491675608,
+       "mean_radial_error_mm": 0.5279978085858891,
+       "outside_hpd50": 0.6396396396396397,
+       "outside_hpd95": 0.33513513513513515,
+       "next_probe_in_capture": 0.772972972972973,
+       "next_probe_in_strict_clearance": 0.23063063063063063
+      },
+      "noise_0.5mm": {
+       "n": 1,
+       "grid_nll_nats": 0.586089270913992,
+       "mean_radial_error_mm": 0.26393778107325455,
+       "outside_hpd50": 1.0,
+       "outside_hpd95": 0.0,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 1.0
+      },
+      "noise_1mm": {
+       "n": 165,
+       "grid_nll_nats": 3.540569718104682,
+       "mean_radial_error_mm": 1.4225445207658485,
+       "outside_hpd50": 0.6363636363636364,
+       "outside_hpd95": 0.3515151515151515,
+       "next_probe_in_capture": 0.7696969696969697,
+       "next_probe_in_strict_clearance": 0.45454545454545453
+      },
+      "noise_2mm": {
+       "n": 646,
+       "grid_nll_nats": 5.085712484823455,
+       "mean_radial_error_mm": 2.4364658570665325,
+       "outside_hpd50": 0.7414860681114551,
+       "outside_hpd95": 0.4613003095975232,
+       "next_probe_in_capture": 0.6640866873065016,
+       "next_probe_in_strict_clearance": 0.3188854489164087
+      }
+     }
+    }
+   }
+  },
+  "dev": {
+   "n": 345,
+   "n_on_grid": 345,
+   "n_first_contact": 123,
+   "replay_max_dev_mm": 1.1102230246251565e-15,
+   "candidates": {
+    "C": {
+     "weight": 0.0,
+     "all": {
+      "n": 345,
+      "grid_nll_nats": 6.981829800029965,
+      "mean_radial_error_mm": 1.8304573707537142,
+      "outside_hpd50": 0.6695652173913044,
+      "outside_hpd95": 0.5043478260869565,
+      "next_probe_in_capture": 0.4318840579710145,
+      "next_probe_in_strict_clearance": 0.14492753623188406
+     },
+     "first_contact": {
+      "n": 123,
+      "grid_nll_nats": 3.1630418716440474,
+      "mean_radial_error_mm": 1.3825196836783853,
+      "outside_hpd50": 0.36585365853658536,
+      "outside_hpd95": 0.1951219512195122,
+      "next_probe_in_capture": 0.5528455284552846,
+      "next_probe_in_strict_clearance": 0.21951219512195122
+     },
+     "later_contact": {
+      "n": 222,
+      "grid_nll_nats": 9.097644733324866,
+      "mean_radial_error_mm": 2.0786390622413973,
+      "outside_hpd50": 0.8378378378378378,
+      "outside_hpd95": 0.6756756756756757,
+      "next_probe_in_capture": 0.36486486486486486,
+      "next_probe_in_strict_clearance": 0.1036036036036036
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 9,
+       "grid_nll_nats": 5.857543301438144,
+       "mean_radial_error_mm": 0.5602905598682525,
+       "outside_hpd50": 0.8888888888888888,
+       "outside_hpd95": 0.6666666666666666,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 0.2222222222222222
+      },
+      "mf_noise_1mm": {
+       "n": 147,
+       "grid_nll_nats": 7.283020655302561,
+       "mean_radial_error_mm": 1.0544506373032054,
+       "outside_hpd50": 0.6190476190476191,
+       "outside_hpd95": 0.5034013605442177,
+       "next_probe_in_capture": 0.4217687074829932,
+       "next_probe_in_strict_clearance": 0.07482993197278912
+      },
+      "noise_1mm": {
+       "n": 35,
+       "grid_nll_nats": 5.404828052486961,
+       "mean_radial_error_mm": 1.9200760700894794,
+       "outside_hpd50": 0.5714285714285714,
+       "outside_hpd95": 0.34285714285714286,
+       "next_probe_in_capture": 0.5714285714285714,
+       "next_probe_in_strict_clearance": 0.2571428571428571
+      },
+      "noise_2mm": {
+       "n": 154,
+       "grid_nll_nats": 7.1184439813693166,
+       "mean_radial_error_mm": 2.6250537125617806,
+       "outside_hpd50": 0.7272727272727273,
+       "outside_hpd95": 0.5324675324675324,
+       "next_probe_in_capture": 0.37662337662337664,
+       "next_probe_in_strict_clearance": 0.18181818181818182
+      }
+     }
+    },
+    "g_v1": {
+     "weight": 1.0,
+     "all": {
+      "n": 345,
+      "grid_nll_nats": 4.6366469625924305,
+      "mean_radial_error_mm": 1.106607738735181,
+      "outside_hpd50": 0.7536231884057971,
+      "outside_hpd95": 0.4956521739130435,
+      "next_probe_in_capture": 0.6985507246376812,
+      "next_probe_in_strict_clearance": 0.2811594202898551
+     },
+     "first_contact": {
+      "n": 123,
+      "grid_nll_nats": 2.12847093736217,
+      "mean_radial_error_mm": 1.108532808237962,
+      "outside_hpd50": 0.5203252032520326,
+      "outside_hpd95": 0.1951219512195122,
+      "next_probe_in_capture": 0.7398373983739838,
+      "next_probe_in_strict_clearance": 0.35772357723577236
+     },
+     "later_contact": {
+      "n": 222,
+      "grid_nll_nats": 6.026312057652439,
+      "mean_radial_error_mm": 1.1055411461728293,
+      "outside_hpd50": 0.8828828828828829,
+      "outside_hpd95": 0.6621621621621622,
+      "next_probe_in_capture": 0.6756756756756757,
+      "next_probe_in_strict_clearance": 0.23873873873873874
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 9,
+       "grid_nll_nats": 3.9236904386587645,
+       "mean_radial_error_mm": 0.5948004283808697,
+       "outside_hpd50": 0.8888888888888888,
+       "outside_hpd95": 0.5555555555555556,
+       "next_probe_in_capture": 0.7777777777777778,
+       "next_probe_in_strict_clearance": 0.6666666666666666
+      },
+      "mf_noise_1mm": {
+       "n": 147,
+       "grid_nll_nats": 5.248579407008736,
+       "mean_radial_error_mm": 0.6143289915535394,
+       "outside_hpd50": 0.7346938775510204,
+       "outside_hpd95": 0.5578231292517006,
+       "next_probe_in_capture": 0.6802721088435374,
+       "next_probe_in_strict_clearance": 0.1564625850340136
+      },
+      "noise_1mm": {
+       "n": 35,
+       "grid_nll_nats": 3.002437192416607,
+       "mean_radial_error_mm": 0.956415629320728,
+       "outside_hpd50": 0.6,
+       "outside_hpd95": 0.37142857142857144,
+       "next_probe_in_capture": 0.8571428571428571,
+       "next_probe_in_strict_clearance": 0.34285714285714286
+      },
+      "noise_2mm": {
+       "n": 154,
+       "grid_nll_nats": 4.4656072310493125,
+       "mean_radial_error_mm": 1.6405555663871032,
+       "outside_hpd50": 0.7987012987012987,
+       "outside_hpd95": 0.461038961038961,
+       "next_probe_in_capture": 0.6753246753246753,
+       "next_probe_in_strict_clearance": 0.36363636363636365
+      }
+     }
+    },
+    "residual_k2_tempered": {
+     "weight": 1.0,
+     "all": {
+      "n": 345,
+      "grid_nll_nats": 2.0941080694877745,
+      "mean_radial_error_mm": 1.1999036333775226,
+      "outside_hpd50": 0.5652173913043478,
+      "outside_hpd95": 0.1072463768115942,
+      "next_probe_in_capture": 0.7159420289855073,
+      "next_probe_in_strict_clearance": 0.30144927536231886
+     },
+     "first_contact": {
+      "n": 123,
+      "grid_nll_nats": 1.8582107339119838,
+      "mean_radial_error_mm": 1.120371353310569,
+      "outside_hpd50": 0.5040650406504065,
+      "outside_hpd95": 0.07317073170731707,
+      "next_probe_in_capture": 0.7317073170731707,
+      "next_probe_in_strict_clearance": 0.35772357723577236
+     },
+     "later_contact": {
+      "n": 222,
+      "grid_nll_nats": 2.2248079446040907,
+      "mean_radial_error_mm": 1.243968815576781,
+      "outside_hpd50": 0.5990990990990991,
+      "outside_hpd95": 0.12612612612612611,
+      "next_probe_in_capture": 0.7072072072072072,
+      "next_probe_in_strict_clearance": 0.2702702702702703
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 9,
+       "grid_nll_nats": 1.1438214034151737,
+       "mean_radial_error_mm": 0.5293258725466937,
+       "outside_hpd50": 0.7777777777777778,
+       "outside_hpd95": 0.0,
+       "next_probe_in_capture": 0.8888888888888888,
+       "next_probe_in_strict_clearance": 0.7777777777777778
+      },
+      "mf_noise_1mm": {
+       "n": 147,
+       "grid_nll_nats": 1.4291315434392664,
+       "mean_radial_error_mm": 0.7052176696858917,
+       "outside_hpd50": 0.5510204081632653,
+       "outside_hpd95": 0.1292517006802721,
+       "next_probe_in_capture": 0.7074829931972789,
+       "next_probe_in_strict_clearance": 0.14285714285714285
+      },
+      "noise_1mm": {
+       "n": 35,
+       "grid_nll_nats": 2.164911158693154,
+       "mean_radial_error_mm": 0.9603933662086453,
+       "outside_hpd50": 0.4,
+       "outside_hpd95": 0.11428571428571428,
+       "next_probe_in_capture": 0.8571428571428571,
+       "next_probe_in_strict_clearance": 0.5142857142857142
+      },
+      "noise_2mm": {
+       "n": 154,
+       "grid_nll_nats": 2.768303012355279,
+       "mean_radial_error_mm": 1.7657276324753015,
+       "outside_hpd50": 0.6038961038961039,
+       "outside_hpd95": 0.09090909090909091,
+       "next_probe_in_capture": 0.6818181818181818,
+       "next_probe_in_strict_clearance": 0.37662337662337664
+      }
+     }
+    },
+    "residual_k2": {
+     "weight": 1.0,
+     "all": {
+      "n": 345,
+      "grid_nll_nats": 3.9264147215916116,
+      "mean_radial_error_mm": 1.1289303107807844,
+      "outside_hpd50": 0.7246376811594203,
+      "outside_hpd95": 0.43478260869565216,
+      "next_probe_in_capture": 0.6956521739130435,
+      "next_probe_in_strict_clearance": 0.28695652173913044
+     },
+     "first_contact": {
+      "n": 123,
+      "grid_nll_nats": 2.1902290645892757,
+      "mean_radial_error_mm": 1.182771436365151,
+      "outside_hpd50": 0.5365853658536586,
+      "outside_hpd95": 0.17073170731707318,
+      "next_probe_in_capture": 0.7073170731707317,
+      "next_probe_in_strict_clearance": 0.3170731707317073
+     },
+     "later_contact": {
+      "n": 222,
+      "grid_nll_nats": 4.888355423444257,
+      "mean_radial_error_mm": 1.0990994168759323,
+      "outside_hpd50": 0.8288288288288288,
+      "outside_hpd95": 0.581081081081081,
+      "next_probe_in_capture": 0.6891891891891891,
+      "next_probe_in_strict_clearance": 0.2702702702702703
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 9,
+       "grid_nll_nats": 3.722607446446986,
+       "mean_radial_error_mm": 0.4216355789489785,
+       "outside_hpd50": 0.8888888888888888,
+       "outside_hpd95": 0.4444444444444444,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 0.4444444444444444
+      },
+      "mf_noise_1mm": {
+       "n": 147,
+       "grid_nll_nats": 4.088332813642452,
+       "mean_radial_error_mm": 0.6653437152075103,
+       "outside_hpd50": 0.6938775510204082,
+       "outside_hpd95": 0.47619047619047616,
+       "next_probe_in_capture": 0.6462585034013606,
+       "next_probe_in_strict_clearance": 0.14965986394557823
+      },
+      "noise_1mm": {
+       "n": 35,
+       "grid_nll_nats": 2.1797920715788743,
+       "mean_radial_error_mm": 1.009729127894968,
+       "outside_hpd50": 0.6285714285714286,
+       "outside_hpd95": 0.2857142857142857,
+       "next_probe_in_capture": 0.7714285714285715,
+       "next_probe_in_strict_clearance": 0.4857142857142857
+      },
+      "noise_2mm": {
+       "n": 154,
+       "grid_nll_nats": 4.180727050781702,
+       "mean_radial_error_mm": 1.6398713727078045,
+       "outside_hpd50": 0.7662337662337663,
+       "outside_hpd95": 0.42857142857142855,
+       "next_probe_in_capture": 0.7077922077922078,
+       "next_probe_in_strict_clearance": 0.36363636363636365
+      }
+     }
+    },
+    "residual_k3": {
+     "weight": 1.0,
+     "all": {
+      "n": 345,
+      "grid_nll_nats": 3.274545328587315,
+      "mean_radial_error_mm": 0.9216759340048047,
+      "outside_hpd50": 0.7478260869565218,
+      "outside_hpd95": 0.3681159420289855,
+      "next_probe_in_capture": 0.7942028985507247,
+      "next_probe_in_strict_clearance": 0.28695652173913044
+     },
+     "first_contact": {
+      "n": 123,
+      "grid_nll_nats": 2.095757289926174,
+      "mean_radial_error_mm": 1.0888329968861579,
+      "outside_hpd50": 0.5772357723577236,
+      "outside_hpd95": 0.1951219512195122,
+      "next_probe_in_capture": 0.7479674796747967,
+      "next_probe_in_strict_clearance": 0.3170731707317073
+     },
+     "later_contact": {
+      "n": 222,
+      "grid_nll_nats": 3.927657620277947,
+      "mean_radial_error_mm": 0.8290618856516226,
+      "outside_hpd50": 0.8423423423423423,
+      "outside_hpd95": 0.46396396396396394,
+      "next_probe_in_capture": 0.8198198198198198,
+      "next_probe_in_strict_clearance": 0.2702702702702703
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 9,
+       "grid_nll_nats": 4.059878879110219,
+       "mean_radial_error_mm": 0.6042053282836046,
+       "outside_hpd50": 0.8888888888888888,
+       "outside_hpd95": 0.4444444444444444,
+       "next_probe_in_capture": 1.0,
+       "next_probe_in_strict_clearance": 0.3333333333333333
+      },
+      "mf_noise_1mm": {
+       "n": 147,
+       "grid_nll_nats": 3.1292039522545707,
+       "mean_radial_error_mm": 0.5871526270759446,
+       "outside_hpd50": 0.7482993197278912,
+       "outside_hpd95": 0.4557823129251701,
+       "next_probe_in_capture": 0.7755102040816326,
+       "next_probe_in_strict_clearance": 0.14285714285714285
+      },
+      "noise_1mm": {
+       "n": 35,
+       "grid_nll_nats": 1.9606566192224473,
+       "mean_radial_error_mm": 0.7973478427249516,
+       "outside_hpd50": 0.7142857142857143,
+       "outside_hpd95": 0.22857142857142856,
+       "next_probe_in_capture": 0.8571428571428571,
+       "next_probe_in_strict_clearance": 0.5142857142857142
+      },
+      "noise_2mm": {
+       "n": 154,
+       "grid_nll_nats": 3.6659952324443137,
+       "mean_radial_error_mm": 1.2878034974127799,
+       "outside_hpd50": 0.7467532467532467,
+       "outside_hpd95": 0.3116883116883117,
+       "next_probe_in_capture": 0.7857142857142857,
+       "next_probe_in_strict_clearance": 0.37012987012987014
+      }
+     }
+    },
+    "posterior_k3": {
+     "weight": 1.0,
+     "all": {
+      "n": 345,
+      "grid_nll_nats": 2.945661642580191,
+      "mean_radial_error_mm": 0.7448891673648632,
+      "outside_hpd50": 0.7478260869565218,
+      "outside_hpd95": 0.4144927536231884,
+      "next_probe_in_capture": 0.808695652173913,
+      "next_probe_in_strict_clearance": 0.37681159420289856
+     },
+     "first_contact": {
+      "n": 123,
+      "grid_nll_nats": 1.6789764341679576,
+      "mean_radial_error_mm": 0.9164596640111169,
+      "outside_hpd50": 0.5121951219512195,
+      "outside_hpd95": 0.2032520325203252,
+      "next_probe_in_capture": 0.7479674796747967,
+      "next_probe_in_strict_clearance": 0.3821138211382114
+     },
+     "later_contact": {
+      "n": 222,
+      "grid_nll_nats": 3.6474737175112923,
+      "mean_radial_error_mm": 0.6498298381419388,
+      "outside_hpd50": 0.8783783783783784,
+      "outside_hpd95": 0.5315315315315315,
+      "next_probe_in_capture": 0.8423423423423423,
+      "next_probe_in_strict_clearance": 0.3738738738738739
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 9,
+       "grid_nll_nats": 3.4287969604598367,
+       "mean_radial_error_mm": 1.0243790206579824,
+       "outside_hpd50": 1.0,
+       "outside_hpd95": 0.7777777777777778,
+       "next_probe_in_capture": 0.7777777777777778,
+       "next_probe_in_strict_clearance": 0.7777777777777778
+      },
+      "mf_noise_1mm": {
+       "n": 147,
+       "grid_nll_nats": 3.395002341550798,
+       "mean_radial_error_mm": 0.47862124551463675,
+       "outside_hpd50": 0.7482993197278912,
+       "outside_hpd95": 0.4965986394557823,
+       "next_probe_in_capture": 0.7891156462585034,
+       "next_probe_in_strict_clearance": 0.19727891156462585
+      },
+      "noise_1mm": {
+       "n": 35,
+       "grid_nll_nats": 0.9068246949406776,
+       "mean_radial_error_mm": 0.5303767182404878,
+       "outside_hpd50": 0.6285714285714286,
+       "outside_hpd95": 0.11428571428571428,
+       "next_probe_in_capture": 0.9428571428571428,
+       "next_probe_in_strict_clearance": 0.6
+      },
+      "noise_2mm": {
+       "n": 154,
+       "grid_nll_nats": 2.951882373474912,
+       "mean_radial_error_mm": 1.031473008609658,
+       "outside_hpd50": 0.7597402597402597,
+       "outside_hpd95": 0.38311688311688313,
+       "next_probe_in_capture": 0.7987012987012987,
+       "next_probe_in_strict_clearance": 0.474025974025974
+      }
+     }
+    },
+    "ratio_k3": {
+     "weight": 1.0,
+     "all": {
+      "n": 345,
+      "grid_nll_nats": 3.6257687456630245,
+      "mean_radial_error_mm": 1.4751964634044261,
+      "outside_hpd50": 0.7159420289855073,
+      "outside_hpd95": 0.4318840579710145,
+      "next_probe_in_capture": 0.7507246376811594,
+      "next_probe_in_strict_clearance": 0.33043478260869563
+     },
+     "first_contact": {
+      "n": 123,
+      "grid_nll_nats": 1.8946816322261852,
+      "mean_radial_error_mm": 0.9167662255507015,
+      "outside_hpd50": 0.4878048780487805,
+      "outside_hpd95": 0.2032520325203252,
+      "next_probe_in_capture": 0.7479674796747967,
+      "next_probe_in_strict_clearance": 0.3983739837398374
+     },
+     "later_contact": {
+      "n": 222,
+      "grid_nll_nats": 4.584884578783435,
+      "mean_radial_error_mm": 1.784597000593652,
+      "outside_hpd50": 0.8423423423423423,
+      "outside_hpd95": 0.5585585585585585,
+      "next_probe_in_capture": 0.7522522522522522,
+      "next_probe_in_strict_clearance": 0.2927927927927928
+     },
+     "by_condition": {
+      "friction_1": {
+       "n": 9,
+       "grid_nll_nats": 4.384826205691586,
+       "mean_radial_error_mm": 1.6078718241132757,
+       "outside_hpd50": 0.8888888888888888,
+       "outside_hpd95": 0.6666666666666666,
+       "next_probe_in_capture": 0.7777777777777778,
+       "next_probe_in_strict_clearance": 0.6666666666666666
+      },
+      "mf_noise_1mm": {
+       "n": 147,
+       "grid_nll_nats": 3.4367502334708293,
+       "mean_radial_error_mm": 0.440684780124174,
+       "outside_hpd50": 0.7414965986394558,
+       "outside_hpd95": 0.4897959183673469,
+       "next_probe_in_capture": 0.8095238095238095,
+       "next_probe_in_strict_clearance": 0.19047619047619047
+      },
+      "noise_1mm": {
+       "n": 35,
+       "grid_nll_nats": 1.28871600799506,
+       "mean_radial_error_mm": 1.1389509130051318,
+       "outside_hpd50": 0.5714285714285714,
+       "outside_hpd95": 0.2,
+       "next_probe_in_capture": 0.8857142857142857,
+       "next_probe_in_strict_clearance": 0.6
+      },
+      "noise_2mm": {
+       "n": 154,
+       "grid_nll_nats": 4.29298335586026,
+       "mean_radial_error_mm": 2.5313505767797038,
+       "outside_hpd50": 0.7142857142857143,
+       "outside_hpd95": 0.4155844155844156,
+       "next_probe_in_capture": 0.6623376623376623,
+       "next_probe_in_strict_clearance": 0.38311688311688313
+      }
+     }
+    }
+   }
+  }
+ },
+ "git": {
+  "commit": "1a2eea7c0e371f862068c205ad6a3198e0625971",
+  "dirty": false
+ }
+}

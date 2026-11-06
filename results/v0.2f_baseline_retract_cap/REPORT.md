@@ -1,0 +1,125 @@
+# v0.2f baseline retract cap: report
+
+
+## Result
+
+**Dropped by the rule.** On development seed 2026 the capped D and H tore one good
+latch that the uncapped D and H did not (gantry, latching, `mf_noise_1mm` trial 7).
+RULE.md criterion 1 fails for D and H, so the cap is dropped for all four fair
+baselines. `SpiralSearchConfig.retract_pull_cap` stays in the code, default off. No
+reported run changes. Seed 4008 was not used. The fairness item stays open.
+
+Source: `dev/TABLES.md`, made by
+`python -m experiments.v02f_retract_cap_compare results/v0.2f_baseline_retract_cap/dev`.
+
+## What was run
+
+- Rule committed first (`RULE.md`, commit c7db5df). Code, compare script and tests are
+  in commits c7db5df, c4b1fde and 8358a9b.
+- Development seeds 2026 and 2027; suites `latching` and `latch_spread`; gantry and
+  arm; 20 trials per condition. Controllers: D, F, H, I and J, each uncapped (v0.2e
+  behaviour) and capped (`X@cap`, `variants.json`) on the same trials. 12,800 trials,
+  folders `dev/<machine>_<suite>_s<seed>`.
+- Every `config.json` has `git_dirty: false`. Seven folders record commit 8358a9b, and
+  `gantry_latching_s2026` records c4b1fde. The two commits differ only in the compare
+  script and tests, which the run does not import. The first run of
+  `gantry_latch_spread_s2026` recorded `git_dirty: true`, because the compare script was
+  being edited while it ran. I reran that folder from a clean tree. The rerun's
+  `trials.csv` is identical to the first run's in every column except `wall_time_s`
+  (1,800 rows).
+
+## Numbers (dev/TABLES.md)
+
+The cap tripped in 9 of the 6,400 capped trials. All 9 are `mf_noise_1mm` good parts in the
+latching suite: 3 D and 3 H on the gantry, 1 D and 2 H on the arm. It never tripped
+for F, I or J, or on any latch_spread trial.
+
+| check (RULE.md) | result |
+|---|---|
+| 1. no new torn latch | **fails for D and H on gantry latching**: 1 new tear each (seed 2026 trial 7). Torn latches overall: D 2 -> 2, H 2 -> 2 (seed 2027 trial 17 prevented, trial 19 torn either way, trial 7 new) |
+| 2. no new bad unit | pass. Gantry latching D 1 -> 0: seed 2027 trial 19 changed from `false_accept` to a declared failure |
+| 3. no new bad part passed | pass. No trip on a bad part |
+| 4. success loss <= 2 per cell | pass. No cell changed: every tripped trial failed both uncapped and capped |
+| 5. identity where no trip | pass. 0 rows differ in the 6,391 untripped pairs |
+
+Protective stops: unchanged in every cell. Arm latching D and H: no new tear, no
+outcome change.
+
+Tripped trials, uncapped -> capped (`dev/trips.csv`):
+
+| machine | seed | trial | ctrl | uncapped | capped |
+|---|---|---|---|---|---|
+| gantry | 2026 | 7 | D, H | protective stop, latch intact | protective stop, **latch torn** |
+| gantry | 2027 | 17 | D, H | protective stop, latch torn | protective stop, latch intact |
+| gantry | 2027 | 19 | D | false accept, latch torn | stuck_during_retract, latch torn |
+| gantry | 2027 | 19 | H | retention_failed, latch torn | stuck_during_retract, latch torn |
+| arm | 2026 | 6 | D, H | protective stop | protective stop |
+| arm | 2026 | 7 | H | aborted: excess_torque | aborted: excess_torque |
+
+## Why the cap did not protect the latch (post-hoc analysis, after the rule decided)
+
+Everything in this section was found after seeing the results. It did not change the
+decision.
+
+1. **The re-seat never happened.** In all 8 trips that tried it (`events.json.gz`, not
+   committed), INSERT aborted 2-14 ms after it was entered. On the gantry the abort was
+   `excess_force` (6 trips), because the residual pull of 36-40 N already exceeds
+   INSERT's 40 N abort limit (`abort_n` in the Micro-Fit force budget). On the arm it was
+   `excess_torque` (2 trips). Each abort ran `_jam_or_fail`, which commanded the retract
+   height again. The second hold then failed the part. So in this port, "re-seat and
+   check" restarted the pull instead of ending it. C's held re-seat runs in its own
+   VERIFY phase, which does not abort on the residual pull.
+2. **The baseline's retry retract runs at 40 mm/s.** C's retract runs at 15 mm/s. After
+   `_jam_or_fail` the spiral FSM backs out in APPROACH at `transit_speed_mm_s`
+   (40 mm/s). With the fixture's 500 mm/s^2 acceleration limit, a hold commanded at
+   40 mm/s stops after about 1.6 mm. On the 10 N/mm gantry servo that adds about 16 N,
+   so 36 + 16 is above the 48 N stop. From 15 mm/s the stop takes about 0.23 mm, or
+   about 2 N. The trace of gantry seed 2026 trial 7 shows this. I made it with
+   `PYTHONPATH=. python results/v0.2f_baseline_retract_cap/trace_trip.py gantry mf_noise_1mm spiral 7 2026 5.09 5.17`,
+   on development seed 2026. After the hold at 5.124 s the setpoint kept rising for at least
+   about 40 ms, and the measured pull went from 37 N to 46.8 N. The hook peaked at
+   58.2 N capped (torn) and 54.1 N uncapped (intact). Both runs ended on the 48 N
+   protective stop. Torn or not near 58 N looks like a matter of timing.
+
+## Open fairness item (unchanged)
+
+D, F, H and I still have no working gentle-retract cap. C has one. On these dev seeds
+the uncapped baselines tore 2 good gantry latches each (D and H, seed 2027 trials 17
+and 19). F and I tore none, and the cap never tripped for them.
+
+What a working port would need. These are proposals only: nothing here was built or
+tested.
+- (a) The retry retract at C's `retract_speed_mm_s` (15 mm/s) on a latching part, at
+  least for the first few mm. This changes the baselines' retry timing on every
+  latching retry, not only on trips.
+- (b) A re-seat that does not abort on the pull it was entered to end. For example,
+  start INSERT's force limits only once the measured axial force is back above zero,
+  or hold and fail in place with no re-seat.
+
+Either needs a new RULE.md and a new validation seed, because this rule was applied
+and the result was dropped. (a) is a baseline motion change, not only a cap, so it
+needs the lead's approval under this round's "no controller tuning" line.
+
+## J
+
+J runs F's insertion with F's config, so the flag reached J's F phase. It never
+tripped for J (0 of 1,280 capped J trials). J's VERIFY is C's code with C's cap, unchanged.
+
+## Files
+
+- `RULE.md`, `variants.json`, `run.sh`, `trace_trip.py`
+- `dev/<machine>_<suite>_s<seed>/`: `trials.csv`, `summary.json`, `summary.csv`,
+  `config.json`
+- `dev/TABLES.md`, `dev/trips.csv`
+- `events.json.gz` not committed. The trip events the numbers need are in
+  `trips.csv`. The re-seat abort timings in the post-hoc section come from the
+  uncommitted events and can be reproduced with `run.sh`.
+- Code: `defex/config.py` (`retract_pull_cap`, default off),
+  `defex/control/spiral_search.py`, `experiments/v02f_retract_cap_compare.py`,
+  `tests/test_v02f_baseline_retract_cap.py`.
+
+## Ready to merge?
+
+No, not as a behaviour change. The flag is off by default, and with it off every row
+is identical to v0.2e (criterion 5). The code can be merged as an inert option, but it
+should not be turned on in the next frozen benchmark.

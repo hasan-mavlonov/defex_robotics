@@ -1,0 +1,37 @@
+Checkpoint 2 prep: arm (UR5e) learned contact prior. Plan and selection rule,
+written after the family probe and before any other arm data or validation run.
+
+Same pipeline and seed splits as the gantry model (results/w9_development):
+train base seeds 3001-3030, validation base seed 4001 (early stopping, the grid,
+the input set and the integration weight), development seed 2026 (reported,
+never used for a choice). Seeds 3031-3040, 2027 and every reserved seed are not run.
+
+Families. Same rule as W9: train on the families where C produces surface-block
+contacts in the probe (data/arm/family_probe_seed3001, seed 3001, 10 trials each).
+On the arm these are noise_0.5mm (4), noise_1mm (13), noise_2mm (15), friction_1 (9)
+and mf_noise_1mm (37). friction_0.6, lateral_3mm, yaw_5deg and tilt_5deg produce none.
+friction_1 is new compared with the gantry (0 blocks there).
+
+Data (data/arm/):
+  train_main     seeds 3001-3030, noise_1mm, noise_2mm, friction_1, mf_noise_1mm, 40 trials each
+  train_noise05  seeds 3001-3030, noise_0.5mm, 10 trials each
+  validation     seed 4001, all five families, 100 trials each
+  dev_seed2026   seed 2026, all five families, 60 trials each (offline metrics only)
+
+Models: train_contact_prior --backend arm for the 'contact' and 'all' input sets, each
+the lowest-validation-NLL network of the same grid as the gantry.
+
+Candidates: 2 models x integration weights 0.25, 0.5, 1.0, run paired against C on
+validation seed 4001, the five families, 60 trials each (validation/weights/).
+
+Rule, applied in order over the five families pooled:
+  1. most successes;
+  2. fewest bad units passed;
+  3. fewest protective stops;
+  4. lowest mean cycle time of the successful trials.
+
+The chosen candidate is installed as assets/models/contact_prior_arm.json and is the G
+evaluated on development seed 2026 (noise_0.5mm, noise_1mm, noise_2mm, friction_1 and the
+whole latching suite, 60 trials each). If no candidate reaches C's success count on
+validation, the best one is still installed and evaluated, and the report says that
+learning did not help on validation.

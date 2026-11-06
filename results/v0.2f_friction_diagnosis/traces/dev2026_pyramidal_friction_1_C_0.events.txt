@@ -1,0 +1,43 @@
+cone variant - cone pyramidal impratio 10 solreffriction 0.02 s seed 2026 friction_1 adaptive #0: success=False reason=aborted:time_limit depth=-3.05 mm retries=3
+    0.200 state              APPROACH
+    1.684 state              ALIGN
+    1.806 attempt            #1 probe=(+0.00,+0.00) mm yaw_corr=+0.0 deg
+    1.806 state              INSERT
+    5.874 state              DETECT: bottomed
+    5.926 detect             seated_candidate [bottomed] depth=15.01 mm Fax=6.8 N Flat=(+0.1,-0.1) N CoP=(-6.00,-3.94) mm at (+0.00,-0.00) mm
+    5.926 state              VERIFY
+    6.024 seat_conform       tilt aligned to floor by (+0.05,-0.05) deg
+    6.936 verify             wall reactions [2.1, 2.1] N at travel [0.32, 0.41] mm -> PASS
+    6.952 wall_yaw           half free travel 0.041 mm (>= 0.293 for 2.0 deg), levers (+5.9,+2.5) mm -> FAIL
+    6.952 state              RECOVER: verify_failed
+    8.240 recover            verify failed: re-aim tilt=(-0.0,+0.0) yaw=+0.0 deg
+    8.240 state              ALIGN: retry 1
+    8.362 attempt            #2 probe=(+0.01,-0.05) mm yaw_corr=+0.0 deg
+    8.362 state              INSERT
+   12.556 state              DETECT: bottomed
+   12.606 detect             seated_candidate [bottomed] depth=15.02 mm Fax=6.9 N Flat=(-0.2,-0.2) N CoP=(+5.98,+3.60) mm at (+0.02,-0.05) mm
+   12.606 state              VERIFY
+   12.758 seat_conform       tilt aligned to floor by (+0.01,-0.06) deg
+   13.534 verify             wall reactions [2.0, 2.1] N at travel [0.32, 0.23] mm -> PASS
+   13.546 wall_yaw           half free travel 0.005 mm (>= 0.293 for 2.0 deg), levers (-6.1,+6.1) mm -> inconsistent levers, probe again
+   14.174 verify             wall reactions [2.2, 2.4] N at travel [0.22, 0.6] mm -> PASS
+   14.228 wall_yaw           half free travel 0.085 mm (>= 0.293 for 2.0 deg), levers (-6.1,+6.0) mm -> FAIL
+   14.228 state              RECOVER: verify_failed
+   15.514 recover            verify failed: re-aim tilt=(-0.0,+0.0) yaw=+0.0 deg
+   15.514 state              ALIGN: retry 2
+   15.636 attempt            #3 probe=(+0.03,-0.20) mm yaw_corr=+0.0 deg
+   15.636 state              INSERT
+   19.832 state              DETECT: bottomed
+   19.884 detect             seated_candidate [bottomed] depth=15.02 mm Fax=7.0 N Flat=(-0.1,-0.1) N CoP=(+6.02,-3.83) mm at (+0.03,-0.21) mm
+   19.884 state              VERIFY
+   20.008 seat_conform       tilt aligned to floor by (-0.00,-0.04) deg
+   20.906 verify             wall reactions [2.4, 2.0] N at travel [0.36, 0.35] mm -> PASS
+   20.908 wall_yaw           half free travel 0.029 mm (>= 0.293 for 2.0 deg), levers (-6.1,+6.1) mm -> FAIL
+   20.908 state              RECOVER: verify_failed
+   22.196 recover            verify failed: re-aim tilt=(-0.0,+0.0) yaw=+0.0 deg
+   22.196 state              ALIGN: retry 3
+   22.320 attempt            #4 probe=(+0.05,-0.21) mm yaw_corr=+0.0 deg
+   22.320 state              INSERT
+   26.202 abort              time_limit
+   26.202 state              FAILURE: time_limit
+   27.486 finish             success=False reason=time_limit

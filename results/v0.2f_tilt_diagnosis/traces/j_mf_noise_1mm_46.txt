@@ -1,0 +1,20 @@
+(20261130, 'arm', 'mf_noise_1mm', 'spiral_rcc_verify', 46): success=False reason=false_accept declared=True depth=7.80 tilt=3.10 yaw=0.19 cycle=10.39
+scenario: dist_tilt=0.82 az=296.4 grasp_tilt=0.00
+    0.200 state            APPROACH
+    1.690 state            TARE
+    1.812 attempt          #1 at (+0.00,+0.00) mm
+    1.812 state            DESCEND
+    2.812 contact          face at depth -2.53 mm: spiral search
+    2.812 state            SPIRAL
+    5.276 hole_found       pushed 0.30 mm at (+1.46,-0.17) mm
+    5.276 state            INSERT
+    6.886 seated           8.13 mm below the face
+    6.886 verify_handover  F seated at 5.60 mm (face at -2.53 mm): C's VERIFY
+    6.886 tilt             window at 0.0 N, under the 11.7 N floor -> no verdict
+    6.886 latch            click seen: drop 6.0 N near the snap
+    6.886 state            VERIFY
+    8.930 verify           pull 35.2 N at 0.52 mm, click seen -> PASS
+   10.588 reseat           back on the floor
+   10.588 state            SUCCESS
+   10.588 finish           success=True reason=None
+  latch check t=6.686 handover no verdict: f_ax=none edge=0.00 meas=0.06 true=3.21 cam_err=3.13 sock_err=3.13 plug_err=0.55 v_true=[-2.28, 2.26] v_sock=[-1.79, 2.57] v_cam=[-1.79, 2.57] v_plug=[-1.84, 2.58] rcorr=[0.0, 0.0, 0.0] depth=7.80

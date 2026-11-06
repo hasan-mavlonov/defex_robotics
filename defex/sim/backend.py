@@ -18,7 +18,7 @@ from typing import Protocol
 
 import numpy as np
 
-from defex.config import ConnectorSpec
+from defex.config import CompliantStageConfig, ConnectorSpec, PartVariation
 from defex.utils.transforms import Pose
 
 
@@ -30,11 +30,46 @@ class SceneParams:
     friction: float
     socket_pose: Pose  # true world pose of the socket mouth frame
     grasp_offset: Pose = field(default_factory=Pose.identity)  # connector tip relative to the fixture TCP
+    compliance: CompliantStageConfig | None = None  # passive RCC stage (baselines E, F); None = rigid
+    defect: str | None = None  # deliberately bad part (defex.sim.mating.DEFECTS); None = good part
+    part_variation: PartVariation | None = None  # mating values off nominal (v0.2c review); None = nominal
+
+
+@dataclass(frozen=True)
+class FixtureDynamics:
+    """What a controller needs to know about the machine it pushes with (W5).
+
+    Without this, controllers were told the gantry's servo values even on the arm.
+    """
+
+    translational_stiffness_n_per_mm: float  # weakest Cartesian direction at the tool
+    yaw_stiffness_nm_per_rad: float  # about the insertion axis
+    effective_mass_kg: float  # apparent mass at the tool along the insertion axis
+    command_latency_s: float  # setpoint to actuator
+    # W5b. Stiffer of the two tilt axes, tool tip held in place (as it is by a face or floor
+    # contact). None: not characterized, taken equal to the yaw stiffness.
+    tilt_stiffness_nm_per_rad: float | None = None
+    # W5b. Following error per unit of commanded speed in steady motion (servo damping over
+    # stiffness), slowest translational axis. A guarded move that stops on a wall stores speed x lag
+    # of setpoint lead, which the servo then pushes into the wall. On hardware: identify from a
+    # logged ramp. None: not characterized (no lag correction).
+    following_lag_s: float | None = None
+    # The same for the rotational axes (slowest of yaw and tilt), for guarded rotations.
+    # None: taken equal to following_lag_s.
+    rotational_following_lag_s: float | None = None
+
+    @property
+    def tilt_stiffness(self) -> float:
+        return self.yaw_stiffness_nm_per_rad if self.tilt_stiffness_nm_per_rad is None else self.tilt_stiffness_nm_per_rad
+
+    @property
+    def rotational_following_lag(self) -> float | None:
+        return self.following_lag_s if self.rotational_following_lag_s is None else self.rotational_following_lag_s
 
 
 @dataclass(frozen=True)
 class PayloadModel:
-    """Mass properties below the F/T sensor, as identified after grasping."""
+    """Mass properties below the F/T sensor (identified, or the simulator's truth)."""
 
     mass_kg: float
     com_in_sensor: np.ndarray  # (3,) center of mass in the sensor frame (m)
@@ -66,6 +101,11 @@ class GroundTruth:
     tcp_speed: float  # m/s
     joint_limit_hit: bool
     actuator_saturated: bool
+    # "simulator": exact. "measured": a hardware run, where pose comes from encoders and
+    # force from the wrist sensor; seating is confirmed by the post-trial inspection.
+    source: str = "simulator"
+    latched: bool | None = None  # latching connectors: is the latch engaged (None: no latch modelled)
+    latch_broken: bool = False
 
 
 class SimBackend(Protocol):
@@ -81,7 +121,18 @@ class SimBackend(Protocol):
     def nominal_socket_pose(self) -> Pose: ...
 
     @property
-    def payload(self) -> PayloadModel: ...
+    def fixture_dynamics(self) -> FixtureDynamics: ...
+
+    @property
+    def ft_sensor_in_tcp(self) -> Pose:
+        """F/T sensor frame relative to the fixture TCP (a drawing dimension)."""
+        ...
+
+    @property
+    def true_payload(self) -> PayloadModel:
+        """Simulator mass properties below the F/T sensor. For tests and reports only:
+        the harness identifies the payload from F/T readings (defex.tasks.calibration)."""
+        ...
 
     def load(self, params: SceneParams) -> None: ...
 

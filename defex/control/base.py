@@ -9,6 +9,7 @@ import numpy as np
 
 from defex.config import ConnectorSpec, FixtureConfig, SensorNoiseConfig
 from defex.perception.state_estimator import Observation
+from defex.sim.backend import FixtureDynamics
 from defex.utils.transforms import Pose
 
 
@@ -31,6 +32,10 @@ class ControllerContext:
     control_period_s: float
     fixture: FixtureConfig
     vision_accuracy: SensorNoiseConfig  # characterized accuracy of the vision system
+    fixture_dynamics: "FixtureDynamics | None" = None  # the machine actually pushing (W5)
+    # Stiffness along the insertion axis at the home pose, where it differs from the weakest
+    # direction in fixture_dynamics (the arm). None: taken equal to the weakest direction.
+    insertion_stiffness_n_per_mm: float | None = None
 
 
 @dataclass
@@ -45,6 +50,7 @@ class InsertionController(ABC):
 
     name: str = "base"
     label: str = "Base controller"
+    compliant_wrist: bool = False  # runs on the passive RCC stage (hardware choice, baselines E and F)
 
     def __init__(self) -> None:
         self.ctx: ControllerContext | None = None
@@ -97,3 +103,109 @@ class InsertionController(ABC):
         """World pose of a connector-tip target expressed in a socket frame."""
         R = socket_pose.R if R_local is None else socket_pose.R @ R_local
         return Pose(socket_pose.apply(np.asarray(xyz, dtype=float)), R)
+
+
+# Guarded-motion speed limits from the fixture's dynamics (W5). The reference values are
+# those of the gantry the controllers were tuned on, so both rules are inactive there.
+REFERENCE_EFFECTIVE_MASS_KG = 1.0  # gantry: 0.88 kg along z
+# W5b. C's admittance dampings were tuned against the gantry's 15 N m/rad wrist servos, and its
+# guarded moves with the gantry's servo lag absorbed in their constants. The corrections scale with
+# the excess over these values, and only switch on for fixtures at least a given ratio beyond them
+# (AdaptiveConfig.stiff_wrist_min_ratio, lagging_servo_min_ratio), well outside the gantry family:
+# no-ops on the nominal gantry and on every gantry of the simulator-randomization bands
+# (experiments/sim_randomization.py), active on the UR5e arm.
+REFERENCE_ROTATIONAL_STIFFNESS_NM_PER_RAD = 15.0  # gantry wrist servos (FixtureConfig.angular_kp_nm_per_rad)
+REFERENCE_FOLLOWING_LAG_S = 0.04  # gantry: 0.037 s on its heaviest axis (x carriage), 0.019-0.024 s elsewhere
+
+
+def budgeted(controller, ctx: ControllerContext, select=None, **fields_from_budget: str):
+    """Controller config with force thresholds from the connector's force budget (W3).
+
+    Starts from whatever config the controller holds at reset (scripts may swap it),
+    never compounding an earlier override. ``fields_from_budget`` maps a config field
+    to a ForceBudget attribute, e.g. insert_force_n="insert_target_n". ``select`` (v0.2c)
+    maps that config to the one to run on this fixture (per-machine settings); None keeps it.
+    """
+    from dataclasses import replace
+
+    if getattr(controller, "_budget_cfg", None) is not controller.cfg:
+        controller._user_cfg = controller.cfg
+    cfg = controller._user_cfg if select is None else select(controller._user_cfg)
+    budget = ctx.connector.force_budget
+    if budget is not None:
+        cfg = replace(cfg, **{f: getattr(budget, b) for f, b in fields_from_budget.items()})
+    controller._budget_cfg = cfg
+    return cfg
+
+
+def contact_speed_scale(ctx: ControllerContext) -> float:
+    """Scale for speeds at which contact can occur: impact force ~ v sqrt(k m), so keep v sqrt(m)."""
+    fd = ctx.fixture_dynamics
+    if fd is None:
+        return 1.0
+    return min(1.0, (REFERENCE_EFFECTIVE_MASS_KG / fd.effective_mass_kg) ** 0.5)
+
+
+def excess_following_lag(ctx: ControllerContext, min_ratio: float, rotational: bool = False) -> float:
+    """Servo following lag beyond the reference fixture's (s), translational axes (rotational with
+    ``rotational``). 0 unless the lag is at least ``min_ratio`` x the reference, and 0 when the
+    fixture's lag is not characterized."""
+    fd = ctx.fixture_dynamics
+    if fd is None:
+        return 0.0
+    lag = fd.rotational_following_lag if rotational else fd.following_lag_s
+    if lag is None or lag < min_ratio * REFERENCE_FOLLOWING_LAG_S:
+        return 0.0
+    return max(0.0, lag - REFERENCE_FOLLOWING_LAG_S)
+
+
+def max_rotation_speed(ctx: ControllerContext, torque_budget_nm: float, min_lag_ratio: float) -> float:
+    """rad/s such that stiffness x speed x (reaction time + excess rotational lag) stays within the torque budget.
+
+    W5b: a guarded rotation that stops on a wall also unloads the setpoint lead it carried,
+    speed x following lag, into the wall (the W5 rule had the reaction time only). The lag term
+    follows :func:`excess_following_lag` (rotational axes, ``min_lag_ratio``).
+    """
+    fd = ctx.fixture_dynamics
+    if fd is None:
+        return float("inf")
+    filter_delay = 1.0 / (2.0 * 3.141592653589793 * ctx.vision_accuracy.ft_filter_cutoff_hz)  # first-order F/T filter
+    reaction = fd.command_latency_s + filter_delay + ctx.control_period_s
+    lag = excess_following_lag(ctx, min_lag_ratio, rotational=True)
+    return torque_budget_nm / (fd.yaw_stiffness_nm_per_rad * (reaction + lag))
+
+
+def rotational_damping_scale(ctx: ControllerContext, min_ratio: float) -> tuple[float, float]:
+    """(tilt, yaw) factors for rotational admittance damping that keep the loop gain
+    stiffness / damping at its value on the reference wrist (W5b).
+
+    Per axis: the stiffness over the reference wrist's when that ratio is at least ``min_ratio``,
+    else 1 (a wrist within the gantry family keeps the dampings C was tuned with)."""
+    fd = ctx.fixture_dynamics
+    if fd is None:
+        return 1.0, 1.0
+
+    def factor(stiffness: float) -> float:
+        r = stiffness / REFERENCE_ROTATIONAL_STIFFNESS_NM_PER_RAD
+        return max(1.0, r) if r >= min_ratio else 1.0
+
+    return factor(fd.tilt_stiffness), factor(fd.yaw_stiffness_nm_per_rad)
+
+
+def outside_reference_family(ctx: ControllerContext, stiff_wrist_min_ratio: float, lagging_servo_min_ratio: float) -> bool:
+    """True on fixtures well outside the gantry family the controllers were tuned on (v0.2c).
+
+    Uses the W5b thresholds: a wrist axis at least ``stiff_wrist_min_ratio`` x the reference
+    stiffness, or a translational or rotational servo lag at least ``lagging_servo_min_ratio`` x
+    the reference lag. False on the nominal gantry, on every gantry of the sim-randomization
+    bands, and when the fixture is not characterized; true on the UR5e arm.
+    """
+    if ctx.fixture_dynamics is None:
+        return False
+    s_tilt, s_yaw = rotational_damping_scale(ctx, stiff_wrist_min_ratio)
+    return (
+        s_tilt > 1.0
+        or s_yaw > 1.0
+        or excess_following_lag(ctx, lagging_servo_min_ratio) > 0.0
+        or excess_following_lag(ctx, lagging_servo_min_ratio, rotational=True) > 0.0
+    )

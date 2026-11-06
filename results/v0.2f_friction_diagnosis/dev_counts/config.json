@@ -1,0 +1,46 @@
+{
+  "argv": [
+    "/Users/husanmavlonov/projects/defex_robotics-f-fricdiag/experiments/friction_diagnosis_v02f.py",
+    "counts",
+    "--seeds",
+    "2026,2027",
+    "--trials",
+    "20",
+    "--workers",
+    "2",
+    "--name",
+    "v0.2f_friction_diagnosis/dev_counts"
+  ],
+  "seeds": [
+    2026,
+    2027
+  ],
+  "conditions": [
+    "friction_1",
+    "friction_0.6",
+    "nominal"
+  ],
+  "controllers": [
+    "adaptive",
+    "spiral_rcc",
+    "spiral_rcc_verify"
+  ],
+  "trials": 20,
+  "sims": {
+    "elliptic_nominal": "variant 0: the nominal arm (cone elliptic, solreffriction 20 ms)",
+    "pyramidal_cone_only": "nominal arm with SimConfig.cone = pyramidal; every other parameter nominal",
+    "elliptic_fric_2ms": "nominal arm (elliptic) with contact_friction_timeconst_s = 2 ms, the normal solref: what a pyramidal cone does to solreffriction (MuJoCo ignores it there)"
+  },
+  "environment": {
+    "python": "3.12.11",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "mujoco": "3.17.0",
+    "numpy": "2.5.4",
+    "matplotlib": "3.11.2",
+    "git_commit": "d29d43f6994fdfd4ac0165adcd0db04aa85fba47",
+    "git_dirty": false,
+    "cpu_count": 10
+  },
+  "post_hoc": true
+}

@@ -21,14 +21,16 @@ from typing import Callable
 
 import numpy as np
 
-from defex.config import DEG, MM, FixtureConfig, SafetyConfig, SimConfig, SuccessCriteria
+from defex.config import DEG, MM, CompliantStageConfig, FixtureConfig, SafetyConfig, SensorNoiseConfig, SimConfig, SuccessCriteria
 from defex.control.base import Command, ControllerContext, InsertionController
 from defex.control.motion import CartesianMotionGenerator
 from defex.logging.metrics import TrialResult
+from defex.perception.payload_id import PayloadFit
 from defex.perception.sensors import SensorSuite
 from defex.perception.state_estimator import Observation, StateEstimator
 from defex.sim.backend import GroundTruth, SceneParams, SimBackend
 from defex.sim.mujoco_backend import MuJoCoBackend
+from defex.tasks.calibration import calibration_seed, identify_payload
 from defex.tasks.scenarios import Scenario
 from defex.utils.transforms import Pose, axis_angle_between, twist_about_axis
 
@@ -115,6 +117,8 @@ def evaluate_final_state(gt: GroundTruth, scenario: Scenario, crit: SuccessCrite
         "yaw": abs(yaw) <= crit.max_yaw_deg * DEG,
         "settled": gt.tcp_speed <= crit.max_final_speed_mm_s * MM,
     }
+    if gt.latched is not None:  # latching connector: seated means latched, latch intact
+        checks["latched"] = bool(gt.latched and not gt.latch_broken)
     return {
         "depth_mm": depth / MM,
         "lateral_mm": lateral / MM,
@@ -122,6 +126,12 @@ def evaluate_final_state(gt: GroundTruth, scenario: Scenario, crit: SuccessCrite
         "yaw_deg": yaw / DEG,
         "seated": bool(all(checks.values())),
         "failed_checks": [k for k, ok in checks.items() if not ok],
+        # Logged so the seating checks can be recomputed offline (v0.2f); not used in scoring.
+        "x_mm": float(rel.p[0]) / MM,
+        "y_mm": float(rel.p[1]) / MM,
+        "tcp_speed_mm_s": float(gt.tcp_speed) / MM,
+        "latched": None if gt.latched is None else bool(gt.latched),
+        "latch_intact": None if gt.latched is None else bool(not gt.latch_broken),
     }
 
 
@@ -139,6 +149,23 @@ class InsertionTask:
         self.safety = safety or SafetyConfig()
         self.criteria = success or SuccessCriteria()
         self.backend = backend or MuJoCoBackend(self.sim, self.fixture)
+        self._payload_fits: dict[str, PayloadFit] = {}
+        # Synthetic noise added to the readings during payload identification; zero it on
+        # hardware (defex.hardware.backend.hardware_noise), where the sensor has its own.
+        self.identification_noise = SensorNoiseConfig()
+
+    def payload_fit(self, scenario: Scenario, compliance: CompliantStageConfig | None = None) -> PayloadFit:
+        """Identified payload for this connector and wrist (once each, nominal grasp)."""
+        spec = scenario.connector
+        key = repr((spec.name, spec.plug, spec.socket, compliance))
+        if key not in self._payload_fits:
+            be = self.backend
+            # Free-space motion 60 mm above the socket: the socket pose plays no role.
+            be.load(SceneParams(spec, scenario.friction, scenario.socket_pose, compliance=compliance))
+            self._payload_fits[key] = identify_payload(
+                be, self.fixture, self.identification_noise, self.sim.control_period_s, calibration_seed(spec.name)
+            )
+        return self._payload_fits[key]
 
     def run(
         self,
@@ -151,12 +178,24 @@ class InsertionTask:
         wall0 = time.perf_counter()
         dt = self.sim.control_period_s
         be = self.backend
-        be.load(SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset))
+        compliance = CompliantStageConfig() if controller.compliant_wrist else None
+        # W3: per-connector thresholds when the connector defines a force budget.
+        budget = scenario.connector.force_budget
+        stop_force = budget.protective_stop_n if budget else self.safety.protective_stop_force_n
+        damage_force = budget.damage_n if budget else self.safety.damage_contact_force_n
+        payload = self.payload_fit(scenario, compliance).payload
+        be.load(
+            SceneParams(scenario.connector, scenario.friction, scenario.socket_pose, scenario.grasp_offset, compliance,
+                        scenario.defect, scenario.part_variation)
+        )
 
         sensors = SensorSuite(scenario.noise, scenario.seed)
-        vision = sensors.vision_measurement(scenario.socket_pose)
-        grasp_est = sensors.grasp_measurement(scenario.grasp_offset)
-        estimator = StateEstimator(be.payload, dt, scenario.noise.ft_filter_cutoff_hz)
+        # heldout2: the camera and the in-hand estimate may measure something other than the truth.
+        seen_socket = scenario.socket_pose if scenario.vision_target_pose is None else scenario.vision_target_pose
+        seen_grasp = scenario.grasp_offset if scenario.measured_grasp_offset is None else scenario.measured_grasp_offset
+        vision = sensors.vision_measurement(seen_socket)
+        grasp_est = sensors.grasp_measurement(seen_grasp)
+        estimator = StateEstimator(payload, dt, scenario.noise.ft_filter_cutoff_hz)
         estimator.reset(vision, grasp_est)
         motion = CartesianMotionGenerator(self.fixture, dt)
         home = be.home_tcp_pose
@@ -175,13 +214,16 @@ class InsertionTask:
             obs = estimator.update(sensors.measure(be.read_sensors()), motion.pose)
         estimator.end_tare()
 
+        told_connector = scenario.connector if scenario.characterized_connector is None else scenario.characterized_connector
         ctx = ControllerContext(
-            connector=scenario.connector,
+            connector=told_connector,
             nominal_socket_pose=be.nominal_socket_pose,
             home_pose=home,
             control_period_s=dt,
             fixture=self.fixture,
-            vision_accuracy=scenario.noise,
+            vision_accuracy=scenario.characterized_noise or scenario.noise,
+            fixture_dynamics=getattr(be, "fixture_dynamics", None),
+            insertion_stiffness_n_per_mm=getattr(be, "insertion_stiffness_n_per_mm", None),
         )
         controller.reset(ctx)
 
@@ -220,7 +262,7 @@ class InsertionTask:
             f_meas = obs.force_norm
             peak_measured = max(peak_measured, f_meas)
             peak_torque = max(peak_torque, obs.torque_norm)
-            if f_meas > self.safety.protective_stop_force_n or obs.torque_norm > self.safety.protective_stop_torque_nm:
+            if f_meas > stop_force or obs.torque_norm > self.safety.protective_stop_torque_nm:
                 protective_stop = True
                 controller.log(obs.t, "protective_stop", f"|F|={f_meas:.1f} N |T|={obs.torque_norm:.2f} N m")
                 break
@@ -258,7 +300,7 @@ class InsertionTask:
         # Damage is judged on the 10 ms average: single-sample transients from MuJoCo's
         # velocity-proportional contact damping (impacts, stick-slip) are reported in
         # peak_contact_force_n but are not a meaningful damage criterion on their own.
-        damage = peak_sustained > self.safety.damage_contact_force_n
+        damage = peak_sustained > damage_force
         declared = controller.declared_success
         success = bool(
             final["seated"]
@@ -325,4 +367,9 @@ class InsertionTask:
             events=[(e.t, e.kind, e.detail) for e in controller.events],
             sim_time_s=float(be.time),
             wall_time_s=float(time.perf_counter() - wall0),
+            final_x_mm=final["x_mm"],
+            final_y_mm=final["y_mm"],
+            final_tcp_speed_mm_s=final["tcp_speed_mm_s"],
+            final_latched=final["latched"],
+            final_latch_intact=final["latch_intact"],
         )

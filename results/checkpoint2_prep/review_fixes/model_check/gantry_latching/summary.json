@@ -1,0 +1,199 @@
+{
+  "overall": [
+    {
+      "controller": "adaptive_learned",
+      "n": 40,
+      "successes": 20,
+      "success_rate": 0.5,
+      "success_ci_low": 0.35199278797099753,
+      "success_ci_high": 0.6480072120290025,
+      "escapes": 0,
+      "detected_failures": 20,
+      "protective_stops": 6,
+      "false_accepts": 0,
+      "false_rejects": 0,
+      "self_checks": true,
+      "cycle_time_s_success": {
+        "mean": 9.152499999999907,
+        "median": 8.361999999998973,
+        "p95": 12.905600000004322,
+        "p99": 16.152320000005137,
+        "max": 16.96400000000535
+      },
+      "cycle_time_s_all": {
+        "mean": 11.610950000002294,
+        "median": 10.766000000001911,
+        "p95": 17.042100000005167,
+        "p99": 18.03220000000286,
+        "max": 18.664000000001387
+      },
+      "throughput_uph_no_reset": 155.02607452444843,
+      "throughput_uph_with_reset": 87.33221903889921,
+      "stop_reset_s": 60.0,
+      "peak_contact_force_n": {
+        "mean": 40.99895846301573,
+        "median": 29.017810449118137,
+        "p95": 84.21533140096953,
+        "p99": 173.29580455689216,
+        "max": 192.12404118366746
+      },
+      "peak_measured_torque_nm": {
+        "mean": 0.13819137253442323,
+        "median": 0.1326642531636948,
+        "p95": 0.2366056388038168,
+        "p99": 0.315448050365656,
+        "max": 0.3303086001058731
+      },
+      "retries_mean": 3.95
+    }
+  ],
+  "paired_vs_adaptive": {},
+  "summary": [
+    {
+      "condition": "mf_noise_1mm",
+      "group": "latching",
+      "controller": "adaptive_learned",
+      "n": 20,
+      "successes": 20,
+      "success_rate": 1.0,
+      "success_ci_low": 0.8388698745050667,
+      "success_ci_high": 1.0,
+      "cycle_time_s_success": {
+        "mean": 9.152499999999907,
+        "median": 8.361999999998973,
+        "p95": 12.905600000004322,
+        "p99": 16.152320000005137,
+        "max": 16.96400000000535
+      },
+      "cycle_time_s_all": {
+        "mean": 9.152499999999907,
+        "median": 8.361999999998973,
+        "p95": 12.905600000004322,
+        "p99": 16.152320000005137,
+        "max": 16.96400000000535
+      },
+      "peak_contact_force_n": {
+        "mean": 28.36729792414598,
+        "median": 29.003532344835833,
+        "p95": 29.0839975218678,
+        "p99": 29.302242470750937,
+        "max": 29.35680370797172
+      },
+      "peak_contact_force_10ms_n": {
+        "mean": 28.36423439396149,
+        "median": 29.002468913501524,
+        "p95": 29.05348458500288,
+        "p99": 29.293698612309356,
+        "max": 29.353752119135976
+      },
+      "peak_measured_force_n": {
+        "mean": 29.04431248923861,
+        "median": 29.024426804373682,
+        "p95": 29.0774209835167,
+        "p99": 29.305889863986607,
+        "max": 29.363007084104083
+      },
+      "peak_measured_torque_nm": {
+        "mean": 0.1217553554778048,
+        "median": 0.13204951839413906,
+        "p95": 0.14032697517041648,
+        "p99": 0.14456097950653246,
+        "max": 0.14561948059056148
+      },
+      "retries_mean": 1.55,
+      "retries_max": 6,
+      "trials_with_recovery": 19,
+      "recovery_success_rate": 1.0,
+      "final_depth_mm": {
+        "mean": 7.985987806984943,
+        "median": 8.000479543880695,
+        "p95": 8.000508392138597,
+        "p99": 8.000508779114819,
+        "max": 8.000508875858875
+      },
+      "max_penetration_mm": 0.02077646035667637,
+      "protective_stops": 0,
+      "false_accepts": 0,
+      "false_rejects": 0,
+      "escapes": 0,
+      "throughput_uph_no_reset": 393.33515432942215,
+      "throughput_uph_with_reset": 393.33515432942215,
+      "failure_reasons": {}
+    },
+    {
+      "condition": "mf_wrong_polarization",
+      "group": "bad_part",
+      "controller": "adaptive_learned",
+      "n": 20,
+      "successes": 0,
+      "success_rate": 0.0,
+      "success_ci_low": 0.0,
+      "success_ci_high": 0.16113012549493322,
+      "cycle_time_s_success": {
+        "mean": NaN,
+        "median": NaN,
+        "p95": NaN,
+        "p99": NaN,
+        "max": NaN
+      },
+      "cycle_time_s_all": {
+        "mean": 14.06940000000468,
+        "median": 14.559000000006547,
+        "p95": 17.125000000004974,
+        "p99": 18.3562000000021,
+        "max": 18.664000000001387
+      },
+      "peak_contact_force_n": {
+        "mean": 53.630619001885485,
+        "median": 30.26853406381538,
+        "p95": 146.26038786203543,
+        "p99": 182.95131051934098,
+        "max": 192.12404118366746
+      },
+      "peak_contact_force_10ms_n": {
+        "mean": 30.206200741627743,
+        "median": 29.016804849577426,
+        "p95": 34.860641900333704,
+        "p99": 45.02058682745732,
+        "max": 47.56057305923825
+      },
+      "peak_measured_force_n": {
+        "mean": 39.13641418978558,
+        "median": 29.7719069106562,
+        "p95": 68.22936021803912,
+        "p99": 76.81455775552884,
+        "max": 78.9608571399013
+      },
+      "peak_measured_torque_nm": {
+        "mean": 0.15462738959104166,
+        "median": 0.13719210890242634,
+        "p95": 0.29410982509765204,
+        "p99": 0.32306884510422884,
+        "max": 0.3303086001058731
+      },
+      "retries_mean": 6.35,
+      "retries_max": 7,
+      "trials_with_recovery": 20,
+      "recovery_success_rate": 0.0,
+      "final_depth_mm": {
+        "mean": -1.7643756091467466,
+        "median": -2.9569045839261885,
+        "p95": 1.0433152848406662,
+        "p99": 1.045121291358719,
+        "max": 1.0455727929882321
+      },
+      "max_penetration_mm": 0.0520325219714051,
+      "protective_stops": 6,
+      "false_accepts": 0,
+      "false_rejects": 0,
+      "escapes": 0,
+      "throughput_uph_no_reset": 0.0,
+      "throughput_uph_with_reset": 0.0,
+      "failure_reasons": {
+        "aborted:retry_limit": 14,
+        "protective_stop": 6
+      }
+    }
+  ],
+  "wall_time_s": 13.344470024108887
+}

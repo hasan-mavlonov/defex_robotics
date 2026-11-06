@@ -1,0 +1,31 @@
+other: 3 adaptive 1 protective_stop [[6.565999999999081, 'state', 'VERIFY'], [7.129999999998768, 'seat_conform', 'tilt aligned to floor by (-0.34,+0.05) deg'], [8.417999999998797, 'protective_stop', '|F|=4.7 N |T|=0.67 N m']]
+other: 3 adaptive 14 protective_stop [[5.8299999999994885, 'state', 'VERIFY'], [6.20599999999928, 'seat_conform', 'tilt aligned to floor by (+0.15,+0.04) deg'], [6.955999999998864, 'protective_stop', '|F|=4.3 N |T|=0.66 N m']]
+other: 3 adaptive_learned 1 protective_stop [[6.565999999999081, 'state', 'VERIFY'], [7.129999999998768, 'seat_conform', 'tilt aligned to floor by (-0.34,+0.05) deg'], [8.417999999998797, 'protective_stop', '|F|=4.7 N |T|=0.67 N m']]
+other: 3 adaptive_learned 14 protective_stop [[5.8299999999994885, 'state', 'VERIFY'], [6.20599999999928, 'seat_conform', 'tilt aligned to floor by (+0.15,+0.04) deg'], [6.955999999998864, 'protective_stop', '|F|=4.3 N |T|=0.66 N m']]
+other: 4 adaptive 4 aborted:time_limit [[26.201999999984285, 'abort', 'time_limit'], [26.201999999984285, 'state', 'FAILURE: time_limit'], [27.429999999981423, 'finish', 'success=False reason=time_limit']]
+other: 5 adaptive 4 aborted:time_limit [[26.201999999984285, 'abort', 'time_limit'], [26.201999999984285, 'state', 'FAILURE: time_limit'], [27.431999999981418, 'finish', 'success=False reason=time_limit']]
+other: 8 adaptive 5 protective_stop [[12.57800000000388, 'detect', 'seated_candidate [bottomed] depth=14.16 mm Fax=7.0 N Flat=(-0.3,-0.2) N CoP=(-6.01,-4.20) mm at (-0.16,+1.04) mm'], [12.57800000000388, 'state', 'VERIFY'], [13.022000000004423, 'protective_stop', '|F|=8.2 N |T|=0.71 N m']]
+other: 11 adaptive 4 aborted:time_limit [[26.201999999984285, 'abort', 'time_limit'], [26.201999999984285, 'state', 'FAILURE: time_limit'], [27.479999999981306, 'finish', 'success=False reason=time_limit']]
+other: 12 spiral_rcc_verify 11 aborted:jam [[10.90800000000184, 'abort', 'jam'], [10.90800000000184, 'state', 'FAILURE: jam'], [12.252000000003482, 'finish', 'success=False reason=jam']]
+('elliptic', 'adaptive') {'seated': 81, 'mouth_stall': 2, 'verify_reject': 4, 'other': 3}
+    {'mouth_stall:aborted:retry_limit': 2, 'verify_reject:protective_stop': 2, 'other:protective_stop': 2, 'verify_reject:aborted:time_limit': 2, 'other:aborted:time_limit': 1}
+('elliptic', 'adaptive_learned') {'seated': 83, 'verify_reject': 5, 'other': 2}
+    {'verify_reject:aborted:time_limit': 5, 'other:protective_stop': 2}
+('elliptic', 'spiral_rcc_verify') {'seated': 90}
+    {}
+('pyramidal', 'adaptive') {'verify_reject': 85, 'other': 3, 'mouth_stall': 1, 'seated': 1}
+    {'verify_reject:aborted:time_limit': 74, 'other:aborted:time_limit': 2, 'verify_reject:protective_stop': 7, 'mouth_stall:aborted:retry_limit': 1, 'other:protective_stop': 1, 'verify_reject:aborted:stuck_during_retract': 4}
+('pyramidal', 'adaptive_learned') {'verify_reject': 89, 'seated': 1}
+    {'verify_reject:aborted:time_limit': 77, 'verify_reject:protective_stop': 8, 'verify_reject:aborted:stuck_during_retract': 4}
+('pyramidal', 'spiral_rcc_verify') {'seated': 89, 'other': 1}
+    {'other:aborted:jam': 1}
+
+wall-yaw checks: measured half free travel (mm), need 0.293 mm for 2 deg; y free travel of a centred, unyawed plug is 0.5 mm
+  friction_1   elliptic  adaptive           n=  98 median 0.431 p10 0.024 p90 0.494 below 0.293: 17% verdict lines {'PASS': 81, 'probe again / turn': 7, 'FAIL': 11}
+  friction_1   elliptic  spiral_rcc_verify  n=  90 median 0.465 p10 0.408 p90 0.501 below 0.293: 0% verdict lines {'PASS': 90}
+  friction_1   pyramidal adaptive           n= 308 median 0.053 p10 0.010 p90 0.138 below 0.293: 100% verdict lines {'probe again / turn': 100, 'FAIL': 216, 'PASS': 1}
+  friction_1   pyramidal spiral_rcc_verify  n=  89 median 0.456 p10 0.400 p90 0.501 below 0.293: 0% verdict lines {'PASS': 89}
+  nominal      elliptic  adaptive           n=  90 median 0.449 p10 0.348 p90 0.484 below 0.293: 0% verdict lines {'PASS': 90}
+  nominal      elliptic  spiral_rcc_verify  n=  90 median 0.473 p10 0.369 p90 0.502 below 0.293: 0% verdict lines {'PASS': 90}
+  nominal      pyramidal adaptive           n=  90 median 0.448 p10 0.346 p90 0.485 below 0.293: 0% verdict lines {'PASS': 90}
+  nominal      pyramidal spiral_rcc_verify  n=  90 median 0.466 p10 0.360 p90 0.498 below 0.293: 0% verdict lines {'PASS': 90}

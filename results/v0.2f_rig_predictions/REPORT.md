@@ -1,0 +1,157 @@
+v0.2f rig predictions: report, 100 trials per condition
+(The 50-trial version is kept as REPORT_50.md, with its tables in TABLES_50.md.)
+
+These are the simulation's predictions for the conditions of hardware/TEST_PROTOCOL.md,
+frozen before any rig exists.
+- Seed 20261201; code ddd0d34 (benchmark_v0.2e's frozen code).
+- 100 trials per condition: the pre-registered 50 (run from dc938d1, in this folder's
+  <machine>_<suite>/ folders), extended to 100 under PREREGISTRATION.md item 7 (run
+  from a clean checkout of dc938d1, in ext100/).
+- Trial indices 0-49 of the extension are identical to the first run: 6,600 rows,
+  237,600 fields, 0 differences, wall time excepted (ext100/CHECK_FIRST50.txt).
+- 13,200 trials: A, C, F, H, I and J, on the gantry and UR5e arm models.
+- Every number below is from TABLES.md, made from ext100/*/trials.csv with the
+  pre-registered tables.py. Rates are k/n with Wilson 95% intervals. Simulation only.
+
+RESULT
+
+Housing-only part:
+- C seats more than F, I and J on both machines (gantry 387/400 = 96.8% against
+  336/400 = 84.0% for F and I).
+- C passes no bad unit in 400 (upper bound 1.0%). F and I pass 33/400 (gantry) and
+  39/400 (arm).
+- 66 of F and I's 72 bad units are at full depth, all 3.00-5.01 deg off in tilt or yaw.
+
+Micro-Fit:
+- Good parts, gantry: C is now predicted below F, I and J (284/300 against 297, 296 and
+  296; p = 0.00024 against F, 0.0018 against I and J).
+- Good parts, arm: no difference reaches p < 0.05.
+- Deliberately bad parts: C, H, I and J pass none (0/400 each). F passes 252/400
+  (gantry) and 227/400 (arm).
+
+Cycle time: C's median is 2.25 times F's on the gantry and 1.77 times on the arm.
+
+PREDICTIONS, POOLED (success | bad units passed | protective stops | cycle p50/p95 s)
+
+Housing-only part (nominal, lateral_3mm, noise_1mm, noise_2mm; 400 per controller):
+  gantry A 126/400 (27.1-36.2%) | 9/400 (1.2-4.2%)    | 265/400 | 4.32/4.32
+  gantry C 387/400 (94.5-98.1%) | 0/400 (0.0-1.0%)    | 0/400   | 5.49/12.99
+  gantry F 336/400 (80.1-87.3%) | 33/400 (5.9-11.4%)  | 0/400   | 2.44/9.11
+  gantry H 336/400 (80.1-87.3%) | 30/400 (5.3-10.5%)  | 0/400   | 2.91/7.71
+  gantry I 336/400 (80.1-87.3%) | 33/400 (5.9-11.4%)  | 0/400   | 2.44/9.11
+  gantry J 360/400 (86.7-92.6%) | 0/400 (0.0-1.0%)    | 0/400   | 4.85/14.59
+  arm    A 115/400 (24.5-33.4%) | 2/400 (0.1-1.8%)    | 283/400 | 4.32/4.32
+  arm    C 370/400 (89.5-94.7%) | 0/400 (0.0-1.0%)    | 5/400   | 8.50/19.22
+  arm    F 329/400 (78.2-85.7%) | 39/400 (7.2-13.1%)  | 0/400   | 4.80/12.35
+  arm    H 315/400 (74.5-82.5%) | 23/400 (3.9-8.5%)   | 10/400  | 4.80/10.05
+  arm    I 329/400 (78.2-85.7%) | 39/400 (7.2-13.1%)  | 0/400   | 4.80/12.35
+  arm    J 349/400 (83.6-90.2%) | 0/400 (0.0-1.0%)    | 1/400   | 8.26/18.05
+  F and I give identical rows on this part: I's pull test runs only after a latching
+  insertion (defex/control/spiral_search.py, controller I).
+
+Micro-Fit good parts (mf_nominal, mf_moderate, mf_noise_1mm; 300 per controller):
+  gantry A 100/300 (28.2-38.8%) | 0/300 | 200/300 | 3.82/3.82
+  gantry C 284/300 (91.5-96.7%) | 0/300 | 0/300   | 6.16/11.64
+  gantry F 297/300 (97.1-99.7%) | 0/300 | 0/300   | 2.41/11.30
+  gantry H 252/300 (79.4-87.7%) | 0/300 | 4/300   | 6.14/10.89
+  gantry I 296/300 (96.6-99.5%) | 0/300 | 1/300   | 5.47/14.15
+  gantry J 296/300 (96.6-99.5%) | 0/300 | 0/300   | 5.46/14.15
+  arm    A 100/300 (28.2-38.8%) | 0/300 | 200/300 | 3.79/3.79
+  arm    C 272/300 (86.8-93.5%) | 0/300 | 5/300   | 9.02/18.73
+  arm    F 279/300 (89.5-95.4%) | 2/300 (0.2-2.4%) | 0/300 | 4.68/13.12
+  arm    H 238/300 (74.4-83.5%) | 0/300 | 9/300   | 8.50/12.68
+  arm    I 278/300 (89.1-95.1%) | 2/300 (0.2-2.4%) | 1/300 | 8.65/16.29
+  arm    J 280/300 (89.9-95.6%) | 0/300 | 0/300   | 8.64/16.21
+
+Micro-Fit bad parts (4 defects; 400 per controller; bad parts passed | stops | time to
+reject p50/p95 s):
+  gantry A 7/400 (0.9-3.6%)      | 393 | 2.67/2.69
+  gantry C 0/400 (0.0-1.0%)      | 23  | 8.52/11.54
+  gantry F 252/400 (58.2-67.6%)  | 36  | 17.87/23.05
+  gantry H 0/400                 | 23  | 9.42/13.72
+  gantry I 0/400                 | 36  | 8.91/22.21
+  gantry J 0/400                 | 59  | 7.83/22.21
+  arm    A 5/400 (0.5-2.9%)      | 395 | 2.63/2.64
+  arm    C 0/400                 | 0   | 13.01/16.19
+  arm    F 227/400 (51.9-61.5%)  | 0   | 8.93/26.38
+  arm    H 0/400                 | 1   | 10.18/12.29
+  arm    I 0/400                 | 0   | 11.54/26.35
+  arm    J 0/400                 | 0   | 12.14/26.35
+
+Per-condition rows (100 trials each) are in TABLES.md ("Per condition"). They are what a
+rig compares with condition by condition.
+
+PREDICTED DIFFERENCES (paired; C-only / other-only discordant pairs, exact McNemar p,
+C - other in points with Newcombe 95% CI)
+
+Housing-only part:
+  gantry vs I (= F): success 53/2, p = 8.6e-14, +12.8 (+9.5 to +16.4);
+    bad units 0/33, p = 2.3e-10, -8.2 (-11.4 to -5.7)
+  gantry vs J: success 29/2, p = 4.6e-7, +6.8 (+4.2 to +9.7); bad units 0/0
+  arm vs I (= F): success 45/4, p = 8.2e-10, +10.3 (+7.1 to +13.7);
+    bad units 0/39, p = 3.6e-12, -9.8 (-13.1 to -7.0)
+  arm vs J: success 26/5, p = 0.00019, +5.2 (+2.6 to +8.1); bad units 0/0
+
+Micro-Fit good parts:
+  gantry vs F: 0/13, p = 0.00024, -4.3 (-7.3 to -2.2)
+  gantry vs I and J: 1/13, p = 0.0018, -4.0 (-7.0 to -1.7)
+  arm vs I: 12/18, p = 0.36; vs J: 11/19, p = 0.20; vs F: 11/18, p = 0.26
+  arm bad units vs F and I: 0/2, p = 0.5
+
+Micro-Fit bad parts:
+  vs F: gantry 0/252, p = 2.8e-76; arm 0/227, p = 9.3e-69
+
+WHAT CHANGED FROM THE 50-TRIAL VERSION (REPORT_50.md)
+- The first 50 trials of every cell are unchanged (0 differences). Everything below
+  comes from adding indices 50-99.
+- Gantry Micro-Fit good parts: C below F, I and J is now significant. Against F it was
+  0/5 discordant, p = 0.062; it is now 0/13, p = 0.00024. Against I and J it is now
+  1/13, p = 0.0018 (was 0/5). Indices 50-99 added 8 pairs in the other controller's
+  favour, and against I and J one pair in C's favour. The direction matches benchmark_v0.2d and its replication (C below F on gantry
+  latching good parts), and benchmark_v0.2e (p = 0.12).
+- Housing-only gaps are a little larger on the gantry and about the same on the arm:
+  - C minus I success: gantry +9.5 -> +12.8 points; arm +11.0 -> +10.3.
+  - F and I bad units: gantry 6.5% -> 8.2%; arm 9.0% -> 9.8%.
+  - C vs J success: gantry +6.0 -> +6.8 points; arm +6.5 -> +5.2.
+- Gantry C success on the housing-only part: 97.0% -> 96.8%. Gantry Micro-Fit C: 95.3% ->
+  94.7%; F: 98.7% -> 99.0%.
+- New nonzero counts:
+  - arm J, one protective stop on the housing-only part (1/400);
+  - arm H, one stop on a bad part (1/400);
+  - arm F and I, two Micro-Fit bad units (were one), both at full depth with
+    3.18-3.22 deg tilt.
+- Zero counts now have upper bounds of 1.0% (400) and 1.3% (300), against 1.9% and 2.5%
+  at 50 per condition.
+- Cycle medians moved by at most 0.05 s.
+
+AGAINST THE PRE-REGISTERED EXPECTATIONS
+- Housing-only, C ahead of F and I, 0 bad units for C, about 7% for F and I: yes (8.2% and
+  9.8%).
+- Micro-Fit good parts, F, I and J as many as C or more: yes. On the gantry they are now
+  significantly more.
+- Micro-Fit bad parts, C/H/I/J 0, F most: yes.
+- C's median cycle about twice F's: 2.25x (gantry), 1.77x (arm).
+- "Most between-controller differences will not reach p < 0.05": true only on arm
+  Micro-Fit good parts. That expectation was written for 50 trials per condition.
+
+HOW A RIG RESULT WILL BE JUDGED
+Unchanged: PREREGISTRATION.md, "Comparison with a rig result", run with
+PYTHONPATH=. python results/v0.2f_rig_predictions/tables.py results/v0.2f_rig_predictions/ext100 --rig results/hil_<name>.
+- Pairing: by trial.
+- Rates: rig minus sim, with a Newcombe interval and a +/-5-point band.
+- Cycle times: rig / sim ratio, with a bootstrap interval and a 0.8-1.25 band.
+
+At 400 paired trials (housing-only) or 300 (Micro-Fit good parts), two zero counts give
+an interval of about +/-1.0 to 1.3 points, so "agrees" is now reachable for zero counts
+on the pooled rows. On per-condition rows of 100 the interval is about +/-3.7 points,
+which is also inside the band.
+
+WHAT THIS DOES NOT SHOW
+- It does not test the simulator. It freezes what the simulator says.
+- It is uncalibrated: asset friction 0.3, modelled contact stiffness.
+- The physical bad parts only approximate the simulated defects.
+- gantry and arm are the simulator's gantry with its RCC and the UR5e model. No BOM.md
+  arm is modelled.
+- There is no rig counterpart to the damage measure.
+- One cosmetic post-run edit to tables.py (abs() labels; RUN_LOG.md) was made before
+  these tables. No number or rule changed.

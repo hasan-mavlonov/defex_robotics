@@ -23,10 +23,14 @@ import numpy as np
 from defex.config import MM, AdaptiveConfig
 from defex.perception.state_estimator import Observation
 
+_WINDOW_FILL = 0.98  # window counts as full despite sample-time jitter (numerical, not tuned)
+
 
 class InsertionMonitor:
-    def __init__(self, cfg: AdaptiveConfig) -> None:
+    def __init__(self, cfg: AdaptiveConfig, timeout_s: float | None = None) -> None:
         self.cfg = cfg
+        # Phase timeout; callers whose insertion speeds are scaled down pass a longer one (v0.2c).
+        self.timeout_s = cfg.insert_timeout_s if timeout_s is None else timeout_s
         self._hist: deque[tuple[float, float]] = deque()
         self._t0 = 0.0
 
@@ -40,7 +44,7 @@ class InsertionMonitor:
             return None
         t_now, d_now = self._hist[-1]
         t_old, d_old = self._hist[0]
-        if t_now - t_old < self.cfg.stall_window_s * 0.98:
+        if t_now - t_old < self.cfg.stall_window_s * _WINDOW_FILL:
             return None
         return d_now - d_old
 
@@ -64,7 +68,7 @@ class InsertionMonitor:
         prog = self.progress()
         if prog is not None and force[2] > c.stall_force_fraction * f_target and prog < c.stall_progress_mm * MM:
             return "stall"
-        if t - self._t0 > c.insert_timeout_s:
+        if t - self._t0 > self.timeout_s:
             return "insert_timeout"
         return None
 
@@ -79,6 +83,7 @@ class ContactDiagnosis:
     cop: np.ndarray | None  # (2,) m, center of pressure relative to the tip (socket frame)
     probe_xy: np.ndarray  # (2,) m, tip lateral position in the estimated socket frame
     trigger: str = ""
+    probe_yaw: float = 0.0  # rad, plug yaw relative to the estimated socket (encoders + grasp estimate)
 
     def describe(self) -> str:
         cop = "n/a" if self.cop is None else f"({self.cop[0] / MM:+.2f},{self.cop[1] / MM:+.2f}) mm"

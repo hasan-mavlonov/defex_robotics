@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Every command behind results/v0.2c_integration, in the order it was run, from the root of the worktree
+# of branch v0.2c/integration. Seeds: 2026, 2027 (dev), 3001-3030 and 3033-3040 (training), 4002 (validation),
+# 3032 (one out-of-sample snapshot). Workers: 3 throughout (the Checkpoint 2 benchmark had finished).
+set -euo pipefail
+PY=${PY:-$HOME/projects/defex_robotics/.venv/bin/python}
+T="$PY -m pytest -p no:cacheprovider -o addopts= -q ."
+
+# 0. Branch and merges (full test suite after each merge: 110, 122, 130, 140 passed).
+git worktree add ~/projects/defex_robotics-c-integration -b v0.2c/integration v0.2/checkpoint2   # tip 883db25
+git merge --no-ff v0.2c/arm-baselines;   $T
+git merge --no-ff v0.2c/defect-verdict;  $T
+git merge --no-ff v0.2c/arm-robustness   # conflict in experiments/v02c_tables.py -> v02c_robustness_tables.py
+$T
+git merge --no-ff v0.2c/learned-prior    # conflict in experiments/v02c_tables.py -> v02c_prior_tables.py
+$T
+
+# 1. Each workstream's after-runs on the merged code (commit 8d343f8), and the comparison.
+results/v0.2c_integration/claims.sh claims_merged 3 ab dv
+results/v0.2c_integration/claims_tables.sh            # -> claims_merged/comparison.md
+
+# 2. G retrained on the integrated C (prior/SELECTION_RULE.md committed first, at 0ace479).
+B=gantry W=3 results/v0.2c_integration/prior/collect.sh   # at 0ace479
+B=arm W=3 results/v0.2c_integration/prior/collect.sh
+cp assets/models/contact_prior_gantry.json results/v0.2c_integration/prior/models/lp_contact_prior_gantry.json
+cp assets/models/contact_prior_arm.json results/v0.2c_integration/prior/models/lp_contact_prior_arm.json
+printf "%s\n" "gantry k2" "gantry temper" "gantry post" "gantry k3" "arm k2" "arm temper" "arm post" "arm k3" |
+  xargs -P 3 -L 1 bash -c 'B=$0 Q=$1 results/v0.2c_integration/prior/train.sh'   # at 0692c04
+results/v0.2c_integration/prior/offline.sh               # -> prior/offline/*.json, OFFLINE_RESULT.md
+B=gantry W=3 CANDS="gantry_residual_k2_tempered gantry_residual_k2 gantry_posterior_k3" results/v0.2c_integration/prior/validate.sh  # at dfbbdb9
+B=arm W=3 CANDS="arm_residual_k2_tempered arm_residual_k3 arm_posterior_k3" results/v0.2c_integration/prior/validate.sh
+for b in gantry arm; do
+  $PY -m experiments.v02c_integration_select results/v0.2c_integration/prior/validation/$b > results/v0.2c_integration/prior/validation/$b/selection.md
+done
+$PY -m experiments.train_contact_likelihood install --model results/v0.2c_integration/prior/models/gantry_posterior_k3.json \
+    --rule results/v0.2c_integration/prior/SELECTION_RULE.md --result results/v0.2c_integration/prior/validation/gantry/selection.md
+cp results/v0.2c_learned_prior/models/v1_contact_prior_arm.json assets/models/contact_prior_arm.json   # the rule kept v1 on the arm
+$T                                                       # 147 passed
+B=gantry W=3 CHOSEN=results/v0.2c_integration/prior/models/gantry_posterior_k3.json results/v0.2c_integration/prior/dev_check.sh  # at 96a4be3
+
+# 3. Snapshots A-G, 20 trials per cell, standard / latching / heldout, both backends.
+results/v0.2c_integration/snapshot.sh 2026 3             # at 96a4be3
+results/v0.2c_integration/snapshot_vs_cp2.sh             # -> snapshot_seed2026/vs_checkpoint2_prep.md
+results/v0.2c_integration/snapshot.sh 3032 3             # at 586caed (results-only commit after 96a4be3); run once
+
+# 4. Diagnosis (after step 3): which workstream's code produces the arm escapes and false rejects seen in the
+#    integrated C's training data. Arm C on training seeds 3001-3030, noise_2mm and mf_noise_1mm, 40 trials,
+#    at each workstream's final controller code, in temporary detached worktrees (removed afterwards);
+#    outputs copied to diagnosis_arm_escapes/<workstream>_<commit>/.
+for w in a5bd452 afa08a4; do
+  git worktree add --detach ../diag-$w $w
+  (cd ../diag-$w && $PY -m experiments.collect_contacts --backend arm --seeds 3001-3030 --conditions noise_2mm,mf_noise_1mm \
+      --trials 40 --name train_main_diag --root results/diag --workers 3)
+done
+$PY -m experiments.v02c_integration_compare \
+  results/checkpoint2_prep/arm_prior/data/arm/train_main results/v0.2c_integration/prior/data/arm/train_main \
+  results/v0.2c_integration/diagnosis_arm_escapes/arm_robustness_a5bd452 results/v0.2c_integration/prior/data/arm/train_main \
+  results/v0.2c_integration/diagnosis_arm_escapes/defect_verdict_afa08a4 results/v0.2c_integration/prior/data/arm/train_main \
+  > results/v0.2c_integration/diagnosis_arm_escapes/comparison.md
+
+# 5. Review fixes (after 5131f29). Every run from a temporary detached worktree at the stated commit
+#    (~/projects/defex_robotics-c-intfix-run; 54f3097 in ~/projects/defex_robotics-c-intfix-cp2), outputs moved
+#    into results/v0.2c_integration/review_fixes/. Seeds 2026 (dev) and 4002 (validation) only. Workers 3.
+#    Variants: DEFEX_CONTROLLER_VARIANTS=<run worktree>/results/v0.2c_integration/review_fixes/variants.json
+RF=v0.2c_integration/review_fixes
+ALL=fixed,correction,adaptive,spiral,correction_rcc,spiral_rcc,adaptive_learned
+eq() { for S in latching standard heldout; do for B in gantry arm; do
+  $PY -m experiments.robustness --suite $S --backend $B --trials 20 --seed 2026 --workers 3 --controllers $2 --name $RF/$1/${B}_$S --no-plots
+done; done; }
+eq equiv_before $ALL                                    # at 5131f29 (untouched tip)
+eq equiv_after1 $ALL                                    # at 66bc8d0
+for B in gantry arm; do                                 # at 66bc8d0
+  $PY -m experiments.robustness --suite latch_spread --backend $B --trials 20 --seed 2026 --workers 3 --controllers $ALL \
+      --name $RF/spread_dev2026_before/${B}_latch_spread --no-plots; done
+eq cp2_54f3097 adaptive                                 # at 54f3097
+cand() { for S in latching latch_spread; do for B in gantry arm; do
+  $PY -m experiments.robustness --suite $S --backend $B --trials $3 --seed $2 --workers 3 \
+      --controllers adaptive@w3,adaptive@noclick,adaptive@w60,adaptive@w80,adaptive@w60f,adaptive@w80f --name $RF/verify_selection/$1/${B}_$S --no-plots
+done; done; }
+cand dev2026 2026 20                                    # at 97d4121 (SELECTION_RULE.md + amendment 1 committed)
+cand validation4002 4002 30                             # at 97d4121
+$PY -m experiments.v02c_verify_select results/$RF/verify_selection/validation4002 > results/$RF/verify_selection/validation4002/selection.md
+# install w60f (b57e0db), then at b57e0db:
+for S in latching latch_spread standard heldout; do for B in gantry arm; do
+  $PY -m experiments.robustness --suite $S --backend $B --trials 20 --seed 2026 --workers 3 --controllers $ALL --name $RF/snapshot2026_after/${B}_$S --no-plots
+done; done
+for S in latching latch_spread; do for B in gantry arm; do
+  $PY -m experiments.robustness --suite $S --backend $B --trials 20 --seed 2026 --workers 3 --controllers spiral@pull,spiral_rcc@pull --name $RF/baseline_pull_dev2026/${B}_$S --no-plots
+done; done
+eq alloff_final adaptive@cp2
+$PY -m experiments.checkpoint_report results/$RF/snapshot2026_after > results/$RF/snapshot2026_after/TABLES.md
+$PY -m experiments.checkpoint_report results/$RF/spread_dev2026_before > results/$RF/spread_dev2026_before/TABLES.md
+$PY -m experiments.v02c_review_tables > results/$RF/REVIEW_TABLES.md
+# before_after.md: experiments.v02c_integration_compare on (equiv_before | spread_dev2026_before, snapshot2026_after) pairs
+# Equivalence: scripts/compare_trials.py A/trials.csv B/trials.csv --ignore wall_time_s (all-off: --pair adaptive,adaptive@cp2)

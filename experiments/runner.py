@@ -23,9 +23,26 @@ from typing import Iterable
 
 import numpy as np
 
-from defex.config import REPO_ROOT, Condition, FixtureConfig, SafetyConfig, SimConfig, SuccessCriteria, to_dict
+from defex.config import (
+    REPO_ROOT,
+    CompliantStageConfig,
+    Condition,
+    FixtureConfig,
+    SafetyConfig,
+    SimConfig,
+    SuccessCriteria,
+    to_dict,
+)
 from defex.control.registry import make_controller
-from defex.logging.metrics import TrialResult, flatten_summary, summarize, write_csv, write_json
+from defex.logging.metrics import (
+    TrialResult,
+    flatten_summary,
+    paired_comparison,
+    summarize,
+    summarize_overall,
+    write_csv,
+    write_json,
+)
 from defex.sim.scene_builder import WorkcellLayout
 from defex.tasks.insertion import InsertionTask, TrajectoryRecorder
 from defex.tasks.scenarios import resolve_connector, sample_scenario
@@ -49,10 +66,23 @@ def nominal_socket_pose(condition: Condition, fixture: FixtureConfig) -> Pose:
     return Pose(layout.socket_mouth.copy(), np.eye(3))
 
 
+def backend_name() -> str:
+    return os.environ.get("DEFEX_BACKEND", "gantry")
+
+
+def make_backend():
+    """'gantry' (V0.1 fixture) or 'arm' (W5 UR5e); chosen by DEFEX_BACKEND so workers inherit it."""
+    if backend_name() == "arm":
+        from defex.sim.arm_backend import MuJoCoArmBackend
+
+        return MuJoCoArmBackend()
+    return None  # InsertionTask builds the gantry backend
+
+
 def _init_worker() -> None:
     global _TASK
     os.environ.setdefault("OMP_NUM_THREADS", "1")
-    _TASK = InsertionTask()
+    _TASK = InsertionTask(backend=make_backend())
 
 
 def save_trajectory(path: Path, recorder: TrajectoryRecorder, result: TrialResult, scenario) -> None:
@@ -100,6 +130,18 @@ def git_revision() -> str:
         return "unknown"
 
 
+def git_dirty() -> bool | None:
+    """True when tracked code differs from the commit (results/ excluded)."""
+    try:
+        out = subprocess.check_output(
+            ["git", "status", "--porcelain", "--untracked-files=no", "--", ".", ":(exclude)results"],
+            cwd=REPO_ROOT, text=True,
+        )
+        return bool(out.strip())
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def environment_info() -> dict:
     import matplotlib
     import mujoco
@@ -112,6 +154,7 @@ def environment_info() -> dict:
         "numpy": np.__version__,
         "matplotlib": matplotlib.__version__,
         "git_commit": git_revision(),
+        "git_dirty": git_dirty(),
         "cpu_count": os.cpu_count(),
     }
 
@@ -155,6 +198,20 @@ def run_suite(
         "success_criteria": to_dict(SuccessCriteria()),
         "environment": environment_info(),
         "workers": workers,
+        "backend": backend_name(),
+        "controller_configs": {c: to_dict(getattr(make_controller(c), "cfg", None)) for c in controllers},
+        # v0.2c: what D, E and F run on fixtures outside the gantry family (the UR5e arm).
+        "stiff_fixture_configs": {
+            c: to_dict(make_controller(c).stiff_fixture_cfg)
+            for c in controllers if hasattr(make_controller(c), "stiff_fixture_cfg")
+        },
+        "compliant_stage": to_dict(CompliantStageConfig()),
+        # v0.2d: J's VERIFY runs C's code with C's config.
+        "verify_configs": {
+            c: {"cfg": to_dict(make_controller(c).verifier.cfg), "on_verify_fail": make_controller(c).on_verify_fail,
+                "rcc_terms": make_controller(c).rcc_terms}
+            for c in controllers if hasattr(make_controller(c), "verifier")
+        },
     }
     write_json(meta, out_dir / "config.json")
     results: list[TrialResult] = []
@@ -188,7 +245,12 @@ def run_suite(
 def write_outputs(results: list[TrialResult], out_dir: Path, wall_time_s: float | None = None) -> None:
     write_csv([r.to_row() for r in results], out_dir / "trials.csv")
     summary = summarize(results)
-    write_json({"summary": summary, "wall_time_s": wall_time_s}, out_dir / "summary.json")
+    overall = summarize_overall(results)
+    paired = paired_comparison(results) if any(r.controller == "adaptive" for r in results) else {}
+    write_json(
+        {"overall": overall, "paired_vs_adaptive": paired, "summary": summary, "wall_time_s": wall_time_s},
+        out_dir / "summary.json",
+    )
     write_csv(flatten_summary(summary), out_dir / "summary.csv")
     events = {f"{r.condition}|{r.controller}|{r.trial_index}": r.events for r in results}
     with gzip.open(out_dir / "events.json.gz", "wt") as fh:

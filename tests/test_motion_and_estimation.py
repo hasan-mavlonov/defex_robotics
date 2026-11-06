@@ -11,6 +11,9 @@ from defex.perception.state_estimator import Observation, StateEstimator
 from defex.utils.transforms import Pose, matrix_to_rotvec, rotvec_to_matrix
 
 ROOT = Path(__file__).resolve().parents[1]
+CONTROLLER_SIDE = ("control", "recovery", "perception")
+SIM_TRUTH_ATTRS = {"ground_truth", "true_payload", "joint_positions", "contact_wrench", "GroundTruth"}
+FORBIDDEN_MODULES = ("mujoco", "defex.sim.mujoco_backend", "defex.sim.arm_backend", "defex.hardware")
 
 
 def test_motion_generator_respects_limits(rng):
@@ -42,7 +45,7 @@ def test_motion_generator_respects_limits(rng):
 def test_gravity_compensation_and_tare_in_free_space(backend):
     noise = SensorNoiseConfig()
     sensors = SensorSuite(noise, 7)
-    est = StateEstimator(backend.payload, 0.002, noise.ft_filter_cutoff_hz)
+    est = StateEstimator(backend.true_payload, 0.002, noise.ft_filter_cutoff_hz)
     est.reset(backend.nominal_socket_pose, Pose.identity())
     home = backend.home_tcp_pose
     backend.set_tcp_setpoint(home)
@@ -70,17 +73,65 @@ def test_observation_has_no_ground_truth_fields():
 
 def test_controller_code_cannot_reach_the_simulator():
     """Controllers, recovery and estimation must not import MuJoCo or ground truth."""
-    for sub in ("control", "recovery", "perception"):
-        for path in (ROOT / "defex" / sub).glob("*.py"):
-            tree = ast.parse(path.read_text())
-            for node in ast.walk(tree):
-                mods = []
-                if isinstance(node, ast.Import):
-                    mods = [a.name for a in node.names]
-                elif isinstance(node, ast.ImportFrom):
-                    mods = [node.module or ""]
-                    names = [a.name for a in node.names]
-                    assert "GroundTruth" not in names, path
-                for mod in mods:
-                    assert not mod.startswith("mujoco"), path
-                    assert "mujoco_backend" not in mod, path
+    paths = [p for sub in CONTROLLER_SIDE for p in (ROOT / "defex" / sub).rglob("*.py")]
+    assert len(paths) >= 10
+    # W9: the learned prior and controller G are controller-side code too.
+    names = {p.relative_to(ROOT).as_posix() for p in paths}
+    assert {"defex/recovery/learned_prior.py", "defex/control/adaptive_learned.py"} <= names
+    # v0.2c: the v2 learned contact term.
+    assert "defex/recovery/contact_likelihood.py" in names
+    for path in paths:
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute):
+                assert node.attr not in SIM_TRUTH_ATTRS, (path, node.attr)
+            mods = []
+            if isinstance(node, ast.Import):
+                mods = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                mods = [node.module or ""]
+                names = [a.name for a in node.names]
+                assert "GroundTruth" not in names, path
+            for mod in mods:
+                assert not mod.startswith(FORBIDDEN_MODULES), (path, mod)
+                assert "mujoco_backend" not in mod and "arm_backend" not in mod, (path, mod)
+
+
+def _imports(path):
+    mods = set()
+    for node in ast.walk(ast.parse(path.read_text())):
+        if isinstance(node, ast.Import):
+            mods |= {a.name for a in node.names}
+        elif isinstance(node, ast.ImportFrom):
+            mods.add(node.module or "")
+    return mods
+
+
+def test_learned_prior_is_numpy_and_json_only():
+    """W9: the learned contact prior runs on observations and its model file, nothing else.
+    v0.2c: the same for the v2 contact term, which may use only the v1 module besides numpy."""
+    rec = ROOT / "defex" / "recovery"
+    mods = _imports(rec / "learned_prior.py")
+    allowed = {"__future__", "json", "dataclasses", "functools", "pathlib", "numpy", "defex.config"}
+    assert mods <= allowed | {"defex.recovery.contact_likelihood"}, mods
+    mods = _imports(rec / "contact_likelihood.py")
+    assert mods <= allowed | {"defex.recovery.learned_prior"}, mods
+
+
+def test_harness_identifies_the_payload_instead_of_reading_the_simulator():
+    src = (ROOT / "defex" / "tasks" / "insertion.py").read_text()
+    assert "true_payload" not in src
+    assert "StateEstimator(payload" in src
+
+
+def test_adaptive_controller_has_no_bare_tuning_constants():
+    """W2: every tuned number in C's state machine lives in AdaptiveConfig."""
+    tree = ast.parse((ROOT / "defex" / "control" / "adaptive_fsm.py").read_text())
+    found = [
+        (n.lineno, n.value)
+        for fn in ast.walk(tree)
+        if isinstance(fn, ast.FunctionDef)
+        for n in ast.walk(fn)
+        if isinstance(n, ast.Constant) and type(n.value) is float and n.value not in (0.0, 1.0, 0.5)
+    ]
+    assert not found, found

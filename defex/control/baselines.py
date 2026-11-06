@@ -19,8 +19,15 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from defex.config import DEG, MM, FixedTrajectoryConfig, PositionCorrectionConfig
-from defex.control.base import Command, ControllerContext, InsertionController
+from defex.config import (
+    DEG,
+    MM,
+    FixedTrajectoryConfig,
+    PassiveComplianceConfig,
+    PassiveComplianceStiffFixtureConfig,
+    PositionCorrectionConfig,
+)
+from defex.control.base import Command, ControllerContext, InsertionController, outside_reference_family
 from defex.perception.state_estimator import Observation
 from defex.utils.transforms import Pose
 
@@ -78,6 +85,21 @@ class _WaypointProgram(InsertionController):
         return Command(last.target, last.speed, ang_speed)
 
 
+def taught_overtravel(ctx: ControllerContext, programmed_mm: float) -> float:
+    """Overtravel (mm) a position program needs to reach the connector's insertion force (W3).
+
+    An integrator teaches the program to push hard enough to seat the part: with a
+    force budget, the servo deflection that produces the insertion target force.
+    """
+    budget = ctx.connector.force_budget
+    if budget is None:
+        return programmed_mm
+    k = ctx.fixture_dynamics.translational_stiffness_n_per_mm if ctx.fixture_dynamics else 10.0
+    if ctx.insertion_stiffness_n_per_mm is not None:  # v0.2d: the axis the program pushes along
+        k = ctx.insertion_stiffness_n_per_mm
+    return max(programmed_mm, budget.insert_target_n / k)
+
+
 class FixedTrajectoryController(_WaypointProgram):
     name = "fixed"
     label = "A: Fixed trajectory"
@@ -92,7 +114,7 @@ class FixedTrajectoryController(_WaypointProgram):
         S = self.ctx.nominal_socket_pose  # taught pose, never re-measured
         depth = self.ctx.connector.depth
         above = self.socket_frame_pose(S, [0.0, 0.0, c.approach_height_mm * MM])
-        seat = self.socket_frame_pose(S, [0.0, 0.0, -(depth + c.overtravel_mm * MM)])
+        seat = self.socket_frame_pose(S, [0.0, 0.0, -(depth + taught_overtravel(self.ctx, c.overtravel_mm) * MM)])
         self.markers = {"target": S}
         # Nominal grasp assumed: connector tip == fixture TCP.
         return [
@@ -116,9 +138,41 @@ class PositionCorrectionController(_WaypointProgram):
         G = obs.grasp_offset  # in-hand estimate
         depth = self.ctx.connector.depth
         above = self.socket_frame_pose(S, [0.0, 0.0, c.approach_height_mm * MM])
-        seat = self.socket_frame_pose(S, [0.0, 0.0, -(depth + c.overtravel_mm * MM)])
+        seat = self.socket_frame_pose(S, [0.0, 0.0, -(depth + taught_overtravel(self.ctx, c.overtravel_mm) * MM)])
         self.markers = {"target": S}
         return [
             _Waypoint("approach", self.fixture_target_for_connector(above, G), c.transit_speed_mm_s * MM),
             _Waypoint("insert", self.fixture_target_for_connector(seat, G), c.insert_speed_mm_s * MM),
         ]
+
+
+class PassiveComplianceController(PositionCorrectionController):
+    """Controller E: B's vision-corrected program on a passive RCC stage, no force feedback.
+
+    The stage (``defex.config.CompliantStageConfig``) lets the chamfer steer the plug
+    laterally and in torsion with less force, as a remote center compliance device
+    does on a conventional cell.
+    """
+
+    name = "correction_rcc"
+    label = "E: Vision correction + passive compliance"
+    compliant_wrist = True
+
+    def __init__(
+        self, cfg: PassiveComplianceConfig | None = None, stiff_fixture_cfg: PassiveComplianceConfig | None = None
+    ) -> None:
+        super().__init__(cfg or PassiveComplianceConfig())
+        # v0.2c: settings for fixtures outside the gantry family (the UR5e), tuned there.
+        self.stiff_fixture_cfg = stiff_fixture_cfg or PassiveComplianceStiffFixtureConfig()
+
+    def reset(self, ctx: ControllerContext) -> None:
+        super().reset(ctx)
+        # Per-machine program (v0.2c): the config set by the user or a script on every gantry,
+        # stiff_fixture_cfg on fixtures outside the gantry family. Never compounds across resets.
+        if getattr(self, "_machine_cfg", None) is not self.cfg:
+            self._user_cfg = self.cfg
+        c = self._user_cfg
+        if outside_reference_family(ctx, c.stiff_wrist_min_ratio, c.lagging_servo_min_ratio):
+            c = self.stiff_fixture_cfg
+        self.cfg = self._machine_cfg = c
+        self.dwell_s = c.dwell_s

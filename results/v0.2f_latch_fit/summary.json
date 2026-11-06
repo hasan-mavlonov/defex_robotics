@@ -1,0 +1,1318 @@
+{
+ "git_commit": "b00e936",
+ "git_dirty": true,
+ "seed": 2026,
+ "designs": {
+  "main": "one push + guarded pull, 1 mm/s, sensor-model noise (JUDGED)",
+  "noise10": "as main, F/T white noise x10 (0.3 N)",
+  "push_only": "one push, no pull, 1 mm/s",
+  "speed_0.5": "as main at 0.5 mm/s",
+  "speed_2": "as main at 2 mm/s",
+  "speed_5": "as main at 5 mm/s",
+  "stiff_rig": "as main, gantry servo 200 N/mm instead of 10 N/mm",
+  "plus_disabled": "main plus one latch-disabled push + pull of the same part"
+ },
+ "tolerance": {
+  "rel": 0.15,
+  "floors": {
+   "mm": 0.03,
+   "n": 0.5,
+   "snap_drop": 0.15
+  }
+ },
+ "sets": [
+  {
+   "name": "nominal",
+   "variation": {
+    "latch_shift_mm": 0.0,
+    "latch_peak_scale": 1.0,
+    "terminal_scale": 1.0
+   },
+   "depth_offset_mm": -0.3210651863245638,
+   "sensor_seed": 56731231
+  },
+  {
+   "name": "off01",
+   "variation": {
+    "latch_shift_mm": -0.013092639542605956,
+    "latch_peak_scale": 0.870500527108048,
+    "terminal_scale": 1.083933867447721
+   },
+   "depth_offset_mm": 0.290518245853265,
+   "sensor_seed": 1374203059
+  },
+  {
+   "name": "off02",
+   "variation": {
+    "latch_shift_mm": 0.16205753467086959,
+    "latch_peak_scale": 0.6773531918230487,
+    "terminal_scale": 1.3222278421481057
+   },
+   "depth_offset_mm": -0.20169723264443074,
+   "sensor_seed": 355781144
+  },
+  {
+   "name": "off03",
+   "variation": {
+    "latch_shift_mm": 0.16794006421491128,
+    "latch_peak_scale": 1.1358708041446515,
+    "terminal_scale": 1.4021856776632693
+   },
+   "depth_offset_mm": 0.01515369632235175,
+   "sensor_seed": 2076535513
+  },
+  {
+   "name": "off04",
+   "variation": {
+    "latch_shift_mm": 0.130358103350228,
+    "latch_peak_scale": 0.9483805454001032,
+    "terminal_scale": 1.0710499626510095
+   },
+   "depth_offset_mm": -0.22210078449984094,
+   "sensor_seed": 313805771
+  },
+  {
+   "name": "off05",
+   "variation": {
+    "latch_shift_mm": 0.010326737338099346,
+    "latch_peak_scale": 0.9309120606844314,
+    "terminal_scale": 1.3305444963780764
+   },
+   "depth_offset_mm": -0.48715951763319343,
+   "sensor_seed": 486046538
+  },
+  {
+   "name": "off06",
+   "variation": {
+    "latch_shift_mm": -0.02091923938451168,
+    "latch_peak_scale": 0.8651808011323914,
+    "terminal_scale": 0.9563180798972433
+   },
+   "depth_offset_mm": 0.09486587100605282,
+   "sensor_seed": 701295860
+  },
+  {
+   "name": "off07",
+   "variation": {
+    "latch_shift_mm": -0.08000339850194008,
+    "latch_peak_scale": 0.7094161212362196,
+    "terminal_scale": 1.4996992457537437
+   },
+   "depth_offset_mm": 0.29746231552143265,
+   "sensor_seed": 934827884
+  },
+  {
+   "name": "off08",
+   "variation": {
+    "latch_shift_mm": 0.0426838706739916,
+    "latch_peak_scale": 0.8451005786672922,
+    "terminal_scale": 1.557455832783719
+   },
+   "depth_offset_mm": 0.06337737450254555,
+   "sensor_seed": 1277876284
+  },
+  {
+   "name": "off09",
+   "variation": {
+    "latch_shift_mm": 0.16017983960168883,
+    "latch_peak_scale": 0.8193418039018624,
+    "terminal_scale": 1.3567958961070268
+   },
+   "depth_offset_mm": -0.18617967273762992,
+   "sensor_seed": 929350906
+  },
+  {
+   "name": "off10",
+   "variation": {
+    "latch_shift_mm": -0.09537878147528,
+    "latch_peak_scale": 1.2008408895008555,
+    "terminal_scale": 0.9823135831258862
+   },
+   "depth_offset_mm": -0.006889677015119222,
+   "sensor_seed": 1015247637
+  }
+ ],
+ "verdict": {
+  "main": {
+   "params": {
+    "terminal_wipe_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.022349962753049457
+    },
+    "terminal_lead_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.0039031557913929427
+    },
+    "terminal_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.8118944695521968
+    },
+    "terminal_slide_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.017341905114836464
+    },
+    "latch_onset_to_seat_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.22007258151560194
+    },
+    "latch_rise_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.23096661003758068
+    },
+    "latch_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.13634382719485938
+    },
+    "latch_fall_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.026265942876330245
+    },
+    "snap_drop": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.011468479545713062
+    },
+    "post_snap_stroke_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.033309237413151394
+    },
+    "latch_play_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.02491761574646234
+    },
+    "latch_stiffness_n_per_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 6,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": false,
+     "max_abs_error": 157.35931950510417
+    },
+    "bristle_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.009285848637733962
+    },
+    "seat_error_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.022405613197270746
+    }
+   },
+   "pass": false
+  },
+  "noise10": {
+   "params": {
+    "terminal_wipe_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01682667984164965
+    },
+    "terminal_lead_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.006031114874672061
+    },
+    "terminal_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.30019891150791267
+    },
+    "terminal_slide_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.0763239677524794
+    },
+    "latch_onset_to_seat_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.03722422045483964
+    },
+    "latch_rise_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.04791266049869014
+    },
+    "latch_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.20879983123407353
+    },
+    "latch_fall_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 8,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.034319927370069364
+    },
+    "snap_drop": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.06714635955001191
+    },
+    "post_snap_stroke_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.03776308149578178
+    },
+    "latch_play_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.029326459699088425
+    },
+    "latch_stiffness_n_per_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 99.30519868400869
+    },
+    "bristle_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.00825943348660562
+    },
+    "seat_error_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.017145474453080567
+    }
+   },
+   "pass": true
+  },
+  "push_only": {
+   "params": {
+    "terminal_wipe_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.04738048701416142
+    },
+    "terminal_lead_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.004021355743565214
+    },
+    "terminal_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.2825095939209845
+    },
+    "terminal_slide_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.025094616192157915
+    },
+    "latch_onset_to_seat_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.06114527873743336
+    },
+    "latch_rise_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.06611717162192243
+    },
+    "latch_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.11491491394753162
+    },
+    "latch_fall_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.024234045147477123
+    },
+    "snap_drop": {
+     "nominal_within": false,
+     "off_nominal_within": 0,
+     "off_nominal_n": 10,
+     "fitted": false,
+     "pass": false,
+     "max_abs_error": 0.0
+    },
+    "post_snap_stroke_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.06862301271404525
+    },
+    "latch_play_mm": {
+     "nominal_within": false,
+     "off_nominal_within": 0,
+     "off_nominal_n": 10,
+     "fitted": false,
+     "pass": false,
+     "max_abs_error": 0.0
+    },
+    "latch_stiffness_n_per_mm": {
+     "nominal_within": false,
+     "off_nominal_within": 0,
+     "off_nominal_n": 10,
+     "fitted": false,
+     "pass": false,
+     "max_abs_error": 0.0
+    },
+    "bristle_mm": {
+     "nominal_within": false,
+     "off_nominal_within": 0,
+     "off_nominal_n": 10,
+     "fitted": false,
+     "pass": false,
+     "max_abs_error": 0.0
+    },
+    "seat_error_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.04748377572810547
+    }
+   },
+   "pass": false
+  },
+  "speed_0.5": {
+   "params": {
+    "terminal_wipe_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01851888610456487
+    },
+    "terminal_lead_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.003660926530156372
+    },
+    "terminal_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.8612465717921296
+    },
+    "terminal_slide_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.014613376159804403
+    },
+    "latch_onset_to_seat_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.2341695647424027
+    },
+    "latch_rise_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.2484988063960034
+    },
+    "latch_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.1563550542844112
+    },
+    "latch_fall_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01980344982915279
+    },
+    "snap_drop": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.005474521950786904
+    },
+    "post_snap_stroke_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.038960494115134914
+    },
+    "latch_play_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.02209731082860046
+    },
+    "latch_stiffness_n_per_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 6,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": false,
+     "max_abs_error": 127.23780640892952
+    },
+    "bristle_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.010368703140887392
+    },
+    "seat_error_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.0188291371199778
+    }
+   },
+   "pass": false
+  },
+  "speed_2": {
+   "params": {
+    "terminal_wipe_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.018765365036031767
+    },
+    "terminal_lead_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.004002271427295312
+    },
+    "terminal_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.26281388683031537
+    },
+    "terminal_slide_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01237545229351511
+    },
+    "latch_onset_to_seat_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.040083626526657756
+    },
+    "latch_rise_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.03510388242589624
+    },
+    "latch_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.13169662084926337
+    },
+    "latch_fall_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01802421594600495
+    },
+    "snap_drop": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.004833566425106461
+    },
+    "post_snap_stroke_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.03788011139892167
+    },
+    "latch_play_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.022915546738758397
+    },
+    "latch_stiffness_n_per_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 17.35038791153201
+    },
+    "bristle_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01237483468968819
+    },
+    "seat_error_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01894189680467928
+    }
+   },
+   "pass": true
+  },
+  "speed_5": {
+   "params": {
+    "terminal_wipe_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01725490366623772
+    },
+    "terminal_lead_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.004941427213694505
+    },
+    "terminal_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.864339296666973
+    },
+    "terminal_slide_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.02075581901408796
+    },
+    "latch_onset_to_seat_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.2604115566534393
+    },
+    "latch_rise_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.2745190628735108
+    },
+    "latch_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.14596973807388025
+    },
+    "latch_fall_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.023014104545939787
+    },
+    "snap_drop": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.013589594045643083
+    },
+    "post_snap_stroke_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.04267520867559382
+    },
+    "latch_play_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 8,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.03418249990155875
+    },
+    "latch_stiffness_n_per_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 9,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 49.56290278376841
+    },
+    "bristle_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.011136989499872976
+    },
+    "seat_error_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.018205250124324834
+    }
+   },
+   "pass": true
+  },
+  "stiff_rig": {
+   "params": {
+    "terminal_wipe_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.012985162495343205
+    },
+    "terminal_lead_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.0006442692268600614
+    },
+    "terminal_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.04232656702193438
+    },
+    "terminal_slide_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01861427620150735
+    },
+    "latch_onset_to_seat_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.015076959296068448
+    },
+    "latch_rise_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.007563528825008881
+    },
+    "latch_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.01978448181499104
+    },
+    "latch_fall_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.004411385984881069
+    },
+    "snap_drop": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.004865999904047458
+    },
+    "post_snap_stroke_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.015080415067869501
+    },
+    "latch_play_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.003746816230431868
+    },
+    "latch_stiffness_n_per_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 8.411156960165698
+    },
+    "bristle_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.002206361871807644
+    },
+    "seat_error_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.012853164871870604
+    }
+   },
+   "pass": true
+  },
+  "plus_disabled": {
+   "params": {
+    "terminal_wipe_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.014039885934985064
+    },
+    "terminal_lead_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.001160332177409018
+    },
+    "terminal_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.0600110797942186
+    },
+    "terminal_slide_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.006382370469054877
+    },
+    "latch_onset_to_seat_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.03026288756287987
+    },
+    "latch_rise_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.06018273892415471
+    },
+    "latch_peak_n": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.10744229914407821
+    },
+    "latch_fall_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.024035427081019287
+    },
+    "snap_drop": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.00808839008938489
+    },
+    "post_snap_stroke_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.03632454397135654
+    },
+    "latch_play_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.023344216116611152
+    },
+    "latch_stiffness_n_per_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 6,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": false,
+     "max_abs_error": 156.50759234866098
+    },
+    "bristle_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.005659623877774078
+    },
+    "seat_error_mm": {
+     "nominal_within": true,
+     "off_nominal_within": 10,
+     "off_nominal_n": 10,
+     "fitted": true,
+     "pass": true,
+     "max_abs_error": 0.014045569107469902
+    }
+   },
+   "pass": false
+  }
+ },
+ "seconds": 214.2589077949524,
+ "identifiability": {
+  "push_only": {
+   "sd": {
+    "terminal_wipe_mm": 7.10198636846797e-05,
+    "terminal_lead_mm": 9.310442788261554e-05,
+    "terminal_peak_n": 0.011050506968022403,
+    "terminal_slide_n": 0.012788837285639634,
+    "latch_rise_mm": 0.0015620880519366226,
+    "latch_peak_n": 0.014624330428487032,
+    "latch_fall_mm": 0.00024233720361924123,
+    "snap_drop": 0.002152647761354935,
+    "post_snap_stroke_mm": 0.00014727085611634063,
+    "seat_0": 4.1179493068366855e-06,
+    "offset_0": 0.0005161604303365765
+   },
+   "rank": 11,
+   "n_params": 11,
+   "top_correlations": [
+    [
+     "terminal_slide_n",
+     "snap_drop",
+     0.9884
+    ],
+    [
+     "terminal_slide_n",
+     "latch_peak_n",
+     -0.979
+    ],
+    [
+     "latch_peak_n",
+     "snap_drop",
+     -0.9693
+    ],
+    [
+     "terminal_peak_n",
+     "latch_rise_mm",
+     -0.9421
+    ],
+    [
+     "latch_fall_mm",
+     "post_snap_stroke_mm",
+     -0.8613
+    ],
+    [
+     "terminal_wipe_mm",
+     "terminal_lead_mm",
+     0.8476
+    ],
+    [
+     "terminal_peak_n",
+     "terminal_slide_n",
+     0.7965
+    ],
+    [
+     "terminal_peak_n",
+     "snap_drop",
+     0.7864
+    ]
+   ]
+  },
+  "push_pull": {
+   "sd": {
+    "terminal_wipe_mm": 6.462915797007689e-05,
+    "terminal_lead_mm": 7.924806910048502e-05,
+    "terminal_peak_n": 0.006793526495339181,
+    "terminal_slide_n": 0.0018554793040766603,
+    "latch_rise_mm": 0.0009985740086373071,
+    "latch_peak_n": 0.0037159205386005905,
+    "latch_fall_mm": 0.00024093773175078598,
+    "snap_drop": 0.000455815313454966,
+    "post_snap_stroke_mm": 0.00014703778245423238,
+    "latch_play_mm": 0.00015450660798546793,
+    "latch_stiffness_n_per_mm": 0.1909550203258338,
+    "bristle_mm": 1.5334540608030092e-05,
+    "seat_0": 2.8663160453865245e-06,
+    "offset_0": 0.0005121944927148433
+   },
+   "rank": 14,
+   "n_params": 14,
+   "top_correlations": [
+    [
+     "post_snap_stroke_mm",
+     "latch_play_mm",
+     -0.9502
+    ],
+    [
+     "latch_fall_mm",
+     "post_snap_stroke_mm",
+     -0.8665
+    ],
+    [
+     "terminal_peak_n",
+     "latch_rise_mm",
+     -0.8538
+    ],
+    [
+     "latch_fall_mm",
+     "latch_play_mm",
+     0.8231
+    ],
+    [
+     "terminal_wipe_mm",
+     "terminal_lead_mm",
+     0.815
+    ],
+    [
+     "terminal_slide_n",
+     "snap_drop",
+     0.7089
+    ],
+    [
+     "terminal_slide_n",
+     "latch_peak_n",
+     -0.5994
+    ],
+    [
+     "latch_peak_n",
+     "snap_drop",
+     -0.4523
+    ]
+   ]
+  },
+  "push_pull_plus_disabled": {
+   "sd": {
+    "terminal_wipe_mm": 4.5532981186578055e-05,
+    "terminal_lead_mm": 5.561587773063716e-05,
+    "terminal_peak_n": 0.0029612815071748764,
+    "terminal_slide_n": 0.0008216296006150434,
+    "latch_rise_mm": 0.0006122362845986011,
+    "latch_peak_n": 0.0028992907832455605,
+    "latch_fall_mm": 0.0002400260638990383,
+    "snap_drop": 0.00035164415172571497,
+    "post_snap_stroke_mm": 0.00014703262623125428,
+    "latch_play_mm": 0.00015434394337035526,
+    "latch_stiffness_n_per_mm": 0.19095502032613687,
+    "bristle_mm": 1.0804532262882573e-05,
+    "seat_0": 2.832407659341095e-06,
+    "seat_1": 2.8175606057326683e-06,
+    "offset_0": 0.0004959586863500656,
+    "offset_1": 0.00044748879748038236
+   },
+   "rank": 16,
+   "n_params": 16,
+   "top_correlations": [
+    [
+     "post_snap_stroke_mm",
+     "latch_play_mm",
+     -0.9516
+    ],
+    [
+     "latch_fall_mm",
+     "post_snap_stroke_mm",
+     -0.8698
+    ],
+    [
+     "latch_fall_mm",
+     "latch_play_mm",
+     0.8278
+    ],
+    [
+     "terminal_wipe_mm",
+     "terminal_lead_mm",
+     0.8207
+    ],
+    [
+     "terminal_peak_n",
+     "latch_rise_mm",
+     -0.5657
+    ],
+    [
+     "terminal_slide_n",
+     "snap_drop",
+     0.407
+    ],
+    [
+     "latch_rise_mm",
+     "latch_peak_n",
+     -0.404
+    ],
+    [
+     "terminal_slide_n",
+     "latch_peak_n",
+     -0.3745
+    ]
+   ]
+  }
+ },
+ "worked_example": {
+  "datasheet_curve": {
+   "params": {
+    "terminal_wipe_mm": 1.7414113946479968,
+    "terminal_lead_mm": 0.3027327409461607,
+    "terminal_peak_n": 20.050299851048063,
+    "terminal_slide_n": 11.99098474030764,
+    "latch_rise_mm": 1.004176134291675,
+    "latch_peak_n": 5.9914890608481715,
+    "latch_fall_mm": 0.123629929479574,
+    "snap_drop": 0.998626309656036,
+    "post_snap_stroke_mm": 0.46704376369825973,
+    "latch_play_mm": 0.1233067073906906,
+    "latch_stiffness_n_per_mm": 197.4499749897838,
+    "bristle_mm": 0.04888866156157412,
+    "latch_onset_to_seat_mm": 1.5948498274695089
+   },
+   "seat_mm": 7.498599951098637,
+   "force_offset_n": -0.5185928044915598,
+   "median_abs_error_n": 0.01990240916107311,
+   "rms_error_n": 0.310929625541385,
+   "within_band_fraction": 1.0,
+   "bins": 199,
+   "max_abs_residual_n": 0.6594896353109334,
+   "peak_logged_n": 20.38656,
+   "peak_fitted_n": 20.457963441170474,
+   "peak_rel_error": 0.003502476198557995
+  },
+  "rounded_curve": {
+   "params": {
+    "terminal_wipe_mm": 1.7534378959550743,
+    "terminal_lead_mm": 0.3190897347790506,
+    "terminal_peak_n": 19.171618492757737,
+    "terminal_slide_n": 11.976972824180274,
+    "latch_rise_mm": 1.0238372919822412,
+    "latch_peak_n": 5.706074207254904,
+    "latch_fall_mm": 0.20502115721184552,
+    "snap_drop": 0.9965391625167339,
+    "post_snap_stroke_mm": 0.4206716872069509,
+    "latch_play_mm": 0.14460681584093654,
+    "latch_stiffness_n_per_mm": 148.32373924875859,
+    "bristle_mm": 0.04886949718373891,
+    "latch_onset_to_seat_mm": 1.6495301364010375
+   },
+   "seat_mm": 7.498599958945253,
+   "force_offset_n": -0.5180202305775317,
+   "median_abs_error_n": 0.07349536758496367,
+   "rms_error_n": 0.5731940088424674,
+   "within_band_fraction": 0.965,
+   "bins": 200,
+   "max_abs_residual_n": 3.7094730547578063,
+   "peak_logged_n": 19.09987,
+   "peak_fitted_n": 19.837609287018527,
+   "peak_rel_error": 0.03862535645627575
+  }
+ },
+ "worked_example_git_commit": "b00e936"
+}

@@ -1,0 +1,55 @@
+{
+  "description": "W9 development measurement (paired G vs C), not a reported benchmark",
+  "base_seed": 4002,
+  "conditions": [
+    "mf_nominal",
+    "mf_moderate",
+    "mf_half_latched",
+    "mf_broken_latch",
+    "mf_stubbed_terminal",
+    "mf_wrong_polarization"
+  ],
+  "trials": 30,
+  "backend": "arm",
+  "variants": {
+    "adaptive": {
+      "controller": "adaptive"
+    },
+    "g_v1": {
+      "controller": "adaptive_learned",
+      "model_path": "results/v0.2c_learned_prior/models/v1_contact_prior_arm.json",
+      "weight": 1.0
+    },
+    "g_lp": {
+      "controller": "adaptive_learned",
+      "model_path": "results/v0.2c_integration/prior/models/lp_contact_prior_arm.json",
+      "weight": 1.0
+    },
+    "g_residual_k2_tempered": {
+      "controller": "adaptive_learned",
+      "model_path": "results/v0.2c_integration/prior/models/arm_residual_k2_tempered.json",
+      "weight": 1.0
+    },
+    "g_residual_k3": {
+      "controller": "adaptive_learned",
+      "model_path": "results/v0.2c_integration/prior/models/arm_residual_k3.json",
+      "weight": 1.0
+    },
+    "g_posterior_k3": {
+      "controller": "adaptive_learned",
+      "model_path": "results/v0.2c_integration/prior/models/arm_posterior_k3.json",
+      "weight": 1.0
+    }
+  },
+  "environment": {
+    "python": "3.12.11",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "mujoco": "3.17.0",
+    "numpy": "2.5.4",
+    "matplotlib": "3.11.2",
+    "git_commit": "dfbbdb91af8fc2d4730bb171677b3d03b36e9af8",
+    "git_dirty": false,
+    "cpu_count": 10
+  }
+}

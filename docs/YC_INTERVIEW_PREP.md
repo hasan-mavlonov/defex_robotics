@@ -15,9 +15,10 @@ Where the questions come from:
   `src/assets/data/data.yml`, 8 categories, about 150 questions, plus its tips.
 - That repo's `yc-more-questions.md`, about 140 questions, which includes the full
   [iPG](https://jamescun.github.io/iPG/) list.
-- ycombinator.com/interviews and ycinsight.com/interview could not be fetched from the
-  session that wrote this file (its network blocks them). Check those two pages by hand
-  for anything missing.
+- [ycinsight.com/interview](https://ycinsight.com/interview): its ten practice questions,
+  pasted in by Hasan, are answered in section 0b.
+- ycombinator.com/interviews could not be fetched from the session that wrote this file
+  (its network blocks it). Check it by hand.
 - Duplicates are merged below. Every distinct question is covered once.
 
 ---
@@ -37,6 +38,190 @@ Where the questions come from:
 
   On this project, the technical work answers the first well. The second and third are
   the open gaps (section 2).
+
+---
+
+## 0b. The ten must-answer questions (ycinsight.com/interview)
+
+The format, per that page: a 10-minute hard cap, 2-3 partners, and a live demo you
+should be ready to show. Each draft answer below is short enough to say in 10-25
+seconds. Memorize the facts in it, not the wording.
+
+### Q1. What does your company do?
+
+> **We make software that lets robots plug in electrical connectors and prove each one
+> is seated right, so assembly lines stop shipping mis-mated connectors.**
+
+If they ask "how far along?":
+> It's a simulation prototype today. In about 100,000 trials against the spiral search
+> cobot vendors ship, theirs passed 138-178 crooked plugs per 7,400 as good. Ours
+> passed none. Next is a real rig.
+
+Avoid "adaptive insertion engine," "AI" and "DAIE" in the first sentence.
+
+### Q2. Why is now the right time?
+
+> Three things changed:
+> 1. **Robots are now doing this step, and they check the wrong thing.** Cobot vendors
+>    now ship connector-insertion routines: Flexiv Adaptive Assembly, Robotiq's
+>    Insertion node, ABB and Nachi cells. Those routines are spiral search with a
+>    depth check. The plug that goes in crooked is a new failure, and nobody owns it.
+> 2. **The hardware got cheap.** A 6-axis wrist force sensor costs about $3,700 (Bota
+>    MiniONE), and cobots have 500 Hz external control (UR's RTDE). Feeling a 0.5 mm
+>    wall now works on a $10-35k arm (`hardware/BOM.md`).
+> 3. **Simulation is now good enough to test before building.** We run 96,000 paired
+>    trials per benchmark, against tuned industrial baselines, before buying any
+>    hardware.
+
+[FILL from customer calls, if you can source it: a demand shift such as EV
+wire-harness volume, reshoring or a labour shortage.] Don't say "AI is hot."
+
+### Q3. Who's your competition? Why will you win?
+
+> 1. **Cobot vendors' built-in insertion:** Flexiv Adaptive Assembly, the Robotiq
+>    Insertion node, UR force-control apps. All of them are spiral search, which is
+>    exactly the baseline we benchmark against.
+> 2. **Industrial connector cells:** ABB's flexible-cable cells and Nachi's
+>    vision-based connector insertion.
+> 3. **General-purpose robots demoing wire-harness work:** for example Sanctuary AI.
+>
+> And the real one: a person with a tug test.
+>
+> **Our wedge is the proof of seat.** It's a verification layer that sits on top of
+> the spiral-search cell a customer already runs, on any robot brand. Added to a spiral
+> cell in simulation, it cut escapes from 178 to 2 per 7,400 parts. Robot vendors sell
+> motion. We sell "this connector is in right."
+
+Follow-up: "Why can't Flexiv add it?" They can add a check, but not one that works
+across robot brands, with per-connector force models and a failure-mode library behind
+it. If we stay one feature, we lose, so we have to become the insertion layer that
+integrators use across robots.
+
+### Q4. Why you? Why are you the right team?
+
+[FILL. This is a story, not a résumé. Structure:]
+> 1. **How I got here:** [the moment you saw this problem: a factory, a job, a project].
+> 2. **What I've shipped:** [the strongest thing you've built before].
+> 3. **Proof of how I work, from this project:** in two weeks I took this from a first
+>    simulation to six pre-registered benchmark rounds against tuned industrial
+>    baselines. When the data said we were losing somewhere, I published it and
+>    changed the pitch, not the numbers.
+> 4. [Cofounder: how you met, what you've built together. Or, if you are solo: how you
+>    cover hardware and sales, and whether you're recruiting.]
+
+Be ready for "Who wrote the code?" If you directed AI agents, say so plainly, then
+prove you own the system: whiteboard section 6.
+
+### Q5. What's your growth?
+
+> **Brutally honest: zero users and zero revenue. We're pre-product.**
+>
+> **What has grown is evidence.** v0.1 was 2026-10-24. Since then: six pre-registered
+> benchmark rounds, a clean held-out test, 12 randomized simulators, and a frozen rig
+> test plan.
+>
+> **The diagnosis:** we built the evidence before talking to customers. That's the gap
+> I'm closing now.
+>
+> **Next targets:** [FILL: N engineer conversations by DATE, first real insertion by
+> DATE, first pilot by DATE.]
+
+Give each number with its date and how you measured it, as the page advises.
+
+### Q6. What have you learned from your users?
+
+The weakest answer today. Do the calls in section 4 first, then use this shape:
+> Last [week], a [quality engineer at a contract manufacturer] told me [their connector
+> check is a tug test plus a look, and an escape found at end-of-line test costs $X].
+> So we [changed what we're building first: the verification module that sits on their
+> existing cell], and now [two of them asked for a feasibility run on their part].
+
+Have three of these, all real, all recent. If you have none on the day, say so in one
+sentence:
+> I haven't talked to enough users yet. Here's what the first [N] told me.
+
+Then move to what the data taught you: spiral search fails by being confidently wrong,
+not by missing the hole. A generic "users love it" is fatal.
+
+### Q7. How big can this be?
+
+Bottom-up, with your own numbers. The arithmetic below is **illustrative only**. Every
+input is a `[FILL]` to replace with figures from your calls:
+> 1. **The wedge:** [N] robot cells doing connector mating in final assembly, times
+>    $[X] a year per cell licence. Example arithmetic: 10,000 cells x $10k a year is
+>    $100M ARR.
+> 2. **The expansion:** every contact-rich assembly step where "did it go in right?"
+>    matters: connectors, clips, snap fits, fasteners, cable routing, across [N]
+>    cells.
+> 3. **The data layer:** every verified insertion logs a force signature as a quality
+>    record. That becomes the training data for learned assembly policies.
+>
+> The billion-dollar path is step 2: becoming the verification layer for robotic
+> assembly, not one connector app.
+
+Don't quote a market-report TAM. Know your [N] and [X], and where each came from.
+
+### Q8. What would you do with the YC money?
+
+> Specifics, 6 months:
+> - **Month 1:** buy the rig. The cheapest option is about $13.6k; the UR3e option is
+>   about $39.8k plus the jig, measurement and parts (`hardware/BOM.md`). Make the
+>   first real insertions.
+> - **Months 2-3:** run the pre-registered rig test, about 3,000 insertions of four
+>   controllers on two connectors, against the simulation's frozen predictions
+>   (`hardware/TEST_PROTOCOL.md`).
+> - **Months 3-6:** two or three paid pilots on customer connectors in their own cells.
+> - **One hire:** [FILL: a robotics hardware engineer to own the rig and pilots].
+> - **The rest:** [FILL: N months of runway].
+
+No marketing team. Know your monthly burn.
+
+### Q9. What's the hardest thing about this business?
+
+> **Proving that it works on real parts, and that escapes cost enough to pay for it.**
+> - We're slower: 5.3 s against 2.4 s per part, and 1.9 s of that is verification. The
+>   pitch only works where a mis-seated connector costs much more than 1.9 s.
+> - The tolerance we score against, 3 degrees, is assumed. Our edge shrinks if the real
+>   spec is looser.
+> - Sim-to-real is the technical risk. That's why the rig predictions are frozen before
+>   the rig exists.
+>
+> The plan: customer calls for the real spec and the cost of an escape, then the rig,
+> then pilots. Industrial sales are slow, so we go through the integrators who build
+> these cells.
+
+### Q10. If we don't fund you, what will you do?
+
+> Keep building. I'll [FILL: self-fund / raise from angels] the cheapest rig, run the
+> rig test, and get pilots. YC makes it faster. It doesn't decide whether it happens.
+
+Never say "go back to my job."
+
+### The live demo (be ready)
+
+The page says to show the main user action, not slides. The main action here is a
+crooked plug caught. The current video (v0.1) and `demos.run_demo` only show controllers
+A, B and C, so they can't show it. A ready-made case from the benchmark:
+- Gantry, `noise_1mm` trial 38, seed 20261130
+  (`results/benchmark_v0.2e/gantry_standard/trials.csv`).
+- I (spiral + passive compliance + pull test) declares success with the plug at
+  14.83 mm and 3.67 deg yaw, a bad unit.
+- C, on the identical socket and noise, seats it correctly after 2 retries.
+- There are 30 such trials on that seed.
+
+**To build:** let `demos.run_demo` take `spiral_rcc_pull` (I) and play I then C on that
+trial. Rehearse screen sharing. Say "simulation" out loud before you press play.
+
+### The page's prep checklist, mapped to this project
+
+1. **Numbers with dates:** revenue 0, users 0. The progress numbers are the benchmark
+   rounds (this file, section 1). [FILL: conversations and pilots, with dates.]
+2. **One mock with follow-ups:** use section 8.
+3. **Working demo:** see above.
+4. **Who knows each part:** [FILL]. You must be able to explain the product end to end
+   (section 6).
+5. **Keep building and talking to users:** section 4. Bring any progress since the
+   application, above all a first real insertion.
 
 ---
 

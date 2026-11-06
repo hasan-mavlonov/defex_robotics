@@ -80,7 +80,47 @@ but it makes C ship as many crooked plugs as spiral search, while still being sl
 than spiral. VERIFY is where C's advantage comes from. C's insertion helps mainly by
 getting the plug in more often under a bad camera.
 
-## Arm, standard, seed 2026
+## Arm, standard, seed 2026 (1,000 paired trials per controller)
 
-(Added when the run finishes. Its first two attempts failed because the UR5e model had
-not been fetched in this session; `scripts/fetch_menagerie.py` fixes that.)
+| Controller | Seated correctly | Bad plugs called "done" | ...of which over 3 deg | Median time, good parts (s) | Good parts per hour |
+|---|---|---|---|---|---|
+| C | 978/1000 (97.8%) | 0 | 0 | 8.15 | 387 |
+| C without VERIFY | 971/1000 (97.1%) | 14 | 14 | 5.75 | 529 |
+| I spiral + pull | 963/1000 (96.3%) | 23 | 23 | 4.77 | 598 |
+| J spiral + C's VERIFY | 971/1000 (97.1%) | 0 | 0 | 8.00 | 382 |
+
+Paired, C against C without VERIFY: C-only 10, without-VERIFY-only 3 (exact McNemar
+p = 0.092, not significant at 50 trials per condition).
+
+Where any of the four differ (seated correctly / bad plugs called "done", per 50):
+
+| Condition | C | C without VERIFY | I | J |
+|---|---|---|---|---|
+| noise_1mm | 49 / 0 | 47 / 2 | 44 / 5 | 48 / 0 |
+| noise_2mm | 34 / 0 | 32 / 7 | 23 / 16 | 26 / 0 |
+| friction_1 | 48 / 0 | 47 / 2 | 50 / 0 | 50 / 0 |
+| generalization_combined | 48 / 0 | 46 / 3 | 48 / 2 | 50 / 0 |
+| generalization_tight | 49 / 0 | 49 / 0 | 48 / 0 | 47 / 0 |
+
+![C with and without VERIFY, arm](../../docs/yc_figures/fig8_without_verify_arm.png)
+
+## Reading (arm)
+
+- **Without VERIFY, C passes 14 bad plugs, against 0 with VERIFY and I's 23.** All 14
+  are more than 3 deg off. On the arm, C's insertion alone passes fewer than spiral
+  search (14 against 23), but not zero.
+- **The success rate barely moves:** 97.1% without VERIFY against 97.8% with it. On the
+  arm, VERIFY mostly turns would-be escapes into rejects and retries, more than into
+  extra seated plugs. It cost 3 trials that the no-VERIFY variant seated.
+- **Speed:** 5.75 s without VERIFY against 8.15 s with it (2.4 s saved), and 4.77 s for
+  I.
+
+## Answer, both machines (development seed 2026)
+
+Dropping VERIFY saves about 1.9 s per part on the gantry and 2.4 s on the arm. But C then
+passes crooked plugs as good: 41 of 2,000 on the gantry (spiral: 40) and 14 of 1,000 on
+the arm (spiral: 23). It is still slower than spiral search on both. VERIFY is what takes
+C's bad plugs to zero. One development seed, not pre-registered.
+
+Regenerate the tables with `python results/v0.2g_noverify_dev/tables.py
+results/v0.2g_noverify_dev`. The variants file is `variants.json` in this folder.

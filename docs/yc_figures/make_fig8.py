@@ -29,5 +29,5 @@ for ax,(title,i,fmt,yl) in zip(axs,panels):
     ax.set_yticks([]); ax.set_title(title,loc="left",fontsize=12,fontweight="bold",pad=14)
 n=stats[0][3]
 fig.suptitle(f"What happens if Defex skips VERIFY? {cell.replace('_',' ')}, same {n:,} sockets for all four (development seed 2026)",fontsize=12,y=1.04)
-fig.text(0.5,-0.04,"Without VERIFY, Defex is faster but ships crooked plugs at the same rate as spiral search. VERIFY is what removes them.",ha="center",color=INK2)
+fig.text(0.5,-0.04,f"Without VERIFY, Defex is faster but calls {stats[1][1]} crooked plugs done (spiral: {stats[2][1]}). With VERIFY: {stats[0][1]}.",ha="center",color=INK2)
 fig.savefig(out,dpi=200,bbox_inches="tight",pad_inches=0.25)

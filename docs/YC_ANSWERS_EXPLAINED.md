@@ -518,3 +518,29 @@ program, vision correction and Defex. They cannot show spiral search, so the dem
 program needs to be extended to play I and then Defex on that trial.
 
 **When you share:** say "this is simulation" before you press play.
+
+---
+
+## Part 4: Pictures
+
+Regenerate them from the committed results with:
+
+```bash
+python docs/yc_figures/make_figs.py . docs/yc_figures
+```
+
+The script needs matplotlib only.
+
+1. ![Yaw and tilt](yc_figures/fig1_yaw_tilt.png) What twist (yaw) and lean (tilt) mean.
+2. ![Crooked plug fits](yc_figures/fig2_crooked_plug_fits.png) Why a plug 3-4.9 deg crooked
+   still reaches full depth.
+3. ![VERIFY](yc_figures/fig3_verify_walls.png) What Defex's VERIFY does: feel both walls,
+   reject a plug caught on the edge, straighten the twist.
+4. ![Escapes](yc_figures/fig4_escapes.png) Escapes on three seeds: C 0, J 2-3, I 138-161,
+   F 176-197 per 7,400 good parts (`results/v0.2f_evidence/BAD_UNITS.md`).
+5. ![Success by condition](yc_figures/fig5_success_by_condition.png) Defex seats more only
+   in the bad-camera conditions (gantry standard, seed 20261130, `trials.csv`).
+6. ![How crooked](yc_figures/fig6_how_crooked_when_done.png) How crooked the "done" plugs
+   really are: 32 of I's are over 3 deg, none of Defex's (gantry standard, seed 20261130).
+7. ![Speed](yc_figures/fig7_speed.png) The price: 5.30 s against 2.43 s per good part
+   (`results/benchmark_v0.2e/HEADLINE_TABLES.md` (c)).

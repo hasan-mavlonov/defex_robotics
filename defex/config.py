@@ -763,6 +763,10 @@ class AdaptiveConfig:
     # "sigma_gate" (V0.1): only if the characterized vision yaw sigma exceeds yaw_center_gate_deg;
     # "gate_or_corrected": also if C changed the yaw itself; "always": every cycle.
     yaw_center_policy: str = "always"  # W4 default; V0.1 used "sigma_gate" (see results/w4_development)
+    # Development ablation only (default off): on a housing-only part, declare SUCCESS at the seated
+    # signature from DETECT and skip the whole VERIFY (seat conform, wall probes, centring, yaw). It
+    # measures what C's insertion achieves without its VERIFY. Latching parts keep their latch check.
+    skip_housing_verify: bool = False
     rotation_budget_fraction: float = 0.8  # of max_torque_nm, for torque overshoot while probing yaw (W5)
     # W5b rules (scaled dampings, rate-mode conform, lag terms; defex.control.base) switch on only for
     # fixtures well outside the gantry family C was tuned and checked on. experiments/sim_randomization.py

@@ -54,7 +54,7 @@ Where any of the four differ (seated correctly / bad plugs called "done", per 10
 | friction_1 | 99 / 0 | 98 / 1 | 100 / 0 | 100 / 0 |
 | generalization_combined | 100 / 0 | 99 / 1 | 98 / 2 | 98 / 0 |
 
-![C with and without VERIFY, gantry](../../docs/yc_figures/fig8_without_verify_gantry.png)
+![C with and without VERIFY, gantry](without_verify_gantry.png)
 
 ## Reading (gantry)
 
@@ -102,7 +102,7 @@ Where any of the four differ (seated correctly / bad plugs called "done", per 50
 | generalization_combined | 48 / 0 | 46 / 3 | 48 / 2 | 50 / 0 |
 | generalization_tight | 49 / 0 | 49 / 0 | 48 / 0 | 47 / 0 |
 
-![C with and without VERIFY, arm](../../docs/yc_figures/fig8_without_verify_arm.png)
+![C with and without VERIFY, arm](without_verify_arm.png)
 
 ## Reading (arm)
 
@@ -124,3 +124,5 @@ C's bad plugs to zero. One development seed, not pre-registered.
 
 Regenerate the tables with `python results/v0.2g_noverify_dev/tables.py
 results/v0.2g_noverify_dev`. The variants file is `variants.json` in this folder.
+Regenerate the charts with `python results/v0.2g_noverify_dev/make_chart.py . gantry_standard results/v0.2g_noverify_dev/without_verify_gantry.png`
+(and `arm_standard`, `results/v0.2g_noverify_dev/without_verify_arm.png`).

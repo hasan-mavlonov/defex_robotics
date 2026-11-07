@@ -1001,10 +1001,6 @@ class AdaptiveInsertionController(InsertionController):
             return self._cmd(self.cfg.force_phase_speed_cap_mm_s)
         if self.latching:
             return self._begin_latch_verify(obs)
-        if self.cfg.skip_housing_verify:
-            # Development ablation (default off): depth/bottoming signature only, as D and F declare.
-            self.log(obs.t, "verify", "skipped (skip_housing_verify): seated signature accepted")
-            return self._succeed(obs)
         # Seat conformity first: zero-spring tilt compliance lets the plug face settle
         # flat on the cavity floor, aligning the connector axis with the true socket axis.
         self.adm_conf.reset()
